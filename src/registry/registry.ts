@@ -114,6 +114,7 @@ export const createRegistry = (version: string): Registry => {
 		entitiesById,
 		entitiesByName,
 		entitiesArray,
+		language: (mcData.language as Record<string, string>) ?? {},
 		isNewerOrEqualTo: (v: string) => mcData.isNewerOrEqualTo(v),
 		isOlderThan: (v: string) => mcData.isOlderThan(v),
 		supportFeature: (f: string) => mcData.supportFeature(f as never),

@@ -28,3 +28,6 @@
 [submodule "upstream/prismarine-windows"]
 	path = upstream/prismarine-windows
 	url = https://github.com/PrismarineJS/prismarine-windows.git
+[submodule "upstream/prismarine-chat"]
+	path = upstream/prismarine-chat
+	url = https://github.com/PrismarineJS/prismarine-chat.git

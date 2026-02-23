@@ -129,6 +129,7 @@ export type Registry = {
 	readonly entitiesById: ReadonlyMap<number, EntityDefinition>;
 	readonly entitiesByName: ReadonlyMap<string, EntityDefinition>;
 	readonly entitiesArray: readonly EntityDefinition[];
+	readonly language: Readonly<Record<string, string>>;
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;
 	readonly supportFeature: (feature: string) => unknown;
