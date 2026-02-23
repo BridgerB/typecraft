@@ -1,3 +1,49 @@
+/** Item definition from the Minecraft data registry. */
+export type ItemDefinition = {
+	readonly id: number;
+	readonly name: string;
+	readonly displayName: string;
+	readonly stackSize: number;
+	readonly enchantCategories?: readonly string[];
+	readonly repairWith?: readonly string[];
+	readonly maxDurability?: number;
+};
+
+/** Enchantment cost formula coefficient (level = a * enchantLevel + b). */
+export type EnchantmentCost = {
+	readonly a: number;
+	readonly b: number;
+};
+
+/** Enchantment definition from the Minecraft data registry. */
+export type EnchantmentDefinition = {
+	readonly id: number;
+	readonly name: string;
+	readonly displayName: string;
+	readonly maxLevel: number;
+	readonly minCost: EnchantmentCost;
+	readonly maxCost: EnchantmentCost;
+	readonly treasureOnly: boolean;
+	readonly curse: boolean;
+	readonly exclude: readonly string[];
+	readonly category: string;
+	readonly weight: number;
+	readonly tradeable: boolean;
+	readonly discoverable: boolean;
+};
+
+/** Food definition from the Minecraft data registry. */
+export type FoodDefinition = {
+	readonly id: number;
+	readonly name: string;
+	readonly displayName: string;
+	readonly stackSize: number;
+	readonly foodPoints: number;
+	readonly saturation: number;
+	readonly effectiveQuality: number;
+	readonly saturationRatio: number;
+};
+
 /** Block definition from the Minecraft data registry. */
 export type BlockDefinition = {
 	readonly id: number;
@@ -60,7 +106,16 @@ export type Registry = {
 	readonly biomesById: ReadonlyMap<number, BiomeDefinition>;
 	readonly biomesByName: ReadonlyMap<string, BiomeDefinition>;
 	readonly biomesArray: readonly BiomeDefinition[];
+	readonly itemsById: ReadonlyMap<number, ItemDefinition>;
+	readonly itemsByName: ReadonlyMap<string, ItemDefinition>;
+	readonly itemsArray: readonly ItemDefinition[];
+	readonly enchantmentsById: ReadonlyMap<number, EnchantmentDefinition>;
+	readonly enchantmentsByName: ReadonlyMap<string, EnchantmentDefinition>;
+	readonly enchantmentsArray: readonly EnchantmentDefinition[];
+	readonly foodsById: ReadonlyMap<number, FoodDefinition>;
+	readonly foodsByName: ReadonlyMap<string, FoodDefinition>;
+	readonly foodsArray: readonly FoodDefinition[];
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;
-	readonly supportFeature: (feature: string) => boolean;
+	readonly supportFeature: (feature: string) => unknown;
 };

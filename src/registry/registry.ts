@@ -3,6 +3,9 @@ import type {
 	BiomeDefinition,
 	BlockDefinition,
 	BlockStateProperty,
+	EnchantmentDefinition,
+	FoodDefinition,
+	ItemDefinition,
 	Registry,
 	VersionInfo,
 } from "./types.js";
@@ -22,6 +25,11 @@ export const createRegistry = (version: string): Registry => {
 
 	const blocksArray = mcData.blocksArray.map(toBlockDefinition);
 	const biomesArray = mcData.biomesArray.map(toBiomeDefinition);
+	const itemsArray = mcData.itemsArray.map(toItemDefinition);
+	const enchantmentsArray = mcData.enchantmentsArray.map(
+		toEnchantmentDefinition,
+	);
+	const foodsArray = mcData.foodsArray.map(toFoodDefinition);
 
 	const blocksById = new Map<number, BlockDefinition>();
 	const blocksByName = new Map<string, BlockDefinition>();
@@ -43,6 +51,30 @@ export const createRegistry = (version: string): Registry => {
 		biomesByName.set(biome.name, biome);
 	}
 
+	const itemsById = new Map<number, ItemDefinition>();
+	const itemsByName = new Map<string, ItemDefinition>();
+
+	for (const item of itemsArray) {
+		itemsById.set(item.id, item);
+		itemsByName.set(item.name, item);
+	}
+
+	const enchantmentsById = new Map<number, EnchantmentDefinition>();
+	const enchantmentsByName = new Map<string, EnchantmentDefinition>();
+
+	for (const ench of enchantmentsArray) {
+		enchantmentsById.set(ench.id, ench);
+		enchantmentsByName.set(ench.name, ench);
+	}
+
+	const foodsById = new Map<number, FoodDefinition>();
+	const foodsByName = new Map<string, FoodDefinition>();
+
+	for (const food of foodsArray) {
+		foodsById.set(food.id, food);
+		foodsByName.set(food.name, food);
+	}
+
 	const versionInfo: VersionInfo = {
 		type: mcData.type as "pc" | "bedrock",
 		majorVersion: mcData.version.majorVersion ?? version,
@@ -60,9 +92,18 @@ export const createRegistry = (version: string): Registry => {
 		biomesById,
 		biomesByName,
 		biomesArray,
+		itemsById,
+		itemsByName,
+		itemsArray,
+		enchantmentsById,
+		enchantmentsByName,
+		enchantmentsArray,
+		foodsById,
+		foodsByName,
+		foodsArray,
 		isNewerOrEqualTo: (v: string) => mcData.isNewerOrEqualTo(v),
 		isOlderThan: (v: string) => mcData.isOlderThan(v),
-		supportFeature: (f: string) => mcData.supportFeature(f as never) as boolean,
+		supportFeature: (f: string) => mcData.supportFeature(f as never),
 	};
 };
 
@@ -110,4 +151,43 @@ const toBiomeDefinition = (biome: MinecraftData.Biome): BiomeDefinition => ({
 	precipitation: biome.precipitation,
 	has_precipitation: biome.has_precipitation,
 	rainfall: biome.rainfall,
+});
+
+const toItemDefinition = (item: MinecraftData.Item): ItemDefinition => ({
+	id: item.id,
+	name: item.name,
+	displayName: item.displayName,
+	stackSize: item.stackSize,
+	enchantCategories: item.enchantCategories,
+	repairWith: item.repairWith,
+	maxDurability: item.maxDurability,
+});
+
+const toEnchantmentDefinition = (
+	ench: MinecraftData.Enchantment,
+): EnchantmentDefinition => ({
+	id: ench.id,
+	name: ench.name,
+	displayName: ench.displayName,
+	maxLevel: ench.maxLevel,
+	minCost: { a: ench.minCost.a ?? 0, b: ench.minCost.b ?? 0 },
+	maxCost: { a: ench.maxCost.a ?? 0, b: ench.maxCost.b ?? 0 },
+	treasureOnly: ench.treasureOnly,
+	curse: ench.curse,
+	exclude: ench.exclude,
+	category: ench.category,
+	weight: ench.weight,
+	tradeable: ench.tradeable,
+	discoverable: ench.discoverable,
+});
+
+const toFoodDefinition = (food: MinecraftData.Food): FoodDefinition => ({
+	id: food.id,
+	name: food.name,
+	displayName: food.displayName,
+	stackSize: food.stackSize,
+	foodPoints: food.foodPoints,
+	saturation: food.saturation,
+	effectiveQuality: food.effectiveQuality,
+	saturationRatio: food.saturationRatio,
 });

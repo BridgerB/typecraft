@@ -19,3 +19,6 @@
 [submodule "upstream/prismarine-world"]
 	path = upstream/prismarine-world
 	url = git@github.com:PrismarineJS/prismarine-world.git
+[submodule "upstream/prismarine-item"]
+	path = upstream/prismarine-item
+	url = https://github.com/PrismarineJS/prismarine-item.git
