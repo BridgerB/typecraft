@@ -1,3 +1,6 @@
 [submodule "upstream/prismarine-provider-anvil"]
 	path = upstream/prismarine-provider-anvil
 	url = git@github.com:PrismarineJS/prismarine-provider-anvil.git
+[submodule "upstream/uint4"]
+	path = upstream/uint4
+	url = git@github.com:wtfaremyinitials/uint4.git
