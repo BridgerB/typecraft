@@ -44,6 +44,17 @@ export type FoodDefinition = {
 	readonly saturationRatio: number;
 };
 
+/** Entity definition from the Minecraft data registry. */
+export type EntityDefinition = {
+	readonly id: number;
+	readonly name: string;
+	readonly displayName: string;
+	readonly width: number;
+	readonly height: number;
+	readonly type: string;
+	readonly category: string;
+};
+
 /** Block definition from the Minecraft data registry. */
 export type BlockDefinition = {
 	readonly id: number;
@@ -115,6 +126,9 @@ export type Registry = {
 	readonly foodsById: ReadonlyMap<number, FoodDefinition>;
 	readonly foodsByName: ReadonlyMap<string, FoodDefinition>;
 	readonly foodsArray: readonly FoodDefinition[];
+	readonly entitiesById: ReadonlyMap<number, EntityDefinition>;
+	readonly entitiesByName: ReadonlyMap<string, EntityDefinition>;
+	readonly entitiesArray: readonly EntityDefinition[];
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;
 	readonly supportFeature: (feature: string) => unknown;

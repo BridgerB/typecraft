@@ -5,6 +5,7 @@ export type {
 	BlockStateProperty,
 	EnchantmentCost,
 	EnchantmentDefinition,
+	EntityDefinition,
 	FoodDefinition,
 	ItemDefinition,
 	Registry,

@@ -4,6 +4,7 @@ import type {
 	BlockDefinition,
 	BlockStateProperty,
 	EnchantmentDefinition,
+	EntityDefinition,
 	FoodDefinition,
 	ItemDefinition,
 	Registry,
@@ -30,6 +31,7 @@ export const createRegistry = (version: string): Registry => {
 		toEnchantmentDefinition,
 	);
 	const foodsArray = mcData.foodsArray.map(toFoodDefinition);
+	const entitiesArray = mcData.entitiesArray.map(toEntityDefinition);
 
 	const blocksById = new Map<number, BlockDefinition>();
 	const blocksByName = new Map<string, BlockDefinition>();
@@ -75,6 +77,14 @@ export const createRegistry = (version: string): Registry => {
 		foodsByName.set(food.name, food);
 	}
 
+	const entitiesById = new Map<number, EntityDefinition>();
+	const entitiesByName = new Map<string, EntityDefinition>();
+
+	for (const ent of entitiesArray) {
+		entitiesById.set(ent.id, ent);
+		entitiesByName.set(ent.name, ent);
+	}
+
 	const versionInfo: VersionInfo = {
 		type: mcData.type as "pc" | "bedrock",
 		majorVersion: mcData.version.majorVersion ?? version,
@@ -101,6 +111,9 @@ export const createRegistry = (version: string): Registry => {
 		foodsById,
 		foodsByName,
 		foodsArray,
+		entitiesById,
+		entitiesByName,
+		entitiesArray,
 		isNewerOrEqualTo: (v: string) => mcData.isNewerOrEqualTo(v),
 		isOlderThan: (v: string) => mcData.isOlderThan(v),
 		supportFeature: (f: string) => mcData.supportFeature(f as never),
@@ -190,4 +203,16 @@ const toFoodDefinition = (food: MinecraftData.Food): FoodDefinition => ({
 	saturation: food.saturation,
 	effectiveQuality: food.effectiveQuality,
 	saturationRatio: food.saturationRatio,
+});
+
+const toEntityDefinition = (
+	entity: MinecraftData.Entity,
+): EntityDefinition => ({
+	id: entity.id,
+	name: entity.name,
+	displayName: entity.displayName,
+	width: entity.width ?? 0,
+	height: entity.height ?? 0,
+	type: entity.type,
+	category: entity.category ?? "UNKNOWN",
 });

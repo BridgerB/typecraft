@@ -95,6 +95,25 @@ export {
 	writePaletteContainer,
 } from "./chunk/index.js";
 export {
+	addEffect,
+	addPassenger,
+	clearEffects,
+	createEntity,
+	type Effect,
+	type Entity,
+	type EntityType,
+	entityValid,
+	getArmor,
+	getHeldItem,
+	getOffhandItem,
+	initEntity,
+	invalidateEntity,
+	removeEffect,
+	removePassenger,
+	setEquipment,
+	setVehicle,
+} from "./entity/index.js";
+export {
 	createItem,
 	createItemByName,
 	type Enchant,
@@ -170,6 +189,7 @@ export {
 	createRegistry,
 	type EnchantmentCost,
 	type EnchantmentDefinition,
+	type EntityDefinition,
 	type FoodDefinition,
 	type ItemDefinition,
 	type Registry,
