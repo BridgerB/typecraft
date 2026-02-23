@@ -23,6 +23,10 @@ export type ClientOptions = {
 	readonly keepAlive?: boolean;
 	readonly profilesFolder?: string;
 	readonly hideErrors?: boolean;
+	readonly onMsaCode?: (data: {
+		user_code: string;
+		verification_uri: string;
+	}) => void;
 };
 
 export type PacketMeta = {

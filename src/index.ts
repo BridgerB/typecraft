@@ -216,6 +216,8 @@ export {
 } from "./nbt/index.js";
 export { createNibbleArray, readNibble, writeNibble } from "./nibble/index.js";
 export {
+	type AuthResult,
+	authenticateMicrosoft,
 	type Client,
 	type ClientOptions,
 	compressPacket,
@@ -230,6 +232,8 @@ export {
 	Direction,
 	decompressPacket,
 	framePacket,
+	joinServer,
+	mcServerHash,
 	type PacketCodec,
 	type PacketMeta,
 	type PingOptions,
@@ -240,6 +244,7 @@ export {
 	readVarLong,
 	registerHandshake,
 	registerKeepalive,
+	resolveServer,
 	sizeOfVarInt,
 	sizeOfVarLong,
 	type TypeDef,

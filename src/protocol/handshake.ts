@@ -4,6 +4,7 @@
  */
 
 import { publicEncrypt, randomBytes } from "node:crypto";
+import { joinServer } from "./auth.js";
 import type { Client } from "./client.js";
 import { ProtocolState } from "./states.js";
 
@@ -15,12 +16,12 @@ export const registerHandshake = (
 		readonly port: number;
 		readonly protocolVersion: number;
 		readonly skipEncryption?: boolean;
+		readonly accessToken?: string;
 	},
 ) => {
 	// ── Step 1: On connect, send handshake + login_start ──
 
 	client.on("connect", () => {
-		// Send set_protocol (handshake)
 		client.write("set_protocol", {
 			protocolVersion: options.protocolVersion,
 			serverHost: options.host,
@@ -28,10 +29,8 @@ export const registerHandshake = (
 			nextState: 2, // LOGIN
 		});
 
-		// Transition to LOGIN state
 		client.state = ProtocolState.LOGIN;
 
-		// Send login_start
 		client.write("login_start", {
 			username: client.username,
 			playerUUID: client.uuid || "0".repeat(32),
@@ -42,7 +41,7 @@ export const registerHandshake = (
 
 	if (!options.skipEncryption) {
 		client.on("encryption_begin", (packet: Record<string, unknown>) => {
-			handleEncryption(client, packet);
+			handleEncryption(client, packet, options.accessToken);
 		});
 	}
 
@@ -58,7 +57,6 @@ export const registerHandshake = (
 		client.uuid = packet.uuid as string;
 		client.username = packet.username as string;
 
-		// 1.20.2+ uses CONFIGURATION state between LOGIN and PLAY
 		if (hasConfigurationState(client.protocolVersion)) {
 			client.write("login_acknowledged", {});
 			client.state = ProtocolState.CONFIGURATION;
@@ -78,11 +76,9 @@ const registerConfigurationHandlers = (client: Client) => {
 		client.state = ProtocolState.PLAY;
 		client.emit("login");
 
-		// Clean up config listeners
 		client.removeListener("finish_configuration", onFinishConfig);
 		client.removeListener("select_known_packs", onSelectKnownPacks);
 
-		// Support re-entering configuration from PLAY
 		client.on("start_configuration", () => {
 			client.write("configuration_acknowledged", {});
 			client.state = ProtocolState.CONFIGURATION;
@@ -91,48 +87,75 @@ const registerConfigurationHandlers = (client: Client) => {
 	};
 
 	const onSelectKnownPacks = (_packet: Record<string, unknown>) => {
-		// Respond with empty packs — let server send all data
 		client.write("select_known_packs", { packs: [] });
 	};
 
 	client.on("finish_configuration", onFinishConfig);
 	client.on("select_known_packs", onSelectKnownPacks);
 
-	// Handle registry data, feature flags, etc — just acknowledge
 	client.on("registry_data", () => {});
 };
 
 // ── Encryption handshake ──
 
-const handleEncryption = (client: Client, packet: Record<string, unknown>) => {
+const handleEncryption = (
+	client: Client,
+	packet: Record<string, unknown>,
+	accessToken?: string,
+) => {
 	const serverPublicKey = packet.publicKey as Buffer;
 	const verifyToken = packet.verifyToken as Buffer;
+	const serverId = (packet.serverId as string) ?? "";
 
-	// Generate 16-byte shared secret
 	const sharedSecret = randomBytes(16);
 
-	// RSA encrypt with server's public key (PKCS#1 v1.5)
-	const encryptedSecret = publicEncrypt(
-		{ key: serverPublicKey, padding: 1 }, // RSA_PKCS1_PADDING
-		sharedSecret,
-	);
+	const sendResponse = () => {
+		const pubKeyPem = derToPem(serverPublicKey);
+		const encryptedSecret = publicEncrypt(
+			{ key: pubKeyPem, padding: 1 },
+			sharedSecret,
+		);
+		const encryptedToken = publicEncrypt(
+			{ key: pubKeyPem, padding: 1 },
+			verifyToken,
+		);
 
-	const encryptedToken = publicEncrypt(
-		{ key: serverPublicKey, padding: 1 },
-		verifyToken,
-	);
+		client.write("encryption_begin", {
+			sharedSecret: encryptedSecret,
+			verifyToken: encryptedToken,
+		});
 
-	// Send encryption response
-	client.write("encryption_begin", {
-		sharedSecret: encryptedSecret,
-		verifyToken: encryptedToken,
-	});
+		client.setEncryption(sharedSecret);
+	};
 
-	// Enable encryption
-	client.setEncryption(sharedSecret);
+	if (accessToken && client.uuid) {
+		// Online mode: verify with Mojang session server before sending response
+		joinServer(
+			accessToken,
+			client.uuid,
+			serverId,
+			sharedSecret,
+			serverPublicKey,
+		)
+			.then(sendResponse)
+			.catch((err) => {
+				client.emit("error", err);
+				client.end("Session server join failed");
+			});
+	} else {
+		sendResponse();
+	}
 };
 
-// ── Version checks ──
+/** Convert a DER-encoded public key to PEM format. */
+const derToPem = (der: Buffer): string => {
+	const base64 = der.toString("base64");
+	const lines: string[] = [];
+	for (let i = 0; i < base64.length; i += 64) {
+		lines.push(base64.slice(i, i + 64));
+	}
+	return `-----BEGIN PUBLIC KEY-----\n${lines.join("\n")}\n-----END PUBLIC KEY-----\n`;
+};
 
 /** 1.20.2+ (protocol version 764+) uses the CONFIGURATION state. */
 const hasConfigurationState = (protocolVersion: number): boolean =>

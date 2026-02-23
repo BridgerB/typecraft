@@ -34,3 +34,6 @@
 [submodule "upstream/minecraft-protocol"]
 	path = upstream/minecraft-protocol
 	url = https://github.com/PrismarineJS/node-minecraft-protocol.git
+[submodule "upstream/prismarine-auth"]
+	path = upstream/prismarine-auth
+	url = https://github.com/PrismarineJS/prismarine-auth.git

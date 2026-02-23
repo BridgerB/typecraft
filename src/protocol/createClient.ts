@@ -4,12 +4,14 @@
  */
 
 import { createHash } from "node:crypto";
+import { authenticateMicrosoft } from "./auth.js";
 import {
 	type Client,
 	type ClientOptions,
 	connectClient,
 	createProtocolClient,
 } from "./client.js";
+import { resolveServer } from "./dns.js";
 import { registerHandshake } from "./handshake.js";
 import { registerKeepalive } from "./keepalive.js";
 
@@ -22,25 +24,43 @@ export const createClient = (options: ClientOptions): Client => {
 
 	const client = createProtocolClient(options);
 
-	// Offline mode: generate UUID from username
+	const wireUp = (
+		resolvedHost: string,
+		resolvedPort: number,
+		accessToken?: string,
+	) => {
+		registerHandshake(client, {
+			host: resolvedHost,
+			port: resolvedPort,
+			protocolVersion: client.protocolVersion,
+			skipEncryption: auth === "offline",
+			accessToken,
+		});
+		if (keepAlive) registerKeepalive(client);
+		connectClient(client, resolvedHost, resolvedPort);
+	};
+
 	if (auth === "offline") {
 		client.uuid = offlineUUID(client.username);
+		resolveServer(host, port)
+			.then(({ host: h, port: p }) => wireUp(h, p))
+			.catch((err) => client.emit("error", err));
+	} else if (auth === "microsoft") {
+		Promise.all([
+			authenticateMicrosoft({
+				username: options.username,
+				profilesFolder: options.profilesFolder,
+				onMsaCode: options.onMsaCode,
+			}),
+			resolveServer(host, port),
+		])
+			.then(([result, resolved]) => {
+				client.username = result.username;
+				client.uuid = result.uuid;
+				wireUp(resolved.host, resolved.port, result.accessToken);
+			})
+			.catch((err) => client.emit("error", err));
 	}
-
-	// Register protocol handlers
-	registerHandshake(client, {
-		host,
-		port,
-		protocolVersion: client.protocolVersion,
-		skipEncryption: auth === "offline",
-	});
-
-	if (keepAlive) {
-		registerKeepalive(client);
-	}
-
-	// Connect
-	connectClient(client, host, port);
 
 	return client;
 };
@@ -48,9 +68,7 @@ export const createClient = (options: ClientOptions): Client => {
 /** Generate an offline-mode UUID from a username (consistent with Minecraft's algorithm). */
 const offlineUUID = (username: string): string => {
 	const hash = createHash("md5").update(`OfflinePlayer:${username}`).digest();
-	// Set version 3 (name-based, MD5)
 	hash[6] = (hash[6] & 0x0f) | 0x30;
-	// Set variant (RFC 4122)
 	hash[8] = (hash[8] & 0x3f) | 0x80;
 	const hex = hash.toString("hex");
 	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;

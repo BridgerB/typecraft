@@ -1,3 +1,5 @@
+export type { AuthResult } from "./auth.js";
+export { authenticateMicrosoft, joinServer, mcServerHash } from "./auth.js";
 export type { Client, ClientOptions, PacketMeta } from "./client.js";
 export { connectClient, createProtocolClient } from "./client.js";
 export type {
@@ -12,6 +14,7 @@ export {
 } from "./codec.js";
 export { compressPacket, decompressPacket } from "./compression.js";
 export { createClient } from "./createClient.js";
+export { resolveServer } from "./dns.js";
 export { createDecryptor, createEncryptor } from "./encryption.js";
 export { createSplitter, framePacket } from "./framing.js";
 export { registerHandshake } from "./handshake.js";
