@@ -10,3 +10,6 @@
 [submodule "upstream/prismarine-nbt"]
 	path = upstream/prismarine-nbt
 	url = git@github.com:PrismarineJS/prismarine-nbt.git
+[submodule "upstream/prismarine-chunk"]
+	path = upstream/prismarine-chunk
+	url = git@github.com:PrismarineJS/prismarine-chunk.git
