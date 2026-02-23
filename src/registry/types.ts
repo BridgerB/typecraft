@@ -84,6 +84,29 @@ export type BlockStateProperty = {
 	readonly values?: readonly string[];
 };
 
+/** Effect (potion) definition from the Minecraft data registry. */
+export type EffectDefinition = {
+	readonly id: number;
+	readonly name: string;
+	readonly displayName: string;
+	readonly type: "good" | "bad";
+};
+
+/** Attribute definition from the Minecraft data registry. */
+export type AttributeDefinition = {
+	readonly resource: string;
+	readonly name: string;
+	readonly min: number;
+	readonly max: number;
+	readonly default: number;
+};
+
+/** Block collision shape data from the Minecraft data registry. */
+export type BlockCollisionShapes = {
+	readonly blocks: Readonly<Record<string, number | readonly number[]>>;
+	readonly shapes: Readonly<Record<string, readonly (readonly number[])[]>>;
+};
+
 /** Biome definition from the Minecraft data registry. */
 export type BiomeDefinition = {
 	readonly id: number;
@@ -129,6 +152,12 @@ export type Registry = {
 	readonly entitiesById: ReadonlyMap<number, EntityDefinition>;
 	readonly entitiesByName: ReadonlyMap<string, EntityDefinition>;
 	readonly entitiesArray: readonly EntityDefinition[];
+	readonly effectsById: ReadonlyMap<number, EffectDefinition>;
+	readonly effectsByName: ReadonlyMap<string, EffectDefinition>;
+	readonly effectsArray: readonly EffectDefinition[];
+	readonly attributesByName: ReadonlyMap<string, AttributeDefinition>;
+	readonly attributesArray: readonly AttributeDefinition[];
+	readonly blockCollisionShapes: BlockCollisionShapes;
 	readonly language: Readonly<Record<string, string>>;
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;

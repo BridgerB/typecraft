@@ -37,3 +37,6 @@
 [submodule "upstream/prismarine-auth"]
 	path = upstream/prismarine-auth
 	url = https://github.com/PrismarineJS/prismarine-auth.git
+[submodule "upstream/prismarine-physics"]
+	path = upstream/prismarine-physics
+	url = https://github.com/PrismarineJS/prismarine-physics.git

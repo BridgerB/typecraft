@@ -1,8 +1,11 @@
 import MinecraftData from "minecraft-data";
 import type {
+	AttributeDefinition,
 	BiomeDefinition,
+	BlockCollisionShapes,
 	BlockDefinition,
 	BlockStateProperty,
+	EffectDefinition,
 	EnchantmentDefinition,
 	EntityDefinition,
 	FoodDefinition,
@@ -85,6 +88,28 @@ export const createRegistry = (version: string): Registry => {
 		entitiesByName.set(ent.name, ent);
 	}
 
+	const effectsArray = (mcData.effectsArray ?? []).map(toEffectDefinition);
+	const attributesArray = (mcData.attributesArray ?? []).map(
+		toAttributeDefinition,
+	);
+
+	const effectsById = new Map<number, EffectDefinition>();
+	const effectsByName = new Map<string, EffectDefinition>();
+
+	for (const eff of effectsArray) {
+		effectsById.set(eff.id, eff);
+		effectsByName.set(eff.name, eff);
+	}
+
+	const attributesByName = new Map<string, AttributeDefinition>();
+
+	for (const attr of attributesArray) {
+		attributesByName.set(attr.name, attr);
+	}
+
+	const blockCollisionShapes = (mcData.blockCollisionShapes ??
+		{}) as BlockCollisionShapes;
+
 	const versionInfo: VersionInfo = {
 		type: mcData.type as "pc" | "bedrock",
 		majorVersion: mcData.version.majorVersion ?? version,
@@ -114,6 +139,12 @@ export const createRegistry = (version: string): Registry => {
 		entitiesById,
 		entitiesByName,
 		entitiesArray,
+		effectsById,
+		effectsByName,
+		effectsArray,
+		attributesByName,
+		attributesArray,
+		blockCollisionShapes,
 		language: (mcData.language as Record<string, string>) ?? {},
 		isNewerOrEqualTo: (v: string) => mcData.isNewerOrEqualTo(v),
 		isOlderThan: (v: string) => mcData.isOlderThan(v),
@@ -216,4 +247,23 @@ const toEntityDefinition = (
 	height: entity.height ?? 0,
 	type: entity.type,
 	category: entity.category ?? "UNKNOWN",
+});
+
+const toEffectDefinition = (
+	effect: MinecraftData.Effect,
+): EffectDefinition => ({
+	id: effect.id,
+	name: effect.name,
+	displayName: effect.displayName,
+	type: effect.type as "good" | "bad",
+});
+
+const toAttributeDefinition = (
+	attr: MinecraftData.Attribute,
+): AttributeDefinition => ({
+	resource: attr.resource,
+	name: attr.name,
+	min: attr.min,
+	max: attr.max,
+	default: attr.default,
 });
