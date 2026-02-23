@@ -23,10 +23,13 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.4",
 		"@types/node": "^25.3.0",
+		"@types/three": "^0.183.1",
 		"typescript": "^5.7.0",
 		"vitest": "^3.0.0"
 	},
 	"dependencies": {
-		"minecraft-data": "^3.105.0"
+		"minecraft-assets": "^1.17.0",
+		"minecraft-data": "^3.105.0",
+		"three": "^0.183.1"
 	}
 }
