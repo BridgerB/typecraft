@@ -4,3 +4,6 @@
 [submodule "upstream/uint4"]
 	path = upstream/uint4
 	url = git@github.com:wtfaremyinitials/uint4.git
+[submodule "upstream/vec3"]
+	path = upstream/vec3
+	url = git@github.com:PrismarineJS/node-vec3.git

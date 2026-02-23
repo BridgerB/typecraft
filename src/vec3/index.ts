@@ -1,4 +1,3 @@
-export { createNibbleArray, readNibble, writeNibble } from "./nibble/index.js";
 export {
 	abs,
 	add,
@@ -38,4 +37,4 @@ export {
 	vec3FromString,
 	volume,
 	ZERO,
-} from "./vec3/index.js";
+} from "./vec3.js";
