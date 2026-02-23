@@ -25,3 +25,6 @@
 [submodule "upstream/prismarine-entity"]
 	path = upstream/prismarine-entity
 	url = https://github.com/PrismarineJS/prismarine-entity.git
+[submodule "upstream/prismarine-windows"]
+	path = upstream/prismarine-windows
+	url = https://github.com/PrismarineJS/prismarine-windows.git
