@@ -13,3 +13,9 @@
 [submodule "upstream/prismarine-chunk"]
 	path = upstream/prismarine-chunk
 	url = git@github.com:PrismarineJS/prismarine-chunk.git
+[submodule "upstream/prismarine-viewer"]
+	path = upstream/prismarine-viewer
+	url = git@github.com:PrismarineJS/prismarine-viewer.git
+[submodule "upstream/prismarine-world"]
+	path = upstream/prismarine-world
+	url = git@github.com:PrismarineJS/prismarine-world.git
