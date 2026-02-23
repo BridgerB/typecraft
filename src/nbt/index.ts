@@ -15,7 +15,9 @@ export {
 	nbtString,
 	parseNbt,
 	parseUncompressedNbt,
+	readAnonymousNbt,
 	simplifyNbt,
+	writeAnonymousNbt,
 	writeUncompressedNbt,
 } from "./nbt.js";
 export type {

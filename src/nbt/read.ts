@@ -316,6 +316,25 @@ const readPayload = (
 	}
 };
 
+// ─── Anonymous tag reader (network NBT — no name string) ────────────────────
+
+export const readAnonymousTag = (
+	buf: Buffer,
+	offset: number,
+	format: NbtFormat,
+): ReadResult<NbtRoot | null> => {
+	const tagId = buf.readUInt8(offset);
+	if (tagId === 0) return { value: null, size: 1 };
+	if (tagId !== 10)
+		throw new Error(`Expected compound tag (10) or end (0), got ${tagId}`);
+	const reader = getReader(format);
+	const result = readCompound(buf, offset + 1, reader);
+	return {
+		value: { type: "compound", name: "", value: result.value },
+		size: 1 + result.size,
+	};
+};
+
 // ─── Root tag reader ────────────────────────────────────────────────────────
 
 export const readRootTag = (

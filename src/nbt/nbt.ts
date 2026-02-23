@@ -1,5 +1,5 @@
 import { gunzipSync, inflateSync } from "node:zlib";
-import { readRootTag } from "./read.js";
+import { readAnonymousTag, readRootTag } from "./read.js";
 import type {
 	NbtByte,
 	NbtByteArray,
@@ -20,7 +20,7 @@ import type {
 	NbtTagType,
 	NbtTagValue,
 } from "./types.js";
-import { writeRootTag } from "./write.js";
+import { writeAnonymousTag, writeRootTag } from "./write.js";
 
 // ─── Decompression helpers ──────────────────────────────────────────────────
 
@@ -76,6 +76,20 @@ export const parseUncompressedNbt = (
 	const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
 	return readRootTag(buf, 0, format).value;
 };
+
+// ─── Parse anonymous (network NBT — no name string) ─────────────────────────
+
+export const readAnonymousNbt = (
+	data: Buffer,
+	offset: number,
+	format: NbtFormat = "big",
+): { value: NbtRoot | null; size: number } =>
+	readAnonymousTag(data, offset, format);
+
+export const writeAnonymousNbt = (
+	root: NbtRoot | null,
+	format: NbtFormat = "big",
+): Buffer => writeAnonymousTag(root, format);
 
 // ─── Write ──────────────────────────────────────────────────────────────────
 

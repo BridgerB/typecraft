@@ -292,6 +292,20 @@ const writePayload = (
 	}
 };
 
+// ─── Anonymous tag writer (network NBT — no name string) ────────────────────
+
+export const writeAnonymousTag = (
+	root: NbtRoot | null,
+	format: NbtFormat,
+): Buffer => {
+	if (root == null) return Buffer.from([0x00]);
+	const writer = getWriter(format);
+	const buf = Buffer.alloc(1024 * 1024);
+	buf.writeInt8(10, 0);
+	const offset = writeCompound(root.value, buf, 1, writer);
+	return Buffer.from(buf.subarray(0, offset));
+};
+
 // ─── Root tag writer ────────────────────────────────────────────────────────
 
 export const writeRootTag = (root: NbtRoot, format: NbtFormat): Buffer => {
