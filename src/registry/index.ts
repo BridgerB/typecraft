@@ -11,6 +11,8 @@ export type {
 	EntityDefinition,
 	FoodDefinition,
 	ItemDefinition,
+	RawRecipe,
+	RawRecipeItem,
 	Registry,
 	VersionInfo,
 } from "./types.js";

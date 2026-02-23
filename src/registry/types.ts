@@ -101,6 +101,24 @@ export type AttributeDefinition = {
 	readonly default: number;
 };
 
+/** Raw recipe from minecraft-data. Keyed by result item ID. */
+export type RawRecipeItem =
+	| null
+	| number
+	| { readonly id: number; readonly metadata?: number | null };
+
+/** Raw recipe entry from minecraft-data. */
+export type RawRecipe = {
+	readonly inShape?: readonly (readonly RawRecipeItem[])[];
+	readonly outShape?: readonly (readonly RawRecipeItem[])[];
+	readonly ingredients?: readonly RawRecipeItem[];
+	readonly result: {
+		readonly id: number;
+		readonly count: number;
+		readonly metadata?: number | null;
+	};
+};
+
 /** Block collision shape data from the Minecraft data registry. */
 export type BlockCollisionShapes = {
 	readonly blocks: Readonly<Record<string, number | readonly number[]>>;
@@ -158,6 +176,7 @@ export type Registry = {
 	readonly attributesByName: ReadonlyMap<string, AttributeDefinition>;
 	readonly attributesArray: readonly AttributeDefinition[];
 	readonly blockCollisionShapes: BlockCollisionShapes;
+	readonly recipes: Readonly<Record<number, readonly RawRecipe[]>>;
 	readonly language: Readonly<Record<string, string>>;
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;

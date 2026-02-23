@@ -40,3 +40,9 @@
 [submodule "upstream/prismarine-physics"]
 	path = upstream/prismarine-physics
 	url = https://github.com/PrismarineJS/prismarine-physics.git
+[submodule "upstream/mineflayer"]
+	path = upstream/mineflayer
+	url = https://github.com/PrismarineJS/mineflayer.git
+[submodule "upstream/prismarine-recipe"]
+	path = upstream/prismarine-recipe
+	url = https://github.com/PrismarineJS/prismarine-recipe.git

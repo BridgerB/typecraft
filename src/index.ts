@@ -285,6 +285,12 @@ export {
 	writeVarLong,
 } from "./protocol/index.js";
 export {
+	findRecipes,
+	parseRecipe,
+	type Recipe,
+	type RecipeItem,
+} from "./recipe/index.js";
+export {
 	type AttributeDefinition,
 	type BiomeDefinition,
 	type BlockCollisionShapes,
@@ -297,6 +303,8 @@ export {
 	type EntityDefinition,
 	type FoodDefinition,
 	type ItemDefinition,
+	type RawRecipe,
+	type RawRecipeItem,
 	type Registry,
 	type VersionInfo,
 } from "./registry/index.js";

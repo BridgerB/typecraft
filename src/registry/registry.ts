@@ -10,6 +10,7 @@ import type {
 	EntityDefinition,
 	FoodDefinition,
 	ItemDefinition,
+	RawRecipe,
 	Registry,
 	VersionInfo,
 } from "./types.js";
@@ -145,6 +146,8 @@ export const createRegistry = (version: string): Registry => {
 		attributesByName,
 		attributesArray,
 		blockCollisionShapes,
+		recipes: ((mcData as unknown as Record<string, unknown>).recipes ??
+			{}) as Readonly<Record<number, readonly RawRecipe[]>>,
 		language: (mcData.language as Record<string, string>) ?? {},
 		isNewerOrEqualTo: (v: string) => mcData.isNewerOrEqualTo(v),
 		isOlderThan: (v: string) => mcData.isOlderThan(v),
