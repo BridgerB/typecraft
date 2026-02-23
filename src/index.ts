@@ -17,6 +17,13 @@ export {
 	writeRegionChunk,
 } from "./anvil/index.js";
 export {
+	type BlockInfo,
+	blockToStateId,
+	getBlock,
+	setBlock,
+	stateIdToBlock,
+} from "./block.js";
+export {
 	BIOME_SECTION_VOLUME,
 	type BiomeSection,
 	type BitArray,

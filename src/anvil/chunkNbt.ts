@@ -41,6 +41,24 @@ export const nbtToChunkColumn = (
 		maxBitsPerBiome: neededBits(registry.biomesArray.length),
 	});
 
+	// Load block entities from the raw (unsimplified) NBT to preserve types
+	const rawBlockEntities = (nbtRoot.value as Record<string, NbtTag>)
+		.block_entities;
+	if (rawBlockEntities?.type === "list") {
+		const listVal = rawBlockEntities.value;
+		if (listVal.type === "compound") {
+			for (const entry of listVal.value) {
+				const compound = entry as Record<string, NbtTag>;
+				const x = compound.x?.value as number | undefined;
+				const y = compound.y?.value as number | undefined;
+				const z = compound.z?.value as number | undefined;
+				if (x !== undefined && y !== undefined && z !== undefined) {
+					col.blockEntities[`${x & 0xf},${y},${z & 0xf}`] = compound;
+				}
+			}
+		}
+	}
+
 	for (const section of sections) {
 		const sectionY = section.Y as number;
 		const blockStates = section.block_states as Record<string, unknown>;
@@ -185,7 +203,7 @@ export const chunkColumnToNbt = (
 			yPos: nbtInt(col.minY >> 4),
 			zPos: nbtInt(chunkZ),
 			sections: nbtList({ type: "compound", value: sectionTags }),
-			block_entities: nbtList(null),
+			block_entities: serializeBlockEntities(col.blockEntities),
 			LastUpdate: nbtLong([0, 0]),
 			InhabitedTime: nbtLong([0, 0]),
 			structures: nbtCompound({}),
@@ -351,4 +369,17 @@ const extractBiomePalette = (
 		names: ids.map((id) => seen.get(id)!),
 		ids,
 	};
+};
+
+const serializeBlockEntities = (entities: Record<string, unknown>): NbtTag => {
+	const keys = Object.keys(entities);
+	if (keys.length === 0) return nbtList(null);
+
+	const compounds: NbtTagValue[] = [];
+	for (const value of Object.values(entities)) {
+		// Stored as raw NbtTag compound value (Record<string, NbtTag>)
+		compounds.push(value as NbtTagValue);
+	}
+
+	return nbtList({ type: "compound", value: compounds });
 };

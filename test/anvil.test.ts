@@ -19,6 +19,12 @@ import {
 	writeRegionChunk,
 } from "../src/anvil/region.js";
 import {
+	blockToStateId,
+	getBlock,
+	setBlock,
+	stateIdToBlock,
+} from "../src/block.js";
+import {
 	createChunkColumn,
 	getBiomeId,
 	getBlockStateId,
@@ -27,6 +33,7 @@ import {
 	setBlockStateId,
 } from "../src/chunk/index.js";
 import { nbtCompound, nbtInt, nbtString } from "../src/nbt/index.js";
+import type { NbtTag } from "../src/nbt/types.js";
 import { createRegistry } from "../src/registry/index.js";
 
 const registry = createRegistry("1.20.4");
@@ -340,5 +347,164 @@ describe("AnvilWorld", () => {
 		expect(getBlockStateId(loaded2!, 0, 0, 0)).toBe(2);
 
 		await closeAnvilWorld(world);
+	});
+});
+
+// ── Block entity roundtrip ──
+
+describe("block entities", () => {
+	const makeTestColumn = () => {
+		const maxBlockStateId = Math.max(
+			...registry.blocksArray.map((b) => b.maxStateId),
+		);
+		return createChunkColumn({
+			minY: -64,
+			worldHeight: 384,
+			maxBitsPerBlock: neededBits(maxBlockStateId),
+			maxBitsPerBiome: neededBits(registry.biomesArray.length),
+		});
+	};
+
+	it("roundtrips block entities through NBT", () => {
+		const col = makeTestColumn();
+
+		// Store a block entity as raw NbtTag compound value
+		const chestEntity: Record<string, NbtTag> = {
+			id: nbtString("minecraft:chest"),
+			x: nbtInt(5),
+			y: nbtInt(10),
+			z: nbtInt(3),
+			Items: { type: "list", value: { type: "end", value: [] } },
+			Lock: nbtString(""),
+		};
+
+		col.blockEntities["5,10,3"] = chestEntity;
+
+		const nbt = chunkColumnToNbt(col, 0, 0, registry, 3700);
+		const restored = nbtToChunkColumn(nbt, registry);
+
+		const entity = restored.blockEntities["5,10,3"] as Record<string, NbtTag>;
+		expect(entity).toBeDefined();
+		expect(entity.id.value).toBe("minecraft:chest");
+		expect(entity.x.value).toBe(5);
+		expect(entity.y.value).toBe(10);
+		expect(entity.z.value).toBe(3);
+	});
+
+	it("roundtrips multiple block entities", () => {
+		const col = makeTestColumn();
+
+		col.blockEntities["0,64,0"] = {
+			id: nbtString("minecraft:sign"),
+			x: nbtInt(0),
+			y: nbtInt(64),
+			z: nbtInt(0),
+		} as Record<string, NbtTag>;
+
+		col.blockEntities["15,0,15"] = {
+			id: nbtString("minecraft:chest"),
+			x: nbtInt(15),
+			y: nbtInt(0),
+			z: nbtInt(15),
+		} as Record<string, NbtTag>;
+
+		const nbt = chunkColumnToNbt(col, 0, 0, registry, 3700);
+		const restored = nbtToChunkColumn(nbt, registry);
+
+		const sign = restored.blockEntities["0,64,0"] as Record<string, NbtTag>;
+		const chest = restored.blockEntities["15,0,15"] as Record<string, NbtTag>;
+
+		expect(sign).toBeDefined();
+		expect(sign.id.value).toBe("minecraft:sign");
+		expect(chest).toBeDefined();
+		expect(chest.id.value).toBe("minecraft:chest");
+	});
+
+	it("preserves empty block entities", () => {
+		const col = makeTestColumn();
+
+		const nbt = chunkColumnToNbt(col, 0, 0, registry, 3700);
+		const restored = nbtToChunkColumn(nbt, registry);
+
+		expect(Object.keys(restored.blockEntities).length).toBe(0);
+	});
+});
+
+// ── getBlock / setBlock convenience ──
+
+describe("getBlock / setBlock", () => {
+	const makeTestColumn = () => {
+		const maxBlockStateId = Math.max(
+			...registry.blocksArray.map((b) => b.maxStateId),
+		);
+		return createChunkColumn({
+			minY: -64,
+			worldHeight: 384,
+			maxBitsPerBlock: neededBits(maxBlockStateId),
+			maxBitsPerBiome: neededBits(registry.biomesArray.length),
+		});
+	};
+
+	it("stateIdToBlock returns name and empty properties for simple blocks", () => {
+		const stone = registry.blocksByName.get("stone")!;
+		const info = stateIdToBlock(registry, stone.defaultState);
+		expect(info.name).toBe("stone");
+		expect(Object.keys(info.properties).length).toBe(0);
+	});
+
+	it("stateIdToBlock returns properties for stateful blocks", () => {
+		const stairs = registry.blocksByName.get("oak_stairs")!;
+		const info = stateIdToBlock(registry, stairs.minStateId);
+		expect(info.name).toBe("oak_stairs");
+		expect(info.properties.facing).toBeDefined();
+		expect(info.properties.half).toBeDefined();
+		expect(info.properties.shape).toBeDefined();
+	});
+
+	it("blockToStateId roundtrips with stateIdToBlock", () => {
+		const stairs = registry.blocksByName.get("oak_stairs")!;
+		for (let offset = 0; offset < 20; offset++) {
+			const stateId = stairs.minStateId + offset;
+			const info = stateIdToBlock(registry, stateId);
+			const recovered = blockToStateId(registry, info.name, info.properties);
+			expect(recovered).toBe(stateId);
+		}
+	});
+
+	it("blockToStateId with no properties returns default state", () => {
+		const stone = registry.blocksByName.get("stone")!;
+		expect(blockToStateId(registry, "stone")).toBe(stone.defaultState);
+	});
+
+	it("setBlock and getBlock work with names", () => {
+		const col = makeTestColumn();
+		setBlock(col, 5, 64, 5, registry, "stone");
+		const info = getBlock(col, 5, 64, 5, registry);
+		expect(info.name).toBe("stone");
+	});
+
+	it("setBlock with properties and getBlock roundtrips", () => {
+		const col = makeTestColumn();
+		setBlock(col, 0, 0, 0, registry, "oak_stairs", {
+			facing: "south",
+			half: "bottom",
+			shape: "straight",
+			waterlogged: "false",
+		});
+		const info = getBlock(col, 0, 0, 0, registry);
+		expect(info.name).toBe("oak_stairs");
+		expect(info.properties.facing).toBe("south");
+		expect(info.properties.half).toBe("bottom");
+		expect(info.properties.shape).toBe("straight");
+		expect(info.properties.waterlogged).toBe("false");
+	});
+
+	it("setBlock with partial properties fills defaults", () => {
+		const col = makeTestColumn();
+		// Only specify facing, rest should use first value in each property's values array
+		setBlock(col, 0, 0, 0, registry, "oak_stairs", { facing: "east" });
+		const info = getBlock(col, 0, 0, 0, registry);
+		expect(info.name).toBe("oak_stairs");
+		expect(info.properties.facing).toBe("east");
 	});
 });
