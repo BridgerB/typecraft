@@ -213,7 +213,7 @@ export const createWebViewer = (
 ): WebViewer => {
 	const port = options?.port ?? 3000;
 	const viewDistance = options?.viewDistance ?? 6;
-	const distDir = resolve(import.meta.dirname, "../../dist/web");
+	const distDir = resolve(import.meta.dirname, "../../dist");
 
 	const clients = new Set<WebSocket>();
 	const chunkCache: ChunkCache = new Map();
@@ -221,11 +221,83 @@ export const createWebViewer = (
 
 	// ── Static file server ──
 
-	const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-		const url = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
-		const filePath = resolve(distDir, `.${url}`);
+	const threeDir = resolve(
+		import.meta.dirname,
+		"../../node_modules/three/build",
+	);
 
-		if (!existsSync(filePath)) {
+	const INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Typecraft Viewer</title>
+<script type="importmap">
+{ "imports": { "three": "/vendor/three.module.js" } }
+</script>
+<script>
+// Minimal Buffer polyfill for browser (read-only subset used by chunk code)
+class Buffer extends Uint8Array {
+  static from(src, enc) {
+    if (enc === "base64") {
+      const bin = atob(src);
+      const arr = new Buffer(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return arr;
+    }
+    if (src instanceof ArrayBuffer || src instanceof Uint8Array) return new Buffer(src);
+    return new Buffer(0);
+  }
+  static alloc(n) { return new Buffer(n); }
+  readUInt8(o) { return this[o]; }
+  readInt16BE(o) { const v = (this[o] << 8) | this[o+1]; return v > 0x7fff ? v - 0x10000 : v; }
+  readUInt32BE(o) { return ((this[o] << 24) | (this[o+1] << 16) | (this[o+2] << 8) | this[o+3]) >>> 0; }
+  writeUInt8(v, o) { this[o] = v & 0xff; return o + 1; }
+  writeInt16BE(v, o) { this[o] = (v >> 8) & 0xff; this[o+1] = v & 0xff; return o + 2; }
+  writeUInt32BE(v, o) { this[o]=(v>>>24)&0xff; this[o+1]=(v>>>16)&0xff; this[o+2]=(v>>>8)&0xff; this[o+3]=v&0xff; return o + 4; }
+}
+globalThis.Buffer = Buffer;
+</script>
+<style>
+body { margin: 0; overflow: hidden; background: #000; }
+canvas { display: block; width: 100vw; height: 100vh; }
+#status { position: fixed; top: 12px; left: 12px; color: #fff; font: 14px monospace; z-index: 1; }
+</style>
+</head>
+<body>
+<div id="status">Connecting...</div>
+<canvas id="viewer"></canvas>
+<script type="module" src="/web/client.js"></script>
+</body>
+</html>`;
+
+	const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+		if (req.url === "/" || req.url === "/index.html") {
+			res.writeHead(200, { "Content-Type": "text/html" });
+			res.end(INDEX_HTML);
+			return;
+		}
+
+		// Serve three.js from node_modules
+		if (req.url?.startsWith("/vendor/")) {
+			const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
+			if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
+				res.writeHead(404);
+				res.end("Not found");
+				return;
+			}
+			try {
+				const content = readFileSync(vendorFile);
+				res.writeHead(200, { "Content-Type": "text/javascript" });
+				res.end(content);
+			} catch {
+				res.writeHead(500);
+				res.end("Internal error");
+			}
+			return;
+		}
+
+		const filePath = resolve(distDir, `.${req.url}`);
+
+		if (!filePath.startsWith(distDir) || !existsSync(filePath)) {
 			res.writeHead(404);
 			res.end("Not found");
 			return;

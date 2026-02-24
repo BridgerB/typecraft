@@ -19,6 +19,12 @@ bot.on("login", () => console.log("[bot] Logged in, version:", bot.version));
 bot.on("spawn", () => {
 	console.log("[bot] Spawned at", bot.entity.position);
 	createWebViewer(bot, { port: 3000, viewDistance: 6 });
+
+	// Spin slowly: full rotation every ~30 seconds
+	const SPIN_SPEED = (2 * Math.PI) / (30 * 20);
+	setInterval(() => {
+		bot.entity.yaw = (bot.entity.yaw + SPIN_SPEED) % (2 * Math.PI);
+	}, 50);
 });
 
 let chunks = 0;

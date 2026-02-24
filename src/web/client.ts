@@ -233,7 +233,7 @@ const connect = () => {
 			if (!viewer) {
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
-				viewer = createViewer(canvas, { workerUrl: "worker.js" });
+				viewer = createViewer(canvas, { workerUrl: "/web/worker.js" });
 			}
 
 			setStatus("Waiting for assets...");
