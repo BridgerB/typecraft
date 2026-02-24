@@ -1,4 +1,4 @@
-export { chatBuilderFromString, createChatBuilder } from "./builder.js";
+export { chatBuilderFromString, createChatBuilder } from "./builder.ts";
 export {
 	chatAppend,
 	chatClone,
@@ -12,7 +12,7 @@ export {
 	parseChatMessage,
 	processNbtMessage,
 	vsprintf,
-} from "./chat.js";
+} from "./chat.ts";
 export {
 	ANSI_CODES,
 	COLOR_CODE_TO_NAME,
@@ -21,7 +21,7 @@ export {
 	MOTD_COLOR_CODES,
 	MOTD_FORMAT_CODES,
 	SUPPORTED_COLORS,
-} from "./styles.js";
+} from "./styles.ts";
 export type {
 	ChatBuilder,
 	ChatClickEvent,
@@ -31,4 +31,4 @@ export type {
 	ClickEventAction,
 	HoverEventAction,
 	Language,
-} from "./types.js";
+} from "./types.ts";

@@ -8,8 +8,8 @@ import {
 	chatToString,
 	parseChatMessage,
 	processNbtMessage,
-} from "../chat/index.js";
-import type { Bot, BotOptions } from "./types.js";
+} from "../chat/index.ts";
+import type { Bot, BotOptions } from "./types.ts";
 
 /** Check if a value looks like an NBT compound (has type/value fields). */
 const isNbt = (v: unknown): boolean =>

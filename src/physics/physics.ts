@@ -3,9 +3,9 @@
  * Replaces prismarine-physics with a functional API.
  */
 
-import type { Entity } from "../entity/types.js";
-import { getEnchants } from "../item/item.js";
-import type { Registry } from "../registry/types.js";
+import type { Entity } from "../entity/types.ts";
+import { getEnchants } from "../item/item.ts";
+import type { Registry } from "../registry/types.ts";
 import {
 	cloneAABB,
 	computeOffsetX,
@@ -16,14 +16,14 @@ import {
 	extendAABB,
 	intersectsAABB,
 	offsetAABB,
-} from "./aabb.js";
+} from "./aabb.ts";
 import {
 	addAttributeModifier,
 	createAttributeValue,
 	deleteAttributeModifier,
 	getAttributeValue,
 	hasAttributeModifier,
-} from "./attribute.js";
+} from "./attribute.ts";
 import type {
 	AABB,
 	MutableVec3,
@@ -33,7 +33,7 @@ import type {
 	PhysicsWorld,
 	PlayerControls,
 	PlayerState,
-} from "./types.js";
+} from "./types.ts";
 
 // ── Version-gated features ──
 

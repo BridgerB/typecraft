@@ -1,4 +1,4 @@
-export { createRegistry } from "./registry.js";
+export { createRegistry } from "./registry.ts";
 export type {
 	AttributeDefinition,
 	BiomeDefinition,
@@ -15,4 +15,4 @@ export type {
 	RawRecipeItem,
 	Registry,
 	VersionInfo,
-} from "./types.js";
+} from "./types.ts";

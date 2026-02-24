@@ -1,7 +1,7 @@
 import { join } from "node:path";
-import type { ChunkColumn } from "../chunk/index.js";
-import type { Registry } from "../registry/index.js";
-import { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.js";
+import type { ChunkColumn } from "../chunk/index.ts";
+import type { Registry } from "../registry/index.ts";
+import { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.ts";
 import {
 	closeRegionFile,
 	hasChunk,
@@ -9,7 +9,7 @@ import {
 	type RegionFile,
 	readRegionChunk,
 	writeRegionChunk,
-} from "./region.js";
+} from "./region.ts";
 
 export type AnvilWorld = {
 	readonly path: string;

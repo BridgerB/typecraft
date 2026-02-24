@@ -15,8 +15,8 @@ import {
 	toNotchianYaw,
 	toRadians,
 	withTimeout,
-} from "../src/bot/index.js";
-import type { Client } from "../src/protocol/index.js";
+} from "../src/bot/index.ts";
+import type { Client } from "../src/protocol/index.ts";
 
 // ── Mock client factory ──
 

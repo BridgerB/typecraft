@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createNibbleArray, readNibble, writeNibble } from "../src/index.js";
+import { createNibbleArray, readNibble, writeNibble } from "../src/index.ts";
 
 describe("readNibble", () => {
 	it("reads low nibble at even index", () => {

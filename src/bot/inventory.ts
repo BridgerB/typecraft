@@ -3,22 +3,22 @@
  * Combines upstream inventory.js and simple_inventory.js.
  */
 
-import type { Entity } from "../entity/index.js";
-import { fromNotch, type Item } from "../item/index.js";
-import type { Vec3 } from "../vec3/index.js";
+import type { Entity } from "../entity/index.ts";
+import { fromNotch, type Item } from "../item/index.ts";
+import type { Vec3 } from "../vec3/index.ts";
 import {
 	createWindow,
 	getWindowTypes,
 	updateSlot,
 	type Window,
-} from "../window/index.js";
+} from "../window/index.ts";
 import type {
 	Bot,
 	BotOptions,
 	EquipmentDestination,
 	TransferOptions,
-} from "./types.js";
-import { once } from "./utils.js";
+} from "./types.ts";
+import { once } from "./utils.ts";
 
 const WINDOW_TIMEOUT = 5000;
 

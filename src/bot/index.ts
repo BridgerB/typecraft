@@ -8,9 +8,9 @@ export {
 	toNotchianPitch,
 	toNotchianYaw,
 	toRadians,
-} from "./conversions.js";
-export { createBot } from "./createBot.js";
-export type { BotEventMap } from "./events.js";
+} from "./conversions.ts";
+export { createBot } from "./createBot.ts";
+export type { BotEventMap } from "./events.ts";
 export type {
 	BossBar,
 	BossBarColor,
@@ -44,7 +44,7 @@ export type {
 	TransferOptions,
 	ViewDistance,
 	VillagerTrade,
-} from "./types.js";
+} from "./types.ts";
 export {
 	clamp,
 	createDoneTask,
@@ -53,4 +53,4 @@ export {
 	onceWithCleanup,
 	sleep,
 	withTimeout,
-} from "./utils.js";
+} from "./utils.ts";

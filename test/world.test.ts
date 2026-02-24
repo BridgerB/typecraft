@@ -3,16 +3,16 @@ import {
 	createChunkColumn,
 	neededBits,
 	setBlockStateId,
-} from "../src/chunk/index.js";
-import { createRegistry } from "../src/registry/index.js";
-import { vec3 } from "../src/vec3/index.js";
+} from "../src/chunk/index.ts";
+import { createRegistry } from "../src/registry/index.ts";
+import { vec3 } from "../src/vec3/index.ts";
 import {
 	BlockFace,
 	createManhattanIterator,
 	createOctahedronIterator,
 	createRaycastIterator,
 	createSpiralIterator2d,
-} from "../src/world/iterators.js";
+} from "../src/world/iterators.ts";
 import {
 	type ChunkGenerator,
 	createWorld,
@@ -28,7 +28,7 @@ import {
 	worldSetBiomeId,
 	worldSetBlock,
 	worldSetBlockStateId,
-} from "../src/world/world.js";
+} from "../src/world/world.ts";
 
 const registry = createRegistry("1.20.4");
 

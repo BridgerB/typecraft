@@ -3,9 +3,9 @@
  * Handles login, respawn, game_state_change, difficulty, and brand packets.
  */
 
-import { simplifyNbt } from "../nbt/index.js";
-import type { NbtTag } from "../nbt/index.js";
-import type { Bot, BotOptions, Difficulty, GameMode } from "./types.js";
+import { simplifyNbt } from "../nbt/index.ts";
+import type { NbtTag } from "../nbt/index.ts";
+import type { Bot, BotOptions, Difficulty, GameMode } from "./types.ts";
 
 const DIFFICULTY_NAMES: readonly Difficulty[] = [
 	"peaceful",

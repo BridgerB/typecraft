@@ -4,9 +4,9 @@ export {
 	loadChunk,
 	openAnvilWorld,
 	saveChunk,
-} from "./anvil.js";
-export { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.js";
-export { type LevelData, readLevelDat, writeLevelDat } from "./levelDat.js";
+} from "./anvil.ts";
+export { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.ts";
+export { type LevelData, readLevelDat, writeLevelDat } from "./levelDat.ts";
 export {
 	closeRegionFile,
 	hasChunk,
@@ -14,4 +14,4 @@ export {
 	type RegionFile,
 	readRegionChunk,
 	writeRegionChunk,
-} from "./region.js";
+} from "./region.ts";

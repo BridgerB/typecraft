@@ -3,10 +3,10 @@
  * Combines upstream place_block.js, generic_place.js, place_entity.js.
  */
 
-import type { Entity } from "../entity/index.js";
-import { type Vec3, vec3 } from "../vec3/index.js";
-import type { Bot, BotOptions } from "./types.js";
-import { once } from "./utils.js";
+import type { Entity } from "../entity/index.ts";
+import { type Vec3, vec3 } from "../vec3/index.ts";
+import type { Bot, BotOptions } from "./types.ts";
+import { once } from "./utils.ts";
 
 export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 	bot.activateBlock = async (

@@ -3,8 +3,8 @@
  * Uses src/recipe/ for recipe data.
  */
 
-import { findRecipes, type Recipe } from "../recipe/index.js";
-import type { Bot, BotOptions } from "./types.js";
+import { findRecipes, type Recipe } from "../recipe/index.ts";
+import type { Bot, BotOptions } from "./types.ts";
 
 export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 	bot.recipesFor = (

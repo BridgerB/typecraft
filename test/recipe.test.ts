@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findRecipes, parseRecipe } from "../src/recipe/recipe.js";
-import { createRegistry } from "../src/registry/registry.js";
+import { findRecipes, parseRecipe } from "../src/recipe/recipe.ts";
+import { createRegistry } from "../src/registry/registry.ts";
 
 const registry = createRegistry("1.20.4");
 

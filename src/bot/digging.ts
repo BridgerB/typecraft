@@ -2,9 +2,9 @@
  * Block mining — dig, stopDigging, canDigBlock, digTime.
  */
 
-import { length, subtract, type Vec3, vec3 } from "../vec3/index.js";
-import type { Bot, BotOptions, Task } from "./types.js";
-import { createTask, sleep } from "./utils.js";
+import { length, subtract, type Vec3, vec3 } from "../vec3/index.ts";
+import type { Bot, BotOptions, Task } from "./types.ts";
+import { createTask, sleep } from "./utils.ts";
 
 export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	let digging = false;

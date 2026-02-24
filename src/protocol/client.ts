@@ -6,12 +6,12 @@
 import { EventEmitter } from "node:events";
 import { type Socket, connect as tcpConnect } from "node:net";
 import MinecraftData from "minecraft-data";
-import { createPacketCodec, type PacketCodec } from "./codec.js";
-import { compressPacket, decompressPacket } from "./compression.js";
-import { createDecryptor, createEncryptor } from "./encryption.js";
-import { createSplitter, framePacket } from "./framing.js";
-import { Direction, ProtocolState } from "./states.js";
-import { readVarInt } from "./varint.js";
+import { createPacketCodec, type PacketCodec } from "./codec.ts";
+import { compressPacket, decompressPacket } from "./compression.ts";
+import { createDecryptor, createEncryptor } from "./encryption.ts";
+import { createSplitter, framePacket } from "./framing.ts";
+import { Direction, ProtocolState } from "./states.ts";
+import { readVarInt } from "./varint.ts";
 
 // ── Types ──
 

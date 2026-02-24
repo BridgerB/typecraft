@@ -12,8 +12,8 @@ import {
 import { createRequire } from "node:module";
 import { extname, join, resolve } from "node:path";
 import { type WebSocket, WebSocketServer } from "ws";
-import type { Bot } from "../bot/types.js";
-import type { BiomeTints } from "../viewer/assets.js";
+import type { Bot } from "../bot/types.ts";
+import type { BiomeTints } from "../viewer/assets.ts";
 
 // ── Types ──
 

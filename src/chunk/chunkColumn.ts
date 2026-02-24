@@ -6,7 +6,7 @@ import {
 	readBiomeSection,
 	setSectionBiome,
 	writeBiomeSection,
-} from "./biomeSection.js";
+} from "./biomeSection.ts";
 import {
 	type BitArray,
 	bitArrayFromLongArray,
@@ -17,7 +17,7 @@ import {
 	readBitArrayData,
 	setBitValue,
 	writeBitArrayData,
-} from "./bitArray.js";
+} from "./bitArray.ts";
 import {
 	type ChunkSection,
 	createChunkSection,
@@ -26,7 +26,7 @@ import {
 	sectionFromLocalPalette,
 	setSectionBlock,
 	writeChunkSection,
-} from "./chunkSection.js";
+} from "./chunkSection.ts";
 
 const DEFAULT_MIN_Y = -64;
 const DEFAULT_WORLD_HEIGHT = 384;

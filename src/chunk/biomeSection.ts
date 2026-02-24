@@ -1,10 +1,10 @@
-import type { BitArray } from "./bitArray.js";
+import type { BitArray } from "./bitArray.ts";
 import {
 	BIOME_SECTION_VOLUME,
 	GLOBAL_BITS_PER_BIOME,
 	MAX_BITS_PER_BIOME,
 	MIN_BITS_PER_BIOME,
-} from "./constants.js";
+} from "./constants.ts";
 import {
 	createIndirectContainer,
 	createSingleValueContainer,
@@ -14,7 +14,7 @@ import {
 	readPaletteContainer,
 	setContainerValue,
 	writePaletteContainer,
-} from "./paletteContainer.js";
+} from "./paletteContainer.ts";
 
 export type BiomeSection = {
 	data: PaletteContainer;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEntity } from "../src/entity/entity.js";
+import { createEntity } from "../src/entity/entity.ts";
 import {
 	cloneAABB,
 	computeOffsetX,
@@ -10,25 +10,25 @@ import {
 	extendAABB,
 	intersectsAABB,
 	offsetAABB,
-} from "../src/physics/aabb.js";
+} from "../src/physics/aabb.ts";
 import {
 	addAttributeModifier,
 	createAttributeValue,
 	deleteAttributeModifier,
 	getAttributeValue,
 	hasAttributeModifier,
-} from "../src/physics/attribute.js";
+} from "../src/physics/attribute.ts";
 import {
 	applyPlayerState,
 	createPhysics,
 	createPlayerState,
-} from "../src/physics/physics.js";
+} from "../src/physics/physics.ts";
 import type {
 	PhysicsBlock,
 	PhysicsWorld,
 	PlayerControls,
-} from "../src/physics/types.js";
-import { createRegistry } from "../src/registry/registry.js";
+} from "../src/physics/types.ts";
+import { createRegistry } from "../src/registry/registry.ts";
 
 const registry = createRegistry("1.20.4");
 

@@ -9,13 +9,13 @@ import {
 	getBiomeId,
 	getBlockStateId,
 	setBlockStateId,
-} from "../chunk/index.js";
-import type { BiomeTints, ResolvedBlockStates } from "../viewer/assets.js";
+} from "../chunk/index.ts";
+import type { BiomeTints, ResolvedBlockStates } from "../viewer/assets.ts";
 import {
 	type GetBlock,
 	getSectionGeometry,
 	type MesherBlock,
-} from "../viewer/mesher.js";
+} from "../viewer/mesher.ts";
 
 // ── Types ──
 

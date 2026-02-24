@@ -1,4 +1,4 @@
-import { add, floor, scale, subtract, type Vec3, vec3 } from "../vec3/index.js";
+import { add, floor, scale, subtract, type Vec3, vec3 } from "../vec3/index.ts";
 
 // ── Block face ──
 

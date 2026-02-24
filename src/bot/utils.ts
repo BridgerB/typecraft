@@ -3,7 +3,7 @@
  */
 
 import type { EventEmitter } from "node:events";
-import type { Task } from "./types.js";
+import type { Task } from "./types.ts";
 
 /** Promise-based delay. */
 export const sleep = (ms: number): Promise<void> =>

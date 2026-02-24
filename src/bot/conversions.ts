@@ -2,7 +2,7 @@
  * Angle and velocity conversions between Notchian protocol values and radians.
  */
 
-import { scalarEuclideanMod, type Vec3, vec3 } from "../vec3/index.js";
+import { scalarEuclideanMod, type Vec3, vec3 } from "../vec3/index.ts";
 
 const PI = Math.PI;
 const PI_2 = Math.PI * 2;

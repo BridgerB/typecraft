@@ -37,4 +37,4 @@ export {
 	vec3FromString,
 	volume,
 	ZERO,
-} from "./vec3.js";
+} from "./vec3.ts";

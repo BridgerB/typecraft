@@ -1,10 +1,10 @@
-import { loadChunk, saveChunk } from "../anvil/anvil.js";
-import type { AnvilWorld } from "../anvil/index.js";
+import { loadChunk, saveChunk } from "../anvil/anvil.ts";
+import type { AnvilWorld } from "../anvil/index.ts";
 import {
 	type BlockInfo,
 	getBlock as chunkGetBlock,
 	setBlock as chunkSetBlock,
-} from "../block.js";
+} from "../block.ts";
 import {
 	type ChunkColumn,
 	getBiomeId,
@@ -15,9 +15,9 @@ import {
 	setBlockLight,
 	setBlockStateId,
 	setSkyLight,
-} from "../chunk/index.js";
-import type { Registry } from "../registry/index.js";
-import type { Vec3 } from "../vec3/index.js";
+} from "../chunk/index.ts";
+import type { Registry } from "../registry/index.ts";
+import type { Vec3 } from "../vec3/index.ts";
 
 // ── Types ──
 

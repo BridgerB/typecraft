@@ -4,9 +4,9 @@
  */
 
 import { publicEncrypt, randomBytes } from "node:crypto";
-import { joinServer } from "./auth.js";
-import type { Client } from "./client.js";
-import { ProtocolState } from "./states.js";
+import { joinServer } from "./auth.ts";
+import type { Client } from "./client.ts";
+import { ProtocolState } from "./states.ts";
 
 /** Wire up the login handshake flow for a client. */
 export const registerHandshake = (

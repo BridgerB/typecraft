@@ -19,11 +19,11 @@ export {
 	setEnchants,
 	setRepairCost,
 	toNotch,
-} from "./item.js";
+} from "./item.ts";
 export type {
 	Enchant,
 	Item,
 	NotchItem,
 	NotchItemBlockId,
 	NotchItemPresent,
-} from "./types.js";
+} from "./types.ts";

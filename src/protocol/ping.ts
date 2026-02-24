@@ -5,9 +5,9 @@
 
 import { connect as tcpConnect } from "node:net";
 import MinecraftData from "minecraft-data";
-import { createPacketCodec, type PacketCodec } from "./codec.js";
-import { createSplitter, framePacket } from "./framing.js";
-import { Direction, ProtocolState } from "./states.js";
+import { createPacketCodec, type PacketCodec } from "./codec.ts";
+import { createSplitter, framePacket } from "./framing.ts";
+import { Direction, ProtocolState } from "./states.ts";
 
 export type PingResponse = {
 	readonly version: { readonly name: string; readonly protocol: number };

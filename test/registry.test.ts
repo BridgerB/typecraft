@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRegistry } from "../src/registry/index.js";
+import { createRegistry } from "../src/registry/index.ts";
 
 describe("createRegistry", () => {
 	it("loads 1.20.4 registry", () => {

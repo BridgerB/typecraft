@@ -3,9 +3,9 @@
  * Replaces the loader logic from prismarine-windows/index.js.
  */
 
-import type { Registry } from "../registry/types.js";
-import type { Window, WindowInfo } from "./types.js";
-import { createWindow } from "./window.js";
+import type { Registry } from "../registry/types.ts";
+import type { Window, WindowInfo } from "./types.ts";
+import { createWindow } from "./window.ts";
 
 /** Build the version-specific window type registry. */
 export const getWindowTypes = (

@@ -13,5 +13,5 @@ export {
 	removePassenger,
 	setEquipment,
 	setVehicle,
-} from "./entity.js";
-export type { Effect, Entity, EntityType } from "./types.js";
+} from "./entity.ts";
+export type { Effect, Entity, EntityType } from "./types.ts";

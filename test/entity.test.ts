@@ -14,9 +14,9 @@ import {
 	removePassenger,
 	setEquipment,
 	setVehicle,
-} from "../src/entity/entity.js";
-import { createItemByName } from "../src/item/item.js";
-import { createRegistry } from "../src/registry/registry.js";
+} from "../src/entity/entity.ts";
+import { createItemByName } from "../src/item/item.ts";
+import { createRegistry } from "../src/registry/registry.ts";
 
 const reg = createRegistry("1.20.4");
 

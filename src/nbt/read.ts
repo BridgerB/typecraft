@@ -7,8 +7,8 @@ import type {
 	NbtTagType,
 	NbtTagValue,
 	ReadResult,
-} from "./types.js";
-import { TAG_ID_TO_TYPE } from "./types.js";
+} from "./types.ts";
+import { TAG_ID_TO_TYPE } from "./types.ts";
 
 // ─── Format reader interface ────────────────────────────────────────────────
 

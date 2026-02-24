@@ -3,10 +3,10 @@
  * Minecraft items. Replaces prismarine-item with a functional API.
  */
 
-import { equalNbt, nbtInt, nbtList, nbtShort, nbtString } from "../nbt/nbt.js";
-import type { NbtCompound, NbtTag } from "../nbt/types.js";
-import type { Registry } from "../registry/types.js";
-import type { Enchant, Item, NotchItem, NotchItemBlockId } from "./types.js";
+import { equalNbt, nbtInt, nbtList, nbtShort, nbtString } from "../nbt/nbt.ts";
+import type { NbtCompound, NbtTag } from "../nbt/types.ts";
+import type { Registry } from "../registry/types.ts";
+import type { Enchant, Item, NotchItem, NotchItemBlockId } from "./types.ts";
 
 // ── Construction ──
 

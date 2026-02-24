@@ -3,8 +3,8 @@
  * Replaces prismarine-chat/MessageBuilder.js with a functional API.
  */
 
-import { COLOR_CODE_TO_NAME } from "./styles.js";
-import type { ChatBuilder, HoverEventAction } from "./types.js";
+import { COLOR_CODE_TO_NAME } from "./styles.ts";
+import type { ChatBuilder, HoverEventAction } from "./types.ts";
 
 type BuilderState = {
 	bold?: boolean;

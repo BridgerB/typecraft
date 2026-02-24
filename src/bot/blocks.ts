@@ -2,14 +2,14 @@
  * Block and world management — chunk loading/unloading, block state updates.
  */
 
-import { stateIdToBlock } from "../block.js";
+import { stateIdToBlock } from "../block.ts";
 import {
 	createChunkColumn,
 	GLOBAL_BITS_PER_BIOME,
 	GLOBAL_BITS_PER_BLOCK,
 	loadChunkColumn,
-} from "../chunk/index.js";
-import { type Vec3, vec3 } from "../vec3/index.js";
+} from "../chunk/index.ts";
+import { type Vec3, vec3 } from "../vec3/index.ts";
 import {
 	createWorld,
 	onWorldEvent,
@@ -17,8 +17,8 @@ import {
 	unloadColumn,
 	worldGetBlockStateId,
 	worldSetBlockStateId,
-} from "../world/index.js";
-import type { Bot, BotOptions, FindBlockOptions } from "./types.js";
+} from "../world/index.ts";
+import type { Bot, BotOptions, FindBlockOptions } from "./types.ts";
 
 export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 	// ── World creation ──

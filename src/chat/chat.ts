@@ -3,8 +3,8 @@
  * Replaces prismarine-chat with a functional API.
  */
 
-import { simplifyNbt } from "../nbt/nbt.js";
-import type { Registry } from "../registry/types.js";
+import { simplifyNbt } from "../nbt/nbt.ts";
+import type { Registry } from "../registry/types.ts";
 import {
 	ANSI_CODES,
 	CSS_STYLES,
@@ -12,13 +12,13 @@ import {
 	MOTD_COLOR_CODES,
 	MOTD_FORMAT_CODES,
 	SUPPORTED_COLORS,
-} from "./styles.js";
+} from "./styles.ts";
 import type {
 	ChatClickEvent,
 	ChatHoverEvent,
 	ChatMessage,
 	Language,
-} from "./types.js";
+} from "./types.ts";
 
 const MAX_CHAT_DEPTH = 8;
 const MAX_CHAT_LENGTH = 4096;

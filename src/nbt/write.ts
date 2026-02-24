@@ -1,5 +1,5 @@
-import type { NbtFormat, NbtList, NbtRoot, NbtTag } from "./types.js";
-import { TAG_TYPE_TO_ID } from "./types.js";
+import type { NbtFormat, NbtList, NbtRoot, NbtTag } from "./types.ts";
+import { TAG_TYPE_TO_ID } from "./types.ts";
 
 // ─── Format writer interface ────────────────────────────────────────────────
 

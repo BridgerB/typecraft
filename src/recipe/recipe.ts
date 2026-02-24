@@ -3,8 +3,8 @@
  * Replaces prismarine-recipe with a functional API.
  */
 
-import type { RawRecipe, RawRecipeItem, Registry } from "../registry/types.js";
-import type { Recipe, RecipeItem } from "./types.js";
+import type { RawRecipe, RawRecipeItem, Registry } from "../registry/types.ts";
+import type { Recipe, RecipeItem } from "./types.ts";
 
 // ── RecipeItem construction ──
 

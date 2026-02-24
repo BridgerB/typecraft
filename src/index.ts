@@ -15,14 +15,14 @@ export {
 	saveChunk,
 	writeLevelDat,
 	writeRegionChunk,
-} from "./anvil/index.js";
+} from "./anvil/index.ts";
 export {
 	type BlockInfo,
 	blockToStateId,
 	getBlock,
 	setBlock,
 	stateIdToBlock,
-} from "./block.js";
+} from "./block.ts";
 export {
 	type BossBar,
 	type BossBarColor,
@@ -74,7 +74,7 @@ export {
 	type ViewDistance,
 	type VillagerTrade,
 	withTimeout,
-} from "./bot/index.js";
+} from "./bot/index.ts";
 export {
 	ANSI_CODES,
 	type ChatBuilder,
@@ -105,7 +105,7 @@ export {
 	processNbtMessage,
 	SUPPORTED_COLORS,
 	vsprintf,
-} from "./chat/index.js";
+} from "./chat/index.ts";
 export {
 	BIOME_SECTION_VOLUME,
 	type BiomeSection,
@@ -176,7 +176,7 @@ export {
 	writeBitArrayData,
 	writeChunkSection,
 	writePaletteContainer,
-} from "./chunk/index.js";
+} from "./chunk/index.ts";
 export {
 	addEffect,
 	addPassenger,
@@ -195,7 +195,7 @@ export {
 	removePassenger,
 	setEquipment,
 	setVehicle,
-} from "./entity/index.js";
+} from "./entity/index.ts";
 export {
 	createItem,
 	createItemByName,
@@ -222,7 +222,7 @@ export {
 	setEnchants,
 	setRepairCost,
 	toNotch,
-} from "./item/index.js";
+} from "./item/index.ts";
 export {
 	equalNbt,
 	type NbtByte,
@@ -265,8 +265,8 @@ export {
 	TAG_TYPE_TO_ID,
 	writeAnonymousNbt,
 	writeUncompressedNbt,
-} from "./nbt/index.js";
-export { createNibbleArray, readNibble, writeNibble } from "./nibble/index.js";
+} from "./nbt/index.ts";
+export { createNibbleArray, readNibble, writeNibble } from "./nibble/index.ts";
 export {
 	type AABB,
 	type AttributeMap,
@@ -298,7 +298,7 @@ export {
 	type PhysicsWorld,
 	type PlayerControls,
 	type PlayerState,
-} from "./physics/index.js";
+} from "./physics/index.ts";
 export {
 	type AuthResult,
 	authenticateMicrosoft,
@@ -335,13 +335,13 @@ export {
 	type TypeRegistry,
 	writeVarInt,
 	writeVarLong,
-} from "./protocol/index.js";
+} from "./protocol/index.ts";
 export {
 	findRecipes,
 	parseRecipe,
 	type Recipe,
 	type RecipeItem,
-} from "./recipe/index.js";
+} from "./recipe/index.ts";
 export {
 	type AttributeDefinition,
 	type BiomeDefinition,
@@ -359,7 +359,7 @@ export {
 	type RawRecipeItem,
 	type Registry,
 	type VersionInfo,
-} from "./registry/index.js";
+} from "./registry/index.ts";
 export {
 	abs,
 	add,
@@ -399,13 +399,13 @@ export {
 	vec3FromString,
 	volume,
 	ZERO,
-} from "./vec3/index.js";
+} from "./vec3/index.ts";
 export {
 	closeWebViewer,
 	createWebViewer,
 	type WebViewer,
 	type WebViewerOptions,
-} from "./web/index.js";
+} from "./web/index.ts";
 export {
 	addRendererColumn,
 	addViewerColumn,
@@ -455,7 +455,7 @@ export {
 	type WorldRenderer,
 	waitForRender,
 	waitForViewerRender,
-} from "./viewer/index.js";
+} from "./viewer/index.ts";
 export {
 	acceptClick,
 	type Click,
@@ -500,7 +500,7 @@ export {
 	type WindowName,
 	windowCount,
 	windowItems,
-} from "./window/index.js";
+} from "./window/index.ts";
 export {
 	anvilProvider,
 	BlockFace,
@@ -541,4 +541,4 @@ export {
 	worldSetBlockLight,
 	worldSetBlockStateId,
 	worldSetSkyLight,
-} from "./world/index.js";
+} from "./world/index.ts";

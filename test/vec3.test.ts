@@ -37,7 +37,7 @@ import {
 	vec3FromString,
 	volume,
 	ZERO,
-} from "../src/index.js";
+} from "../src/index.ts";
 
 describe("construction", () => {
 	it("creates from x, y, z", () => {

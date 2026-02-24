@@ -3,12 +3,12 @@
  * Replaces prismarine-windows/lib/Window.js with a functional API.
  */
 
-import { createItem, itemsEqual } from "../item/item.js";
-import type { Item } from "../item/types.js";
-import { equalNbt } from "../nbt/nbt.js";
-import type { NbtTag } from "../nbt/types.js";
-import type { Registry } from "../registry/types.js";
-import type { Click, Window } from "./types.js";
+import { createItem, itemsEqual } from "../item/item.ts";
+import type { Item } from "../item/types.ts";
+import { equalNbt } from "../nbt/nbt.ts";
+import type { NbtTag } from "../nbt/types.ts";
+import type { Registry } from "../registry/types.ts";
+import type { Click, Window } from "./types.ts";
 
 // ── Helper: create an item with a different count ──
 

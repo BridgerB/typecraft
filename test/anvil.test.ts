@@ -8,22 +8,22 @@ import {
 	loadChunk,
 	openAnvilWorld,
 	saveChunk,
-} from "../src/anvil/anvil.js";
-import { chunkColumnToNbt, nbtToChunkColumn } from "../src/anvil/chunkNbt.js";
-import { readLevelDat, writeLevelDat } from "../src/anvil/levelDat.js";
+} from "../src/anvil/anvil.ts";
+import { chunkColumnToNbt, nbtToChunkColumn } from "../src/anvil/chunkNbt.ts";
+import { readLevelDat, writeLevelDat } from "../src/anvil/levelDat.ts";
 import {
 	closeRegionFile,
 	hasChunk,
 	openRegionFile,
 	readRegionChunk,
 	writeRegionChunk,
-} from "../src/anvil/region.js";
+} from "../src/anvil/region.ts";
 import {
 	blockToStateId,
 	getBlock,
 	setBlock,
 	stateIdToBlock,
-} from "../src/block.js";
+} from "../src/block.ts";
 import {
 	createChunkColumn,
 	getBiomeId,
@@ -31,10 +31,10 @@ import {
 	neededBits,
 	setBiomeId,
 	setBlockStateId,
-} from "../src/chunk/index.js";
-import { nbtCompound, nbtInt, nbtString } from "../src/nbt/index.js";
-import type { NbtTag } from "../src/nbt/types.js";
-import { createRegistry } from "../src/registry/index.js";
+} from "../src/chunk/index.ts";
+import { nbtCompound, nbtInt, nbtString } from "../src/nbt/index.ts";
+import type { NbtTag } from "../src/nbt/types.ts";
+import { createRegistry } from "../src/registry/index.ts";
 
 const registry = createRegistry("1.20.4");
 

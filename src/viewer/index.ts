@@ -14,14 +14,14 @@ export {
 	type ResolvedBlockStates,
 	type TextureAtlas,
 	type TextureUV,
-} from "./assets.js";
+} from "./assets.ts";
 export {
 	type GetBlock,
 	getModelVariants,
 	getSectionGeometry,
 	type MesherBlock,
 	type SectionGeometry,
-} from "./mesher.js";
+} from "./mesher.ts";
 export {
 	addViewerColumn,
 	createViewer,
@@ -36,12 +36,12 @@ export {
 	type Viewer,
 	type ViewerOptions,
 	waitForViewerRender,
-} from "./viewer.js";
+} from "./viewer.ts";
 export {
 	initMesherWorker,
 	type WorkerMessage,
 	type WorkerResponse,
-} from "./workerEntry.js";
+} from "./workerEntry.ts";
 export {
 	addRendererColumn,
 	createWorldRenderer,
@@ -55,4 +55,4 @@ export {
 	setWorldRendererVersion,
 	type WorldRenderer,
 	waitForRender,
-} from "./worldRenderer.js";
+} from "./worldRenderer.ts";

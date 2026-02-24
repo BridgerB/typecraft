@@ -13,7 +13,7 @@ import type {
 	RawRecipe,
 	Registry,
 	VersionInfo,
-} from "./types.js";
+} from "./types.ts";
 
 /**
  * Create a registry for a specific Minecraft version.

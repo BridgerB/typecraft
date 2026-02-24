@@ -2,8 +2,8 @@ import { promises as fs } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { promisify } from "node:util";
 import { deflate, gunzip, inflate } from "node:zlib";
-import { parseNbt, writeUncompressedNbt } from "../nbt/index.js";
-import type { NbtRoot } from "../nbt/types.js";
+import { parseNbt, writeUncompressedNbt } from "../nbt/index.ts";
+import type { NbtRoot } from "../nbt/types.ts";
 
 const deflateAsync = promisify(deflate);
 const gunzipAsync = promisify(gunzip);

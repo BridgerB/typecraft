@@ -8,13 +8,13 @@ import {
 	GLOBAL_BITS_PER_BIOME,
 	GLOBAL_BITS_PER_BLOCK,
 	loadChunkColumn,
-} from "../chunk/index.js";
-import { vec3 } from "../vec3/index.js";
+} from "../chunk/index.ts";
+import { vec3 } from "../vec3/index.ts";
 import {
 	type BiomeTints,
 	createTextureAtlas,
 	prepareBlockStates,
-} from "../viewer/assets.js";
+} from "../viewer/assets.ts";
 import {
 	addViewerColumn,
 	createViewer,
@@ -26,7 +26,7 @@ import {
 	setViewerCamera,
 	setViewerTime,
 	type Viewer,
-} from "../viewer/viewer.js";
+} from "../viewer/viewer.ts";
 
 // ── Types for WS messages ──
 

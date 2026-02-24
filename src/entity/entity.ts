@@ -3,10 +3,10 @@
  * Replaces prismarine-entity with a functional API.
  */
 
-import type { Item } from "../item/types.js";
-import type { Registry } from "../registry/types.js";
-import { ZERO } from "../vec3/index.js";
-import type { Effect, Entity, EntityType } from "./types.js";
+import type { Item } from "../item/types.ts";
+import type { Registry } from "../registry/types.ts";
+import { ZERO } from "../vec3/index.ts";
+import type { Effect, Entity, EntityType } from "./types.ts";
 
 // ── Construction ──
 

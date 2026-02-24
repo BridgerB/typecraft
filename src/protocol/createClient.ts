@@ -4,16 +4,16 @@
  */
 
 import { createHash } from "node:crypto";
-import { authenticateMicrosoft } from "./auth.js";
+import { authenticateMicrosoft } from "./auth.ts";
 import {
 	type Client,
 	type ClientOptions,
 	connectClient,
 	createProtocolClient,
-} from "./client.js";
-import { resolveServer } from "./dns.js";
-import { registerHandshake } from "./handshake.js";
-import { registerKeepalive } from "./keepalive.js";
+} from "./client.ts";
+import { resolveServer } from "./dns.ts";
+import { registerHandshake } from "./handshake.ts";
+import { registerKeepalive } from "./keepalive.ts";
 
 /** Create and connect a Minecraft client. */
 export const createClient = (options: ClientOptions): Client => {

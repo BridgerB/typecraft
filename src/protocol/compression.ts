@@ -6,7 +6,7 @@
  */
 
 import { deflateSync, inflateSync } from "node:zlib";
-import { readVarInt, sizeOfVarInt, writeVarInt } from "./varint.js";
+import { readVarInt, sizeOfVarInt, writeVarInt } from "./varint.ts";
 
 /** Compress a packet if it exceeds the threshold. */
 export const compressPacket = (data: Buffer, threshold: number): Buffer => {

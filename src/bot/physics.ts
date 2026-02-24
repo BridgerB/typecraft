@@ -10,16 +10,16 @@ import {
 	createPlayerState,
 	type PhysicsWorld,
 	type PlayerControls,
-} from "../physics/index.js";
-import { subtract, type Vec3, vec3 } from "../vec3/index.js";
+} from "../physics/index.ts";
+import { subtract, type Vec3, vec3 } from "../vec3/index.ts";
 import {
 	fromNotchianPitch,
 	fromNotchianYaw,
 	toNotchianPitch,
 	toNotchianYaw,
-} from "./conversions.js";
-import type { Bot, BotOptions, ControlState } from "./types.js";
-import { createTask } from "./utils.js";
+} from "./conversions.ts";
+import type { Bot, BotOptions, ControlState } from "./types.ts";
+import { createTask } from "./utils.ts";
 
 /** Writable version of Vec3 for entity position/velocity mutation. */
 type MutableVec3 = { x: number; y: number; z: number };

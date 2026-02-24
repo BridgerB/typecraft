@@ -3,31 +3,31 @@
  */
 
 import { EventEmitter } from "node:events";
-import { createEntity } from "../entity/index.js";
-import { type Client, createClient } from "../protocol/index.js";
-import { createRegistry } from "../registry/index.js";
-import { type Vec3, ZERO } from "../vec3/index.js";
-import { initBlocks } from "./blocks.js";
-import { initChat } from "./chat.js";
-import { initContainers } from "./containers.js";
-import { initCrafting } from "./crafting.js";
-import { initDigging } from "./digging.js";
-import { initEntities } from "./entities.js";
-import { initExtended } from "./extended.js";
-import { initGame } from "./game.js";
-import { initInventory } from "./inventory.js";
-import { initPhysics } from "./physics.js";
-import { initPlacing } from "./placing.js";
-import { initSocial } from "./social.js";
-import { initStatus } from "./status.js";
+import { createEntity } from "../entity/index.ts";
+import { type Client, createClient } from "../protocol/index.ts";
+import { createRegistry } from "../registry/index.ts";
+import { type Vec3, ZERO } from "../vec3/index.ts";
+import { initBlocks } from "./blocks.ts";
+import { initChat } from "./chat.ts";
+import { initContainers } from "./containers.ts";
+import { initCrafting } from "./crafting.ts";
+import { initDigging } from "./digging.ts";
+import { initEntities } from "./entities.ts";
+import { initExtended } from "./extended.ts";
+import { initGame } from "./game.ts";
+import { initInventory } from "./inventory.ts";
+import { initPhysics } from "./physics.ts";
+import { initPlacing } from "./placing.ts";
+import { initSocial } from "./social.ts";
+import { initStatus } from "./status.ts";
 import type {
 	Bot,
 	BotOptions,
 	ControlState,
 	GameSettings,
 	MainHand,
-} from "./types.js";
-import { initWorldState } from "./world_state.js";
+} from "./types.ts";
+import { initWorldState } from "./world_state.ts";
 
 /** Create and connect a Minecraft bot. */
 export const createBot = (options: BotOptions): Bot => {

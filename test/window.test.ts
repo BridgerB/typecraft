@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createItem } from "../src/item/index.js";
-import type { Item } from "../src/item/types.js";
-import { createRegistry } from "../src/registry/index.js";
-import type { Registry } from "../src/registry/types.js";
+import { createItem } from "../src/item/index.ts";
+import type { Item } from "../src/item/types.ts";
+import { createRegistry } from "../src/registry/index.ts";
+import type { Registry } from "../src/registry/types.ts";
 import {
 	acceptClick,
 	clearWindow,
@@ -34,8 +34,8 @@ import {
 	updateSlot,
 	windowCount,
 	windowItems,
-} from "../src/window/index.js";
-import type { Window } from "../src/window/types.js";
+} from "../src/window/index.ts";
+import type { Window } from "../src/window/types.ts";
 
 // ── Helpers ──
 

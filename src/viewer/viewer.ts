@@ -4,12 +4,12 @@
  */
 
 import * as THREE from "three";
-import type { Vec3 } from "../vec3/index.js";
+import type { Vec3 } from "../vec3/index.ts";
 import type {
 	BiomeTints,
 	ResolvedBlockStates,
 	TextureAtlas,
-} from "./assets.js";
+} from "./assets.ts";
 import {
 	addRendererColumn,
 	createWorldRenderer,
@@ -22,7 +22,7 @@ import {
 	setWorldRendererVersion,
 	type WorldRenderer,
 	waitForRender,
-} from "./worldRenderer.js";
+} from "./worldRenderer.ts";
 
 // ── Types ──
 

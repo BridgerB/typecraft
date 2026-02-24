@@ -1,1 +1,1 @@
-export { createNibbleArray, readNibble, writeNibble } from "./nibble.js";
+export { createNibbleArray, readNibble, writeNibble } from "./nibble.ts";

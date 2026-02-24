@@ -2,12 +2,12 @@
  * Adapter that bridges our World to the PhysicsWorld interface.
  */
 
-import { stateIdToBlock } from "../block.js";
-import type { BlockDefinition } from "../registry/index.js";
-import type { Vec3 } from "../vec3/index.js";
-import type { World } from "../world/index.js";
-import { worldGetBlockStateId } from "../world/index.js";
-import type { PhysicsBlock, PhysicsWorld } from "./types.js";
+import { stateIdToBlock } from "../block.ts";
+import type { BlockDefinition } from "../registry/index.ts";
+import type { Vec3 } from "../vec3/index.ts";
+import type { World } from "../world/index.ts";
+import { worldGetBlockStateId } from "../world/index.ts";
+import type { PhysicsBlock, PhysicsWorld } from "./types.ts";
 
 /** Create a PhysicsWorld from our World, resolving collision shapes per access. */
 export const createPhysicsWorld = (world: World): PhysicsWorld => {

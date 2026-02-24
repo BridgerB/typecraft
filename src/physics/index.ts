@@ -8,20 +8,20 @@ export {
 	extendAABB,
 	intersectsAABB,
 	offsetAABB,
-} from "./aabb.js";
-export { createPhysicsWorld } from "./adapter.js";
+} from "./aabb.ts";
+export { createPhysicsWorld } from "./adapter.ts";
 export {
 	addAttributeModifier,
 	createAttributeValue,
 	deleteAttributeModifier,
 	getAttributeValue,
 	hasAttributeModifier,
-} from "./attribute.js";
+} from "./attribute.ts";
 export {
 	applyPlayerState,
 	createPhysics,
 	createPlayerState,
-} from "./physics.js";
+} from "./physics.ts";
 export type {
 	AABB,
 	AttributeMap,
@@ -35,4 +35,4 @@ export type {
 	PhysicsWorld,
 	PlayerControls,
 	PlayerState,
-} from "./types.js";
+} from "./types.ts";

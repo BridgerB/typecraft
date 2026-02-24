@@ -1,10 +1,10 @@
-import type { BitArray } from "./bitArray.js";
+import type { BitArray } from "./bitArray.ts";
 import {
 	BLOCK_SECTION_VOLUME,
 	GLOBAL_BITS_PER_BLOCK,
 	MAX_BITS_PER_BLOCK,
 	MIN_BITS_PER_BLOCK,
-} from "./constants.js";
+} from "./constants.ts";
 import {
 	createIndirectContainer,
 	createSingleValueContainer,
@@ -14,7 +14,7 @@ import {
 	readPaletteContainer,
 	setContainerValue,
 	writePaletteContainer,
-} from "./paletteContainer.js";
+} from "./paletteContainer.ts";
 
 export type ChunkSection = {
 	data: PaletteContainer;

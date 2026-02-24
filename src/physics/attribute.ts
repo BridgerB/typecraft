@@ -1,4 +1,4 @@
-import type { AttributeModifier, AttributeValue } from "./types.js";
+import type { AttributeModifier, AttributeValue } from "./types.ts";
 
 /** Create an attribute value with no modifiers. */
 export const createAttributeValue = (base: number): AttributeValue => ({

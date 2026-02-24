@@ -3,8 +3,8 @@
  * Combines upstream rain.js, time.js, spawn_point.js.
  */
 
-import { vec3 } from "../vec3/index.js";
-import type { Bot, BotOptions } from "./types.js";
+import { vec3 } from "../vec3/index.ts";
+import type { Bot, BotOptions } from "./types.ts";
 
 export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 	// ── Time ──

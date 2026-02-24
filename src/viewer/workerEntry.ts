@@ -9,14 +9,14 @@ import {
 	getBiomeId,
 	getBlockStateId,
 	setBlockStateId,
-} from "../chunk/index.js";
-import { createRegistry, type Registry } from "../registry/index.js";
-import type { BiomeTints, ResolvedBlockStates } from "./assets.js";
+} from "../chunk/index.ts";
+import { createRegistry, type Registry } from "../registry/index.ts";
+import type { BiomeTints, ResolvedBlockStates } from "./assets.ts";
 import {
 	type GetBlock,
 	getSectionGeometry,
 	type MesherBlock,
-} from "./mesher.js";
+} from "./mesher.ts";
 
 // ── Worker-local state ──
 

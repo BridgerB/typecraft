@@ -3,4 +3,4 @@ export {
 	createWebViewer,
 	type WebViewer,
 	type WebViewerOptions,
-} from "./serve.js";
+} from "./serve.ts";

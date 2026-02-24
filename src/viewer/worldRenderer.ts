@@ -4,13 +4,13 @@
  */
 
 import * as THREE from "three";
-import type { Vec3 } from "../vec3/index.js";
+import type { Vec3 } from "../vec3/index.ts";
 import type {
 	BiomeTints,
 	ResolvedBlockStates,
 	TextureAtlas,
-} from "./assets.js";
-import type { WorkerMessage, WorkerResponse } from "./workerEntry.js";
+} from "./assets.ts";
+import type { WorkerMessage, WorkerResponse } from "./workerEntry.ts";
 
 // ── Types ──
 

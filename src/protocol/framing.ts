@@ -3,7 +3,7 @@
  * Wire format: [varint: packet_length][packet_data...]
  */
 
-import { readVarInt, sizeOfVarInt, writeVarInt } from "./varint.js";
+import { readVarInt, sizeOfVarInt, writeVarInt } from "./varint.ts";
 
 /** Frame a packet by prepending its varint-encoded length. */
 export const framePacket = (data: Buffer): Buffer => {

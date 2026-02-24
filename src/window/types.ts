@@ -1,4 +1,4 @@
-import type { Item } from "../item/types.js";
+import type { Item } from "../item/types.ts";
 
 /** Window type definition — slot layout for a specific window kind. */
 export type WindowInfo = {

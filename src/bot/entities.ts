@@ -14,14 +14,14 @@ import {
 	removePassenger,
 	setEquipment,
 	setVehicle,
-} from "../entity/index.js";
-import { fromNotch } from "../item/index.js";
+} from "../entity/index.ts";
+import { fromNotch } from "../item/index.ts";
 import {
 	fromNotchianPitchByte,
 	fromNotchianYawByte,
 	fromNotchVelocity,
-} from "./conversions.js";
-import type { Bot, BotOptions, Player, SkinData } from "./types.js";
+} from "./conversions.ts";
+import type { Bot, BotOptions, Player, SkinData } from "./types.ts";
 
 /** Writable version of Vec3 for entity position/velocity mutation. */
 type MutableVec3 = { x: number; y: number; z: number };

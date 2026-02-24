@@ -1,5 +1,5 @@
 import { gunzipSync, inflateSync } from "node:zlib";
-import { readAnonymousTag, readRootTag } from "./read.js";
+import { readAnonymousTag, readRootTag } from "./read.ts";
 import type {
 	NbtByte,
 	NbtByteArray,
@@ -19,8 +19,8 @@ import type {
 	NbtTag,
 	NbtTagType,
 	NbtTagValue,
-} from "./types.js";
-import { writeAnonymousTag, writeRootTag } from "./write.js";
+} from "./types.ts";
+import { writeAnonymousTag, writeRootTag } from "./write.ts";
 
 // ─── Decompression helpers ──────────────────────────────────────────────────
 

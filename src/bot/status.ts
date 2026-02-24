@@ -3,7 +3,7 @@
  * Combines upstream health.js, experience.js, breath.js, settings.js.
  */
 
-import type { Bot, BotOptions, GameSettings } from "./types.js";
+import type { Bot, BotOptions, GameSettings } from "./types.ts";
 
 const CHAT_TO_BITS: Record<string, number> = {
 	enabled: 0,

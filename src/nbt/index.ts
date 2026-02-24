@@ -19,7 +19,7 @@ export {
 	simplifyNbt,
 	writeAnonymousNbt,
 	writeUncompressedNbt,
-} from "./nbt.js";
+} from "./nbt.ts";
 export type {
 	NbtByte,
 	NbtByteArray,
@@ -40,5 +40,5 @@ export type {
 	NbtTagType,
 	NbtTagValue,
 	ReadResult,
-} from "./types.js";
-export { TAG_ID_TO_TYPE, TAG_TYPE_TO_ID } from "./types.js";
+} from "./types.ts";
+export { TAG_ID_TO_TYPE, TAG_TYPE_TO_ID } from "./types.ts";

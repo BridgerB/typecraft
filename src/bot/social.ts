@@ -3,7 +3,7 @@
  * Combines upstream team.js, scoreboard.js, boss_bar.js, tablist.js.
  */
 
-import { parseChatMessage } from "../chat/index.js";
+import { parseChatMessage } from "../chat/index.ts";
 import type {
 	BossBar,
 	BossBarColor,
@@ -13,7 +13,7 @@ import type {
 	ScoreBoard,
 	ScoreBoardItem,
 	Team,
-} from "./types.js";
+} from "./types.ts";
 
 const BOSS_BAR_COLORS: readonly BossBarColor[] = [
 	"pink",

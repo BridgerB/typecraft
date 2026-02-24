@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { prepareBlockStates } from "../src/viewer/assets.js";
+import { prepareBlockStates } from "../src/viewer/assets.ts";
 import {
 	getModelVariants,
 	getSectionGeometry,
 	type MesherBlock,
-} from "../src/viewer/mesher.js";
+} from "../src/viewer/mesher.ts";
 
 // ── Mock data ──
 

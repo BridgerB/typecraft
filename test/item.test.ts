@@ -20,10 +20,10 @@ import {
 	setEnchants,
 	setRepairCost,
 	toNotch,
-} from "../src/item/item.js";
-import { nbtInt } from "../src/nbt/nbt.js";
-import type { NbtCompound } from "../src/nbt/types.js";
-import { createRegistry } from "../src/registry/registry.js";
+} from "../src/item/item.ts";
+import { nbtInt } from "../src/nbt/nbt.ts";
+import type { NbtCompound } from "../src/nbt/types.ts";
+import { createRegistry } from "../src/registry/registry.ts";
 
 // ── Registries ──
 

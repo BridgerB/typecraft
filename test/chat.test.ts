@@ -12,9 +12,9 @@ import {
 	createChatBuilder,
 	parseChatMessage,
 	vsprintf,
-} from "../src/chat/index.js";
-import type { Language } from "../src/chat/types.js";
-import { createRegistry } from "../src/registry/index.js";
+} from "../src/chat/index.ts";
+import type { Language } from "../src/chat/types.ts";
+import { createRegistry } from "../src/registry/index.ts";
 
 const registry = createRegistry("1.16.5");
 const lang: Language = registry.language;

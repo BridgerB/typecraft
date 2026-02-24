@@ -2,8 +2,8 @@ import {
 	type ChunkColumn,
 	getBlockStateId,
 	setBlockStateId,
-} from "./chunk/index.js";
-import type { Registry } from "./registry/index.js";
+} from "./chunk/index.ts";
+import type { Registry } from "./registry/index.ts";
 
 /** Block name and properties, as used by the Minecraft world format. */
 export type BlockInfo = {

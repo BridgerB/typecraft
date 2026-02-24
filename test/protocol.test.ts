@@ -4,17 +4,17 @@ import { describe, expect, it } from "vitest";
 import {
 	createPacketCodec,
 	createTypeRegistry,
-} from "../src/protocol/codec.js";
+} from "../src/protocol/codec.ts";
 import {
 	compressPacket,
 	decompressPacket,
-} from "../src/protocol/compression.js";
+} from "../src/protocol/compression.ts";
 import {
 	createDecryptor,
 	createEncryptor,
-} from "../src/protocol/encryption.js";
-import { createSplitter, framePacket } from "../src/protocol/framing.js";
-import { Direction, ProtocolState } from "../src/protocol/states.js";
+} from "../src/protocol/encryption.ts";
+import { createSplitter, framePacket } from "../src/protocol/framing.ts";
+import { Direction, ProtocolState } from "../src/protocol/states.ts";
 import {
 	readVarInt,
 	readVarLong,
@@ -22,7 +22,7 @@ import {
 	sizeOfVarLong,
 	writeVarInt,
 	writeVarLong,
-} from "../src/protocol/varint.js";
+} from "../src/protocol/varint.ts";
 
 // ── VarInt ──
 

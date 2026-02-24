@@ -1,5 +1,5 @@
-import type { Item } from "../item/types.js";
-import type { Vec3 } from "../vec3/index.js";
+import type { Item } from "../item/types.ts";
+import type { Vec3 } from "../vec3/index.ts";
 
 /** Entity classification. */
 export type EntityType =

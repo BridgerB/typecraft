@@ -1,4 +1,4 @@
-import type { Vec3 } from "../vec3/index.js";
+import type { Vec3 } from "../vec3/index.ts";
 
 /** Mutable position/velocity used during physics simulation. */
 export type MutableVec3 = { x: number; y: number; z: number };

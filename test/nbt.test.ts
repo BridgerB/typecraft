@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { NbtRoot, NbtTag } from "../src/nbt/index.js";
+import type { NbtRoot, NbtTag } from "../src/nbt/index.ts";
 import {
 	equalNbt,
 	nbtBool,
@@ -21,7 +21,7 @@ import {
 	parseUncompressedNbt,
 	simplifyNbt,
 	writeUncompressedNbt,
-} from "../src/nbt/index.js";
+} from "../src/nbt/index.ts";
 
 const SAMPLE_DIR = resolve("upstream/prismarine-nbt/sample");
 const readSample = (name: string): Buffer =>

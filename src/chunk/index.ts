@@ -6,7 +6,7 @@ export {
 	readBiomeSection,
 	setSectionBiome,
 	writeBiomeSection,
-} from "./biomeSection.js";
+} from "./biomeSection.ts";
 export {
 	type BitArray,
 	bitArrayFromLongArray,
@@ -21,7 +21,7 @@ export {
 	resizeBitArrayCapacity,
 	setBitValue,
 	writeBitArrayData,
-} from "./bitArray.js";
+} from "./bitArray.ts";
 export {
 	type ChunkColumn,
 	type ChunkColumnOptions,
@@ -42,7 +42,7 @@ export {
 	setBlockLight,
 	setBlockStateId,
 	setSkyLight,
-} from "./chunkColumn.js";
+} from "./chunkColumn.ts";
 export {
 	type ChunkSection,
 	createChunkSection,
@@ -52,7 +52,7 @@ export {
 	sectionFromLocalPalette,
 	setSectionBlock,
 	writeChunkSection,
-} from "./chunkSection.js";
+} from "./chunkSection.ts";
 export {
 	BIOME_SECTION_VOLUME,
 	BLOCK_SECTION_VOLUME,
@@ -64,7 +64,7 @@ export {
 	MIN_BITS_PER_BLOCK,
 	SECTION_HEIGHT,
 	SECTION_WIDTH,
-} from "./constants.js";
+} from "./constants.ts";
 export {
 	createDirectContainer,
 	createIndirectContainer,
@@ -78,4 +78,4 @@ export {
 	type SingleValueContainer,
 	setContainerValue,
 	writePaletteContainer,
-} from "./paletteContainer.js";
+} from "./paletteContainer.ts";

@@ -8,14 +8,14 @@ import {
 	resizeBitArray,
 	setBitValue,
 	writeBitArrayData,
-} from "./bitArray.js";
+} from "./bitArray.ts";
 import {
 	BLOCK_SECTION_VOLUME,
 	GLOBAL_BITS_PER_BLOCK,
 	MAX_BITS_PER_BLOCK,
 	MIN_BITS_PER_BLOCK,
-} from "./constants.js";
-import { readVarint, writeVarint } from "./varint.js";
+} from "./constants.ts";
+import { readVarint, writeVarint } from "./varint.ts";
 
 // ── Types ──
 

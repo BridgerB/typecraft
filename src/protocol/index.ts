@@ -1,27 +1,27 @@
-export type { AuthResult } from "./auth.js";
-export { authenticateMicrosoft, joinServer, mcServerHash } from "./auth.js";
-export type { Client, ClientOptions, PacketMeta } from "./client.js";
-export { connectClient, createProtocolClient } from "./client.js";
+export type { AuthResult } from "./auth.ts";
+export { authenticateMicrosoft, joinServer, mcServerHash } from "./auth.ts";
+export type { Client, ClientOptions, PacketMeta } from "./client.ts";
+export { connectClient, createProtocolClient } from "./client.ts";
 export type {
 	PacketCodec,
 	ReadResult,
 	TypeDef,
 	TypeRegistry,
-} from "./codec.js";
+} from "./codec.ts";
 export {
 	createPacketCodec,
 	createTypeRegistry,
-} from "./codec.js";
-export { compressPacket, decompressPacket } from "./compression.js";
-export { createClient } from "./createClient.js";
-export { resolveServer } from "./dns.js";
-export { createDecryptor, createEncryptor } from "./encryption.js";
-export { createSplitter, framePacket } from "./framing.js";
-export { registerHandshake } from "./handshake.js";
-export { registerKeepalive } from "./keepalive.js";
-export type { PingOptions, PingResponse } from "./ping.js";
-export { ping } from "./ping.js";
-export { Direction, ProtocolState } from "./states.js";
+} from "./codec.ts";
+export { compressPacket, decompressPacket } from "./compression.ts";
+export { createClient } from "./createClient.ts";
+export { resolveServer } from "./dns.ts";
+export { createDecryptor, createEncryptor } from "./encryption.ts";
+export { createSplitter, framePacket } from "./framing.ts";
+export { registerHandshake } from "./handshake.ts";
+export { registerKeepalive } from "./keepalive.ts";
+export type { PingOptions, PingResponse } from "./ping.ts";
+export { ping } from "./ping.ts";
+export { Direction, ProtocolState } from "./states.ts";
 export {
 	readVarInt,
 	readVarLong,
@@ -29,4 +29,4 @@ export {
 	sizeOfVarLong,
 	writeVarInt,
 	writeVarLong,
-} from "./varint.js";
+} from "./varint.ts";

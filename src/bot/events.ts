@@ -1,7 +1,7 @@
-import type { ChatMessage } from "../chat/index.js";
-import type { Entity } from "../entity/index.js";
-import type { Vec3 } from "../vec3/index.js";
-import type { Window } from "../window/index.js";
+import type { ChatMessage } from "../chat/index.ts";
+import type { Entity } from "../entity/index.ts";
+import type { Vec3 } from "../vec3/index.ts";
+import type { Window } from "../window/index.ts";
 import type {
 	BossBar,
 	DisplaySlot,
@@ -9,7 +9,7 @@ import type {
 	Player,
 	ScoreBoard,
 	Team,
-} from "./types.js";
+} from "./types.ts";
 
 /**
  * Typed event map for the Bot.

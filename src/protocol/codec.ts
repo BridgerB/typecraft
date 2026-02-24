@@ -3,8 +3,8 @@
  * Reads minecraft-data protocol.json and builds read/write functions for every type.
  */
 
-import { readAnonymousNbt, writeAnonymousNbt } from "../nbt/nbt.js";
-import type { NbtRoot } from "../nbt/types.js";
+import { readAnonymousNbt, writeAnonymousNbt } from "../nbt/nbt.ts";
+import type { NbtRoot } from "../nbt/types.ts";
 import {
 	readVarInt,
 	readVarLong,
@@ -12,7 +12,7 @@ import {
 	sizeOfVarLong,
 	writeVarInt,
 	writeVarLong,
-} from "./varint.js";
+} from "./varint.ts";
 
 // ── Core types ──
 

@@ -4,7 +4,7 @@ export type {
 	Window,
 	WindowInfo,
 	WindowName,
-} from "./types.js";
+} from "./types.ts";
 export {
 	acceptClick,
 	clearWindow,
@@ -42,8 +42,8 @@ export {
 	updateSlot,
 	windowCount,
 	windowItems,
-} from "./window.js";
+} from "./window.ts";
 export {
 	createWindowFromType,
 	getWindowTypes,
-} from "./windows.js";
+} from "./windows.ts";

@@ -1,4 +1,4 @@
-import type { AABB } from "./types.js";
+import type { AABB } from "./types.ts";
 
 export const createAABB = (
 	x0: number,

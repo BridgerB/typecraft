@@ -3,11 +3,11 @@
  * villager, creative mode, command blocks.
  */
 
-import type { Entity } from "../entity/index.js";
-import type { Item } from "../item/index.js";
-import type { Vec3 } from "../vec3/index.js";
-import type { Window } from "../window/index.js";
-import type { Bot, BotOptions } from "./types.js";
+import type { Entity } from "../entity/index.ts";
+import type { Item } from "../item/index.ts";
+import type { Vec3 } from "../vec3/index.ts";
+import type { Window } from "../window/index.ts";
+import type { Bot, BotOptions } from "./types.ts";
 
 /** Writable version of Vec3 for entity position mutation. */
 type MutableVec3 = { x: number; y: number; z: number };

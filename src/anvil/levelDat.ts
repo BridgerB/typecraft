@@ -9,7 +9,7 @@ import {
 	parseNbt,
 	simplifyNbt,
 	writeUncompressedNbt,
-} from "../nbt/index.js";
+} from "../nbt/index.ts";
 
 const gzipAsync = promisify(gzip);
 

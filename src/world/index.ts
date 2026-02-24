@@ -10,7 +10,7 @@ export {
 	type RaycastHit,
 	type RaycastIterator,
 	type SpiralIterator2d,
-} from "./iterators.js";
+} from "./iterators.ts";
 export {
 	anvilProvider,
 	type ChunkGenerator,
@@ -40,4 +40,4 @@ export {
 	worldSetBlockLight,
 	worldSetBlockStateId,
 	worldSetSkyLight,
-} from "./world.js";
+} from "./world.ts";

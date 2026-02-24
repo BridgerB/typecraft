@@ -3,7 +3,7 @@
  * Builds a texture atlas and resolves all model references for use by the mesher.
  */
 
-import type { Registry } from "../registry/index.js";
+import type { Registry } from "../registry/index.ts";
 
 // ── Types ──
 

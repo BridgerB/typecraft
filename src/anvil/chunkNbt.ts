@@ -6,7 +6,7 @@ import {
 	createChunkColumn,
 	loadChunkSectionFromAnvil,
 	neededBits,
-} from "../chunk/index.js";
+} from "../chunk/index.ts";
 import {
 	nbtByte,
 	nbtByteArray,
@@ -17,9 +17,9 @@ import {
 	nbtLongArray,
 	nbtString,
 	simplifyNbt,
-} from "../nbt/index.js";
-import type { NbtRoot, NbtTag, NbtTagValue } from "../nbt/types.js";
-import type { Registry } from "../registry/index.js";
+} from "../nbt/index.ts";
+import type { NbtRoot, NbtTag, NbtTagValue } from "../nbt/types.ts";
+import type { Registry } from "../registry/index.ts";
 
 /**
  * Convert an anvil-format NBT chunk to a ChunkColumn.

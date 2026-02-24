@@ -1,4 +1,4 @@
-import type { NbtCompound } from "../nbt/types.js";
+import type { NbtCompound } from "../nbt/types.ts";
 
 /** A Minecraft item stack. */
 export type Item = {

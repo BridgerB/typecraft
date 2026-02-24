@@ -3,15 +3,15 @@
  * resource pack, kick, fishing, ray trace.
  */
 
-import { type Vec3, vec3 } from "../vec3/index.js";
+import { type Vec3, vec3 } from "../vec3/index.ts";
 import type {
 	Bot,
 	BotOptions,
 	CommandBlockOptions,
 	Particle,
 	Task,
-} from "./types.js";
-import { createTask } from "./utils.js";
+} from "./types.ts";
+import { createTask } from "./utils.ts";
 
 export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	// ── Sleeping ──

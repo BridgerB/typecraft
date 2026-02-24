@@ -10,7 +10,7 @@ import type {
 	BlockStateDefinition,
 	ResolvedBlockStates,
 	TextureUV,
-} from "./assets.js";
+} from "./assets.ts";
 
 // ── MesherBlock — the minimal block interface the mesher needs ──
 
