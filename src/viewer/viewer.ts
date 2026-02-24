@@ -51,12 +51,9 @@ export const createViewer = (
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x87ceeb);
 
-	const ambientLight = new THREE.AmbientLight(0xcccccc);
+	// Shading is baked into vertex colors (Minecraft-style per-face shade + AO)
+	const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
 	scene.add(ambientLight);
-
-	const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-	directionalLight.position.set(1, 1, 0.5).normalize();
-	scene.add(directionalLight);
 
 	const aspect = canvas.clientWidth / canvas.clientHeight;
 	const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
@@ -145,6 +142,33 @@ export const resizeViewer = (
 	viewer.camera.aspect = width / height;
 	viewer.camera.updateProjectionMatrix();
 	viewer.renderer.setSize(width, height);
+};
+
+// ── Day/night cycle ──
+
+// Sky colors: day = light blue, night = dark blue
+const DAY_SKY = new THREE.Color(0x87ceeb);
+const NIGHT_SKY = new THREE.Color(0x0c1445);
+
+/** Set time of day (0–24000 MC ticks). Adjusts ambient light + sky color. */
+export const setViewerTime = (viewer: Viewer, time: number): void => {
+	// Sun angle: 0 at noon (tick 6000), π at midnight (tick 18000)
+	const angle = ((time / 24000 - 0.25) * 2 * Math.PI);
+	const raw = Math.cos(angle);
+	// Brightness: 1.0 at noon, 0.15 at midnight
+	const brightness = Math.max(0.15, raw * 0.5 + 0.5);
+
+	// Find the ambient light in the scene
+	for (const child of viewer.scene.children) {
+		if (child instanceof THREE.AmbientLight) {
+			child.intensity = brightness;
+			break;
+		}
+	}
+
+	// Blend sky color
+	const bg = viewer.scene.background as THREE.Color;
+	bg.copy(NIGHT_SKY).lerp(DAY_SKY, brightness);
 };
 
 // ── Render loop ──

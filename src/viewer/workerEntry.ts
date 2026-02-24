@@ -8,6 +8,7 @@ import {
 	type ChunkColumn,
 	getBiomeId,
 	getBlockStateId,
+	setBlockStateId,
 } from "../chunk/index.js";
 import { createRegistry, type Registry } from "../registry/index.js";
 import type { BiomeTints, ResolvedBlockStates } from "./assets.js";
@@ -161,9 +162,6 @@ export const initMesherWorker = (ctx: {
 			if (!column) return;
 			const lx = ((msg.x % 16) + 16) % 16;
 			const lz = ((msg.z % 16) + 16) % 16;
-			// Import setBlockStateId would add dependency — inline it
-			// The column was already sent fully, we just update the state
-			const { setBlockStateId } = require("../chunk/index.js");
 			setBlockStateId(column, lx, msg.y, lz, msg.stateId);
 		} else if (msg.type === "dirty") {
 			const key = sectionKey(msg.x, msg.y, msg.z);

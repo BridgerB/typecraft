@@ -53,6 +53,16 @@ type FaceDef = {
 	])[];
 };
 
+// Minecraft-style per-face shade (baked into vertex colors, not via lights)
+const faceShade: Readonly<Record<string, number>> = {
+	up: 1.0,
+	down: 0.5,
+	north: 0.8,
+	south: 0.8,
+	east: 0.6,
+	west: 0.6,
+};
+
 const elemFaces: Readonly<Record<string, FaceDef>> = {
 	up: {
 		dir: [0, 1, 0],
@@ -324,7 +334,7 @@ const renderElement = (
 		const maxz = element.to[2];
 
 		const texture = eFace.texture as TextureUV;
-		if (!texture || typeof texture.u !== "number") continue;
+		if (!texture || !Number.isFinite(texture.u)) continue;
 		const { u, v, su, sv } = texture;
 
 		const ndx = Math.floor(attr.positions.length / 3);
@@ -392,7 +402,8 @@ const renderElement = (
 			const basev = (pos[3] - 0.5) * uvsn + (pos[4] - 0.5) * uvcs + 0.5;
 			attr.uvs.push(baseu * su + u, basev * sv + v);
 
-			let light = 1;
+			const shade = faceShade[face] ?? 1;
+			let light = shade;
 			if (doAO) {
 				const dx = pos[0] * 2 - 1;
 				const dy = pos[1] * 2 - 1;
@@ -429,7 +440,7 @@ const renderElement = (
 				const c = corner?.isCube ? 1 : 0;
 
 				const ao = s1 && s2 ? 0 : 3 - (s1 + s2 + c);
-				light = (ao + 1) / 4;
+				light = shade * (0.5 + ao / 6);
 				aos.push(ao);
 			}
 

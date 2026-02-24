@@ -401,6 +401,12 @@ export {
 	ZERO,
 } from "./vec3/index.js";
 export {
+	closeWebViewer,
+	createWebViewer,
+	type WebViewer,
+	type WebViewerOptions,
+} from "./web/index.js";
+export {
 	addRendererColumn,
 	addViewerColumn,
 	type BiomeTints,

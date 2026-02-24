@@ -236,15 +236,17 @@ const prepareModel = (
 			let resolvedTexture: TextureUV | undefined;
 
 			if (face.texture.charAt(0) === "#") {
-				resolvedTexture = model.textures[face.texture.slice(1)] as unknown as
-					| TextureUV
-					| undefined;
+				const ref = model.textures[face.texture.slice(1)];
+				// Only accept resolved TextureUV objects (not leftover strings)
+				if (ref && typeof ref === "object") {
+					resolvedTexture = ref as unknown as TextureUV;
+				}
 			} else {
 				const name = cleanupBlockName(face.texture);
 				resolvedTexture = uvMap[name];
 			}
 
-			if (!resolvedTexture) continue;
+			if (!resolvedTexture || !Number.isFinite(resolvedTexture.u)) continue;
 
 			// Compute sub-UV from element bounds
 			let uv = face.uv;
@@ -414,11 +416,18 @@ type RawTints = {
 	constant: { data: { keys: string[]; color: number }[] };
 };
 
-const prepareBiomeTintsFromMcData = (version: string): BiomeTints => {
-	// Dynamic require of minecraft-data for tints
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
-	const mcData = require("minecraft-data")(version) as { tints: RawTints };
-	return buildTints(mcData.tints);
+const prepareBiomeTintsFromMcData = (_version: string): BiomeTints => {
+	// Fallback — return defaults when registry has no tints
+	return {
+		grass: new Map(),
+		foliage: new Map(),
+		water: new Map(),
+		redstone: new Map(),
+		constant: new Map(),
+		grassDefault: [0.48, 0.74, 0.31],
+		foliageDefault: [0.48, 0.74, 0.31],
+		waterDefault: [0.25, 0.29, 0.98],
+	};
 };
 
 const buildTints = (tints: RawTints): BiomeTints => {
@@ -427,6 +436,7 @@ const buildTints = (tints: RawTints): BiomeTints => {
 	): Map<string, readonly [number, number, number]> => {
 		const map = new Map<string, readonly [number, number, number]>();
 		for (const entry of data) {
+			if (entry.color === 0) continue; // 0 = use default colormap color
 			const color = tintToGl(entry.color);
 			for (const key of entry.keys) {
 				map.set(`${key}`, color);

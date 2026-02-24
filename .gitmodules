@@ -46,3 +46,6 @@
 [submodule "upstream/prismarine-recipe"]
 	path = upstream/prismarine-recipe
 	url = https://github.com/PrismarineJS/prismarine-recipe.git
+[submodule "upstream/prismarine-web-client"]
+	path = upstream/prismarine-web-client
+	url = git@github.com:PrismarineJS/prismarine-web-client.git
