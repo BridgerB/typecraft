@@ -74,6 +74,7 @@ export const readBiomeSection = (
 	buffer: Buffer,
 	offset: number,
 	maxBitsPerBiome: number = GLOBAL_BITS_PER_BIOME,
+	noArrayLength = false,
 ): [BiomeSection, number] => {
 	let data: PaletteContainer;
 	[data, offset] = readPaletteContainer(
@@ -81,6 +82,7 @@ export const readBiomeSection = (
 		offset,
 		BIOME_CONFIG,
 		maxBitsPerBiome,
+		noArrayLength,
 	);
 	return [{ data }, offset];
 };
@@ -90,4 +92,5 @@ export const writeBiomeSection = (
 	section: BiomeSection,
 	buffer: Buffer,
 	offset: number,
-): number => writePaletteContainer(section.data, buffer, offset);
+	noArrayLength = false,
+): number => writePaletteContainer(section.data, buffer, offset, noArrayLength);

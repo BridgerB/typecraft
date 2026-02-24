@@ -298,20 +298,32 @@ const loadLightNibbles = (
 // ── Network I/O ──
 
 /** Serialize chunk data to the network protocol format. */
-export const dumpChunkColumn = (col: ChunkColumn): Buffer => {
+export const dumpChunkColumn = (
+	col: ChunkColumn,
+	noArrayLength = false,
+): Buffer => {
 	const buffer = Buffer.alloc(512 * 1024); // 512KB should be plenty
 	let offset = 0;
 
 	for (let i = 0; i < col.numSections; i++) {
-		offset = writeChunkSection(col.sections[i]!, buffer, offset);
-		offset = writeBiomeSection(col.biomes[i]!, buffer, offset);
+		offset = writeChunkSection(
+			col.sections[i]!,
+			buffer,
+			offset,
+			noArrayLength,
+		);
+		offset = writeBiomeSection(col.biomes[i]!, buffer, offset, noArrayLength);
 	}
 
 	return buffer.subarray(0, offset);
 };
 
 /** Load chunk data from the network protocol format. */
-export const loadChunkColumn = (col: ChunkColumn, data: Buffer): void => {
+export const loadChunkColumn = (
+	col: ChunkColumn,
+	data: Buffer,
+	noArrayLength = false,
+): void => {
 	let offset = 0;
 
 	for (let i = 0; i < col.numSections; i++) {
@@ -319,11 +331,13 @@ export const loadChunkColumn = (col: ChunkColumn, data: Buffer): void => {
 			data,
 			offset,
 			col.maxBitsPerBlock,
+			noArrayLength,
 		);
 		[col.biomes[i], offset] = readBiomeSection(
 			data,
 			offset,
 			col.maxBitsPerBiome,
+			noArrayLength,
 		);
 	}
 };

@@ -106,6 +106,7 @@ export const readChunkSection = (
 	buffer: Buffer,
 	offset: number,
 	maxBitsPerBlock: number = GLOBAL_BITS_PER_BLOCK,
+	noArrayLength = false,
 ): [ChunkSection, number] => {
 	const solidBlockCount = buffer.readInt16BE(offset);
 	offset += 2;
@@ -116,6 +117,7 @@ export const readChunkSection = (
 		offset,
 		makeBlockConfig(maxBitsPerBlock),
 		maxBitsPerBlock,
+		noArrayLength,
 	);
 
 	return [{ data, solidBlockCount }, offset];
@@ -126,8 +128,9 @@ export const writeChunkSection = (
 	section: ChunkSection,
 	buffer: Buffer,
 	offset: number,
+	noArrayLength = false,
 ): number => {
 	offset = buffer.writeInt16BE(section.solidBlockCount, offset);
-	offset = writePaletteContainer(section.data, buffer, offset);
+	offset = writePaletteContainer(section.data, buffer, offset, noArrayLength);
 	return offset;
 };

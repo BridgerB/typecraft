@@ -3,6 +3,8 @@
  * Handles login, respawn, game_state_change, difficulty, and brand packets.
  */
 
+import { simplifyNbt } from "../nbt/index.js";
+import type { NbtTag } from "../nbt/index.js";
 import type { Bot, BotOptions, Difficulty, GameMode } from "./types.js";
 
 const DIFFICULTY_NAMES: readonly Difficulty[] = [
@@ -40,6 +42,45 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 		height: 256,
 	};
 
+	// Dimension type registry — populated during configuration state
+	type DimensionInfo = { height: number; minY: number };
+	const dimensionTypes: DimensionInfo[] = [];
+
+	bot.client.on("registry_data", (packet: Record<string, unknown>) => {
+		const id = packet.id as string;
+		if (id !== "minecraft:dimension_type") return;
+
+		const entries = packet.entries as
+			| Array<{ key: string; value: unknown }>
+			| undefined;
+		if (!entries) return;
+
+		dimensionTypes.length = 0;
+		for (const entry of entries) {
+			if (!entry.value) {
+				dimensionTypes.push({ height: 256, minY: 0 });
+				continue;
+			}
+			const simplified = simplifyNbt(entry.value as NbtTag) as Record<
+				string,
+				unknown
+			>;
+			dimensionTypes.push({
+				height: (simplified.height as number) ?? 256,
+				minY: (simplified.min_y as number) ?? 0,
+			});
+		}
+	});
+
+	const applyDimensionHeight = (dimensionId: number | string) => {
+		const idx = typeof dimensionId === "number" ? dimensionId : 0;
+		const info = dimensionTypes[idx];
+		if (info) {
+			bot.game.minY = info.minY;
+			bot.game.height = info.height;
+		}
+	};
+
 	const handleRespawnData = (packet: Record<string, unknown>) => {
 		bot.game.levelType =
 			(packet.levelType as string) ?? (packet.isFlat ? "flat" : "default");
@@ -74,9 +115,11 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 			);
 		}
 
-		// World height
-		bot.game.minY = 0;
-		bot.game.height = 256;
+		// World height — resolve from dimension registry
+		const dim = packet.dimension ?? packet.dimensionId;
+		if (dim != null) {
+			applyDimensionHeight(dim as number | string);
+		}
 
 		if (packet.difficulty != null) {
 			bot.game.difficulty =

@@ -55,7 +55,11 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 				maxBitsPerBiome: GLOBAL_BITS_PER_BIOME,
 			});
 
-			loadChunkColumn(column, packet.chunkData as Buffer);
+			loadChunkColumn(
+				column,
+				packet.chunkData as Buffer,
+				bot.protocolVersion >= 770,
+			);
 
 			// Block entities
 			const blockEntities = packet.blockEntities as

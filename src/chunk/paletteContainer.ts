@@ -187,11 +187,16 @@ const convertToDirect = (
 
 // ── Binary I/O ──
 
+/** Calculate the number of longs needed for a palette data array. */
+const calcLongCount = (bitsPerValue: number, capacity: number): number =>
+	Math.ceil(capacity / Math.floor(64 / bitsPerValue));
+
 export const readPaletteContainer = (
 	buffer: Buffer,
 	offset: number,
 	config: PaletteConfig,
 	maxGlobalBits: number,
+	noArrayLength = false,
 ): [PaletteContainer, number] => {
 	const bitsPerBlock = buffer.readUInt8(offset++);
 
@@ -199,8 +204,10 @@ export const readPaletteContainer = (
 	if (bitsPerBlock === 0) {
 		let value: number;
 		[value, offset] = readVarint(buffer, offset);
-		// Read and discard data array length (should be 0)
-		[, offset] = readVarint(buffer, offset);
+		if (!noArrayLength) {
+			// Read and discard data array length (should be 0)
+			[, offset] = readVarint(buffer, offset);
+		}
 		return [createSingleValueContainer(value, config), offset];
 	}
 
@@ -208,7 +215,11 @@ export const readPaletteContainer = (
 	if (bitsPerBlock > config.maxBits) {
 		const data = createBitArray(maxGlobalBits, config.capacity);
 		let longCount: number;
-		[longCount, offset] = readVarint(buffer, offset);
+		if (noArrayLength) {
+			longCount = calcLongCount(maxGlobalBits, config.capacity);
+		} else {
+			[longCount, offset] = readVarint(buffer, offset);
+		}
 		offset = readBitArrayData(data, buffer, offset, longCount);
 		return [createDirectContainer(data), offset];
 	}
@@ -225,7 +236,11 @@ export const readPaletteContainer = (
 
 	const data = createBitArray(bitsPerBlock, config.capacity);
 	let longCount: number;
-	[longCount, offset] = readVarint(buffer, offset);
+	if (noArrayLength) {
+		longCount = calcLongCount(bitsPerBlock, config.capacity);
+	} else {
+		[longCount, offset] = readVarint(buffer, offset);
+	}
 	offset = readBitArrayData(data, buffer, offset, longCount);
 
 	return [
@@ -238,12 +253,15 @@ export const writePaletteContainer = (
 	container: PaletteContainer,
 	buffer: Buffer,
 	offset: number,
+	noArrayLength = false,
 ): number => {
 	switch (container.type) {
 		case "single":
 			offset = buffer.writeUInt8(0, offset);
 			offset = writeVarint(buffer, offset, container.value);
-			offset = buffer.writeUInt8(0, offset); // data array length = 0
+			if (!noArrayLength) {
+				offset = buffer.writeUInt8(0, offset); // data array length = 0
+			}
 			return offset;
 
 		case "indirect":
@@ -252,13 +270,17 @@ export const writePaletteContainer = (
 			for (const entry of container.palette) {
 				offset = writeVarint(buffer, offset, entry);
 			}
-			offset = writeVarint(buffer, offset, bitArrayLongCount(container.data));
+			if (!noArrayLength) {
+				offset = writeVarint(buffer, offset, bitArrayLongCount(container.data));
+			}
 			offset = writeBitArrayData(container.data, buffer, offset);
 			return offset;
 
 		case "direct":
 			offset = buffer.writeUInt8(container.data.bitsPerValue, offset);
-			offset = writeVarint(buffer, offset, bitArrayLongCount(container.data));
+			if (!noArrayLength) {
+				offset = writeVarint(buffer, offset, bitArrayLongCount(container.data));
+			}
 			offset = writeBitArrayData(container.data, buffer, offset);
 			return offset;
 	}
