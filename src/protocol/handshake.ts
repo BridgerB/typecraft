@@ -37,13 +37,12 @@ export const registerHandshake = (
 		});
 	});
 
-	// ── Step 2: Handle encryption request (online mode) ──
+	// ── Step 2: Handle encryption request ──
+	// Always register: even offline clients must respond if the server requests encryption.
 
-	if (!options.skipEncryption) {
-		client.on("encryption_begin", (packet: Record<string, unknown>) => {
-			handleEncryption(client, packet, options.accessToken);
-		});
-	}
+	client.on("encryption_begin", (packet: Record<string, unknown>) => {
+		handleEncryption(client, packet, options.accessToken);
+	});
 
 	// ── Step 3: Handle compression ──
 
@@ -63,7 +62,6 @@ export const registerHandshake = (
 			registerConfigurationHandlers(client);
 		} else {
 			client.state = ProtocolState.PLAY;
-			client.emit("login");
 		}
 	});
 };
@@ -74,7 +72,6 @@ const registerConfigurationHandlers = (client: Client) => {
 	const onFinishConfig = () => {
 		client.write("finish_configuration", {});
 		client.state = ProtocolState.PLAY;
-		client.emit("login");
 
 		client.removeListener("finish_configuration", onFinishConfig);
 		client.removeListener("select_known_packs", onSelectKnownPacks);

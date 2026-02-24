@@ -91,13 +91,23 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 		bot.emit("login");
 		bot.emit("game");
 
-		// Send brand
+		// Send brand (encoded as VarInt-prefixed string)
+		const brand = options.brand ?? "vanilla";
+		const brandBytes = Buffer.from(brand, "utf8");
+		const brandBuf = Buffer.alloc(brandBytes.length + 1);
+		brandBuf[0] = brandBytes.length;
+		brandBytes.copy(brandBuf, 1);
 		bot.client.write("custom_payload", {
 			channel: bot.supportFeature("customChannelMCPrefixed")
 				? "MC|Brand"
 				: "minecraft:brand",
-			data: Buffer.from(options.brand ?? "vanilla"),
+			data: brandBuf,
 		});
+
+		// 1.21.4+ (protocol 769+) requires player_loaded acknowledgement
+		if (bot.protocolVersion >= 769) {
+			bot.client.write("player_loaded", {});
+		}
 	});
 
 	// Respawn packet

@@ -77,6 +77,14 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		}
 	});
 
+	// ── Chunk batch acknowledgement (1.20.2+) ──
+
+	bot.client.on("chunk_batch_finished", (_packet: Record<string, unknown>) => {
+		bot.client.write("chunk_batch_received", {
+			chunksPerTick: 20.0,
+		});
+	});
+
 	// ── Chunk unloading ──
 
 	bot.client.on("unload_chunk", (packet: Record<string, unknown>) => {

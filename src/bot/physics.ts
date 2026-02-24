@@ -198,6 +198,12 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 		const pitch = bot.entity.pitch;
 		const onGround = bot.entity.onGround;
 
+		// 1.21.2+ uses MovementFlags bitfield instead of plain onGround boolean
+		const movementFlags = {
+			onGround,
+			flags: { onGround, hasHorizontalCollision: false },
+		};
+
 		const posChanged =
 			pos.x !== lastSentPos.x ||
 			pos.y !== lastSentPos.y ||
@@ -214,23 +220,23 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 				z: pos.z,
 				yaw: toNotchianYaw(yaw),
 				pitch: toNotchianPitch(pitch),
-				onGround,
+				...movementFlags,
 			});
 		} else if (posChanged) {
 			bot.client.write("position", {
 				x: pos.x,
 				y: pos.y,
 				z: pos.z,
-				onGround,
+				...movementFlags,
 			});
 		} else if (lookChanged) {
 			bot.client.write("look", {
 				yaw: toNotchianYaw(yaw),
 				pitch: toNotchianPitch(pitch),
-				onGround,
+				...movementFlags,
 			});
 		} else if (forceUpdate) {
-			bot.client.write("flying", { onGround });
+			bot.client.write("flying", { ...movementFlags });
 		} else {
 			return;
 		}

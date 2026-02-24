@@ -126,15 +126,19 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 			const packets = splitter.write(decrypted);
 
 			for (const raw of packets) {
-				const decompressed =
-					compressionThreshold >= 0 ? decompressPacket(raw) : raw;
-				if (!readCodec) continue;
+				try {
+					const decompressed =
+						compressionThreshold >= 0 ? decompressPacket(raw) : raw;
+					if (!readCodec) continue;
 
-				const { name, params } = readCodec.read(decompressed);
-				const meta: PacketMeta = { name, state: currentState };
+					const { name, params } = readCodec.read(decompressed);
+					const meta: PacketMeta = { name, state: currentState };
 
-				emitter.emit("packet", params, meta);
-				emitter.emit(name, params, meta);
+					emitter.emit("packet", params, meta);
+					emitter.emit(name, params, meta);
+				} catch (packetErr) {
+					if (!options.hideErrors) emitter.emit("error", packetErr);
+				}
 			}
 		} catch (err) {
 			if (!options.hideErrors) emitter.emit("error", err);
@@ -157,17 +161,6 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 	// ── Build the client ──
 
 	const client = Object.assign(emitter, {
-		get state() {
-			return currentState;
-		},
-		set state(newState: string) {
-			const oldState = currentState;
-			currentState = newState;
-			updateCodecs(newState);
-			splitter.reset();
-			emitter.emit("state", newState, oldState);
-		},
-
 		username: options.username,
 		uuid: "",
 		version: options.version,
@@ -225,6 +218,21 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 			compressionThreshold = threshold;
 		},
 	}) as Client;
+
+	// Define state as a getter/setter so codec updates happen on assignment.
+	// Object.assign would flatten a getter/setter into a plain data property.
+	Object.defineProperty(client, "state", {
+		get: () => currentState,
+		set: (newState: string) => {
+			const oldState = currentState;
+			currentState = newState;
+			updateCodecs(newState);
+			splitter.reset();
+			emitter.emit("state", newState, oldState);
+		},
+		enumerable: true,
+		configurable: true,
+	});
 
 	return client;
 };

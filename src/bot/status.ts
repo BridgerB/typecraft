@@ -103,7 +103,7 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 			(sp.showRightPants ? 32 : 0) |
 			(sp.showHat ? 64 : 0);
 
-		bot.client.write("settings", {
+		const payload: Record<string, unknown> = {
 			locale: "en_US",
 			viewDistance: viewDistanceBits,
 			chatFlags: chatBits,
@@ -112,7 +112,14 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 			mainHand: handBits,
 			enableTextFiltering: false,
 			enableServerListing: true,
-		});
+		};
+
+		// 1.21.3+ (protocol 768+) requires particleStatus
+		if (bot.protocolVersion >= 768) {
+			payload.particleStatus = "all";
+		}
+
+		bot.client.write("settings", payload);
 	};
 
 	bot.setSettings = setSettings;
