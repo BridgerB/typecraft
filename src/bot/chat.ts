@@ -7,8 +7,16 @@ import {
 	type ChatMessage,
 	chatToString,
 	parseChatMessage,
+	processNbtMessage,
 } from "../chat/index.js";
 import type { Bot, BotOptions } from "./types.js";
+
+/** Check if a value looks like an NBT compound (has type/value fields). */
+const isNbt = (v: unknown): boolean =>
+	v != null &&
+	typeof v === "object" &&
+	"type" in (v as Record<string, unknown>) &&
+	"value" in (v as Record<string, unknown>);
 
 export const initChat = (bot: Bot, options: BotOptions): void => {
 	const chatLengthLimit = options.chatLengthLimit ?? 256;
@@ -100,6 +108,54 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 		}
 	});
 
+	// 1.19.1+ player chat (signed messages)
+	bot.client.on("player_chat", (packet: Record<string, unknown>) => {
+		if (!bot.registry) return;
+		try {
+			// Prefer formatted content, fall back to plain message
+			const unsigned = packet.unsignedChatContent;
+			const plain = packet.plainMessage as string | undefined;
+
+			let jsonMsg: ChatMessage;
+			if (unsigned != null) {
+				// May be JSON string, parsed JSON, or NBT compound
+				const normalized = isNbt(unsigned)
+					? processNbtMessage(unsigned)
+					: typeof unsigned === "string"
+						? JSON.parse(unsigned)
+						: unsigned;
+				jsonMsg = parseChatMessage(normalized ?? { text: plain ?? "" });
+			} else if (plain) {
+				jsonMsg = parseChatMessage({ text: plain });
+			} else {
+				return;
+			}
+
+			// Extract sender name — may be JSON string or NBT compound
+			const networkName = packet.networkName;
+			let senderName: string | undefined;
+			if (networkName != null) {
+				const normalized = isNbt(networkName)
+					? processNbtMessage(networkName)
+					: typeof networkName === "string"
+						? JSON.parse(networkName)
+						: networkName;
+				senderName = chatToString(parseChatMessage(normalized ?? ""));
+			}
+
+			if (senderName && plain) {
+				// Emit directly as chat event with known sender
+				bot.emit("chat", senderName, plain, null, jsonMsg, null);
+				bot.emit("message", jsonMsg, "chat");
+				bot.emit("messagestr", `<${senderName}> ${plain}`, "chat", jsonMsg);
+			} else {
+				handleChatMessage(jsonMsg, "chat");
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	});
+
 	// ── Default chat patterns ──
 
 	if (options.defaultChatPatterns !== false) {
@@ -126,7 +182,29 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 			chunks.push(message.slice(i, i + chatLengthLimit));
 		}
 		for (const chunk of chunks) {
-			bot.client.write("chat", { message: chunk });
+			if (chunk.startsWith("/")) {
+				// Commands use chat_command (1.19+) or chat (legacy)
+				if (bot.protocolVersion >= 759) {
+					bot.client.write("chat_command", {
+						command: chunk.slice(1),
+					});
+				} else {
+					bot.client.write("chat", { message: chunk });
+				}
+			} else if (bot.protocolVersion >= 759) {
+				// 1.19+ uses chat_message with signing fields
+				bot.client.write("chat_message", {
+					message: chunk,
+					timestamp: BigInt(Date.now()),
+					salt: 0n,
+					signature: undefined,
+					offset: 0,
+					acknowledged: Buffer.alloc(3),
+					checksum: 0,
+				});
+			} else {
+				bot.client.write("chat", { message: chunk });
+			}
 		}
 	};
 

@@ -411,9 +411,10 @@ describe("initChat", () => {
 
 		bot.chat("Hello server!");
 
+		// 1.20.4 (protocol 765) uses chat_message for regular messages
 		const chatPacket = (
 			client as ReturnType<typeof createMockClient>
-		).packets.find(([name]) => name === "chat");
+		).packets.find(([name]) => name === "chat_message");
 		expect(chatPacket).toBeDefined();
 		expect((chatPacket![1] as Record<string, unknown>).message).toBe(
 			"Hello server!",
@@ -430,12 +431,13 @@ describe("initChat", () => {
 
 		bot.whisper("OtherPlayer", "secret message");
 
+		// Whisper uses /tell which is a command → chat_command
 		const chatPacket = (
 			client as ReturnType<typeof createMockClient>
-		).packets.find(([name]) => name === "chat");
+		).packets.find(([name]) => name === "chat_command");
 		expect(chatPacket).toBeDefined();
-		expect((chatPacket![1] as Record<string, unknown>).message).toBe(
-			"/tell OtherPlayer secret message",
+		expect((chatPacket![1] as Record<string, unknown>).command).toBe(
+			"tell OtherPlayer secret message",
 		);
 	});
 

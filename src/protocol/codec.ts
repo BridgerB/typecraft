@@ -491,6 +491,26 @@ const ANONYMOUS_NBT_TYPE: TypeDef = {
 	sizeOf: (v) => writeAnonymousNbt((v as NbtRoot) ?? null, "big").length,
 };
 
+/** Low-precision Vec3 — 3x i16, used for entity velocity (÷8000 for blocks/tick). */
+const LP_VEC3_TYPE: TypeDef = {
+	read: (b, o) => ({
+		value: {
+			x: b.readInt16BE(o),
+			y: b.readInt16BE(o + 2),
+			z: b.readInt16BE(o + 4),
+		},
+		size: 6,
+	}),
+	write: (v, b, o) => {
+		const vec = v as { x: number; y: number; z: number };
+		b.writeInt16BE(vec.x, o);
+		b.writeInt16BE(vec.y, o + 2);
+		b.writeInt16BE(vec.z, o + 4);
+		return o + 6;
+	},
+	sizeOf: () => 6,
+};
+
 const ANON_OPTIONAL_NBT_TYPE: TypeDef = {
 	read: (b, o) => {
 		if (o >= b.length || b[o] === 0x00) return { value: undefined, size: 1 };
@@ -576,6 +596,117 @@ const buildTopBitSetArray = (
 	};
 };
 
+// ── Registry entry types (1.20.5+) ──
+
+/**
+ * registryEntryHolder — varint discriminator:
+ *   0 → inline data (read `otherwise.type`, stored as `{ [otherwise.name]: value }`)
+ *   >0 → registry ID = varint - 1 (stored as `{ [baseName]: id }`)
+ */
+const buildRegistryEntryHolder = (
+	registry: TypeRegistry,
+	params: { baseName: string; otherwise: { name: string; type: unknown } },
+): TypeDef => {
+	const otherwiseType = registry.resolve(params.otherwise.type);
+	return {
+		read: (b, o, ctx) => {
+			const r = readVarInt(b, o);
+			const id = r.value as number;
+			if (id === 0) {
+				const inner = otherwiseType.read(b, o + r.size, ctx);
+				return {
+					value: { [params.otherwise.name]: inner.value },
+					size: r.size + inner.size,
+				};
+			}
+			return { value: { [params.baseName]: id - 1 }, size: r.size };
+		},
+		write: (v, b, o, ctx) => {
+			const obj = v as Record<string, unknown>;
+			if (params.baseName in obj) {
+				o = writeVarInt((obj[params.baseName] as number) + 1, b, o);
+				return o;
+			}
+			o = writeVarInt(0, b, o);
+			return otherwiseType.write(obj[params.otherwise.name], b, o, ctx);
+		},
+		sizeOf: (v, ctx) => {
+			const obj = v as Record<string, unknown>;
+			if (params.baseName in obj) {
+				return sizeOfVarInt((obj[params.baseName] as number) + 1);
+			}
+			return (
+				sizeOfVarInt(0) +
+				otherwiseType.sizeOf(obj[params.otherwise.name], ctx)
+			);
+		},
+	};
+};
+
+/**
+ * registryEntryHolderSet — varint discriminator:
+ *   0 → tag name (read `base.type`, stored as `{ [base.name]: value }`)
+ *   >0 → explicit set of (varint - 1) IDs (read array, stored as `{ [otherwise.name]: [...] }`)
+ */
+const buildRegistryEntryHolderSet = (
+	registry: TypeRegistry,
+	params: {
+		base: { name: string; type: unknown };
+		otherwise: { name: string; type: unknown };
+	},
+): TypeDef => {
+	const baseType = registry.resolve(params.base.type);
+	const otherwiseType = registry.resolve(params.otherwise.type);
+	return {
+		read: (b, o, ctx) => {
+			const r = readVarInt(b, o);
+			const discriminator = r.value as number;
+			if (discriminator === 0) {
+				const inner = baseType.read(b, o + r.size, ctx);
+				return {
+					value: { [params.base.name]: inner.value },
+					size: r.size + inner.size,
+				};
+			}
+			const count = discriminator - 1;
+			const ids: unknown[] = [];
+			let totalSize = r.size;
+			for (let i = 0; i < count; i++) {
+				const elem = otherwiseType.read(b, o + totalSize, ctx);
+				ids.push(elem.value);
+				totalSize += elem.size;
+			}
+			return {
+				value: { [params.otherwise.name]: ids },
+				size: totalSize,
+			};
+		},
+		write: (v, b, o, ctx) => {
+			const obj = v as Record<string, unknown>;
+			if (params.base.name in obj) {
+				o = writeVarInt(0, b, o);
+				return baseType.write(obj[params.base.name], b, o, ctx);
+			}
+			const ids = obj[params.otherwise.name] as unknown[];
+			o = writeVarInt(ids.length + 1, b, o);
+			for (const id of ids) o = otherwiseType.write(id, b, o, ctx);
+			return o;
+		},
+		sizeOf: (v, ctx) => {
+			const obj = v as Record<string, unknown>;
+			if (params.base.name in obj) {
+				return (
+					sizeOfVarInt(0) + baseType.sizeOf(obj[params.base.name], ctx)
+				);
+			}
+			const ids = obj[params.otherwise.name] as unknown[];
+			let size = sizeOfVarInt(ids.length + 1);
+			for (const id of ids) size += otherwiseType.sizeOf(id, ctx);
+			return size;
+		},
+	};
+};
+
 // ── Registry builder ──
 
 const COMPOUND_BUILDERS: Record<
@@ -608,6 +739,22 @@ const COMPOUND_BUILDERS: Record<
 		buildEntityMetadataLoop(r, p as { endVal: number; type: unknown }),
 	topBitSetTerminatedArray: (r, p) =>
 		buildTopBitSetArray(r, p as { type: unknown }),
+	registryEntryHolder: (r, p) =>
+		buildRegistryEntryHolder(
+			r,
+			p as {
+				baseName: string;
+				otherwise: { name: string; type: unknown };
+			},
+		),
+	registryEntryHolderSet: (r, p) =>
+		buildRegistryEntryHolderSet(
+			r,
+			p as {
+				base: { name: string; type: unknown };
+				otherwise: { name: string; type: unknown };
+			},
+		),
 };
 
 /** Create a type registry from a protocol.json types section. */
@@ -625,6 +772,7 @@ export const createTypeRegistry = (
 	types.set("restBuffer", REST_BUFFER_TYPE);
 	types.set("anonymousNbt", ANONYMOUS_NBT_TYPE);
 	types.set("anonOptionalNbt", ANON_OPTIONAL_NBT_TYPE);
+	types.set("lpVec3", LP_VEC3_TYPE);
 
 	const registry: TypeRegistry = { types, resolve };
 
