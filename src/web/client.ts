@@ -17,8 +17,11 @@ import {
 } from "../viewer/assets.ts";
 import {
 	addViewerColumn,
+	addViewerEntity,
+	clearViewerEntities,
 	createViewer,
 	removeViewerColumn,
+	removeViewerEntity,
 	renderViewer,
 	resizeViewer,
 	setViewerAssets,
@@ -26,6 +29,7 @@ import {
 	setViewerCamera,
 	setViewerTime,
 	type Viewer,
+	updateViewerEntity,
 } from "../viewer/viewer.ts";
 
 // ── Types for WS messages ──
@@ -107,6 +111,31 @@ type TimeMessage = {
 	time: number;
 };
 
+type EntitySpawnMessage = {
+	type: "entitySpawn";
+	id: number;
+	username: string | null;
+	skinUrl?: string;
+	x: number;
+	y: number;
+	z: number;
+	yaw: number;
+};
+
+type EntityMoveMessage = {
+	type: "entityMove";
+	id: number;
+	x: number;
+	y: number;
+	z: number;
+	yaw: number;
+};
+
+type EntityGoneMessage = {
+	type: "entityGone";
+	id: number;
+};
+
 type ServerMessage =
 	| InitMessage
 	| AssetsMessage
@@ -114,7 +143,10 @@ type ServerMessage =
 	| ChunkMessage
 	| UnloadChunkMessage
 	| BlockUpdateMessage
-	| TimeMessage;
+	| TimeMessage
+	| EntitySpawnMessage
+	| EntityMoveMessage
+	| EntityGoneMessage;
 
 // ── State ──
 
@@ -209,6 +241,15 @@ const processMessage = (msg: ServerMessage): void => {
 	} else if (msg.type === "time") {
 		if (!viewer) return;
 		setViewerTime(viewer, msg.time);
+	} else if (msg.type === "entitySpawn") {
+		if (!viewer) return;
+		addViewerEntity(viewer, msg.id, msg.username, msg.x, msg.y, msg.z, msg.yaw, msg.skinUrl);
+	} else if (msg.type === "entityMove") {
+		if (!viewer) return;
+		updateViewerEntity(viewer, msg.id, msg.x, msg.y, msg.z, msg.yaw);
+	} else if (msg.type === "entityGone") {
+		if (!viewer) return;
+		removeViewerEntity(viewer, msg.id);
 	}
 };
 
@@ -220,6 +261,7 @@ const connect = () => {
 	assetsReady = false;
 	chunkCount = 0;
 	pendingMessages.length = 0;
+	if (viewer) clearViewerEntities(viewer);
 
 	ws.onopen = () => setStatus("Connected, waiting for assets...");
 
@@ -233,7 +275,7 @@ const connect = () => {
 			if (!viewer) {
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
-				viewer = createViewer(canvas, { workerUrl: "/web/worker.js" });
+				viewer = createViewer(canvas, { workerUrl: "/web/clientWorker.js" });
 			}
 
 			setStatus("Waiting for assets...");

@@ -3,7 +3,7 @@
  * bot state (chunks, position, assets) to the browser viewer.
  */
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import {
 	createServer,
 	type IncomingMessage,
@@ -13,6 +13,7 @@ import { createRequire } from "node:module";
 import { extname, join, resolve } from "node:path";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { Bot } from "../bot/types.ts";
+import type { Entity } from "../entity/types.ts";
 import type { BiomeTints } from "../viewer/assets.ts";
 
 // ── Types ──
@@ -219,12 +220,36 @@ export const createWebViewer = (
 	const chunkCache: ChunkCache = new Map();
 	let assets: CachedAssets | null = null;
 
+	// Disk-backed skin cache
+	const skinCacheDir = resolve(import.meta.dirname, "../../.cache/skins");
+	mkdirSync(skinCacheDir, { recursive: true });
+
+	const getSkinCache = (uuid: string): Buffer | null => {
+		const p = join(skinCacheDir, `${uuid}.png`);
+		return existsSync(p) ? readFileSync(p) : null;
+	};
+
+	const setSkinCache = (uuid: string, buf: Buffer): void => {
+		writeFileSync(join(skinCacheDir, `${uuid}.png`), buf);
+	};
+
 	// ── Static file server ──
 
 	const threeDir = resolve(
 		import.meta.dirname,
 		"../../node_modules/three/build",
 	);
+
+	// Steve skin texture — find latest version available
+	const mcAssetsDir = resolve(import.meta.dirname, "../../node_modules/minecraft-assets/minecraft-assets/data");
+	const steveTexturePath = (() => {
+		const versions = readdirSync(mcAssetsDir).sort();
+		for (let i = versions.length - 1; i >= 0; i--) {
+			const p = join(mcAssetsDir, versions[i]!, "entity/player/wide/steve.png");
+			if (existsSync(p)) return p;
+		}
+		return null;
+	})();
 
 	const INDEX_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -269,10 +294,76 @@ canvas { display: block; width: 100vw; height: 100vh; }
 </body>
 </html>`;
 
-	const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+	const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
 		if (req.url === "/" || req.url === "/index.html") {
 			res.writeHead(200, { "Content-Type": "text/html" });
 			res.end(INDEX_HTML);
+			return;
+		}
+
+		// Serve player skins (proxy from Mojang to avoid CORS)
+		if (req.url?.startsWith("/skins/") && req.url.endsWith(".png")) {
+			const uuid = req.url.slice("/skins/".length, -".png".length);
+			const skinHeaders = { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" };
+
+			// Check disk cache first
+			const cached = getSkinCache(uuid);
+			if (cached) {
+				res.writeHead(200, skinHeaders);
+				res.end(cached);
+				return;
+			}
+
+			// Resolve skin URL: bot.players → Mojang session API
+			let skinUrl: string | undefined;
+			const uname = bot.uuidToUsername[uuid];
+			if (uname) skinUrl = bot.players[uname]?.skinData?.url;
+			if (!skinUrl) {
+				try {
+					const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`);
+					if (profileRes.ok) {
+						const profile = await profileRes.json() as { properties: { name: string; value: string }[] };
+						const texProp = profile.properties.find((p: { name: string }) => p.name === "textures");
+						if (texProp) {
+							const decoded = JSON.parse(Buffer.from(texProp.value, "base64").toString("utf8"));
+							skinUrl = decoded?.textures?.SKIN?.url;
+						}
+					}
+				} catch { /* fall through to steve */ }
+			}
+
+			// Fetch skin PNG and cache it
+			if (skinUrl) {
+				try {
+					const skinRes = await fetch(skinUrl);
+					if (skinRes.ok) {
+						const buf = Buffer.from(await skinRes.arrayBuffer());
+						setSkinCache(uuid, buf);
+						res.writeHead(200, skinHeaders);
+						res.end(buf);
+						return;
+					}
+				} catch { /* fall through to steve */ }
+			}
+
+			// Fallback: cache steve under this UUID so we don't re-fetch
+			if (steveTexturePath) {
+				const buf = readFileSync(steveTexturePath);
+				setSkinCache(uuid, buf);
+				res.writeHead(200, skinHeaders);
+				res.end(buf);
+				return;
+			}
+			res.writeHead(404);
+			res.end("Not found");
+			return;
+		}
+
+		// Serve Steve skin texture
+		if (req.url === "/textures/steve.png" && steveTexturePath) {
+			const content = readFileSync(steveTexturePath);
+			res.writeHead(200, { "Content-Type": "image/png" });
+			res.end(content);
 			return;
 		}
 
@@ -376,6 +467,24 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				}
 			}
 		}
+
+		// Send all currently tracked player entities
+		for (const entity of Object.values(bot.entities)) {
+			if (entity.id === bot.entity?.id) continue;
+			if (entity.type !== "player") continue;
+			const username = entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null);
+			const skinUrl = entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+			sendTo(ws, {
+				type: "entitySpawn",
+				id: entity.id,
+				username: username ?? entity.username,
+				skinUrl,
+				x: entity.position.x,
+				y: entity.position.y,
+				z: entity.position.z,
+				yaw: entity.yaw,
+			});
+		}
 	});
 
 	// ── Bot event listeners ──
@@ -443,6 +552,44 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		broadcast({ type: "time", time: timeOfDay < 0 ? timeOfDay + 24000 : timeOfDay });
 	};
 
+	// ── Entity events ──
+
+	const onEntitySpawn = (entity: Entity) => {
+		if (entity.id === bot.entity?.id) return;
+		if (entity.type !== "player") return;
+		const username = entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null);
+		// Serve skin through our proxy to avoid CORS
+		const skinUrl = entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+		broadcast({
+			type: "entitySpawn",
+			id: entity.id,
+			username: username ?? entity.username,
+			skinUrl,
+			x: entity.position.x,
+			y: entity.position.y,
+			z: entity.position.z,
+			yaw: entity.yaw,
+		});
+	};
+
+	const onEntityMoved = (entity: Entity) => {
+		if (entity.id === bot.entity?.id) return;
+		if (entity.type !== "player") return;
+		broadcast({
+			type: "entityMove",
+			id: entity.id,
+			x: entity.position.x,
+			y: entity.position.y,
+			z: entity.position.z,
+			yaw: entity.yaw,
+		});
+	};
+
+	const onEntityGone = (entity: Entity) => {
+		if (entity.type !== "player") return;
+		broadcast({ type: "entityGone", id: entity.id });
+	};
+
 	// ── Load assets + wire events ──
 
 	const setup = () => {
@@ -461,6 +608,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	}
 
 	bot.on("move", onMove);
+	bot.on("entitySpawn", onEntitySpawn);
+	bot.on("entityMoved", onEntityMoved);
+	bot.on("entityGone", onEntityGone);
 	bot.client.on("map_chunk", onMapChunk);
 	bot.client.on("unload_chunk", onUnloadChunk);
 	bot.client.on("block_change", onBlockChange);
@@ -474,6 +624,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const close = () => {
 		bot.removeListener("move", onMove);
+		bot.removeListener("entitySpawn", onEntitySpawn);
+		bot.removeListener("entityMoved", onEntityMoved);
+		bot.removeListener("entityGone", onEntityGone);
 		bot.client.removeListener("map_chunk", onMapChunk);
 		bot.client.removeListener("unload_chunk", onUnloadChunk);
 		bot.client.removeListener("block_change", onBlockChange);

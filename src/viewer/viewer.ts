@@ -11,6 +11,14 @@ import type {
 	TextureAtlas,
 } from "./assets.ts";
 import {
+	addEntity,
+	clearEntities,
+	createEntityRenderer,
+	type EntityRenderer,
+	removeEntity,
+	updateEntity,
+} from "./entityRenderer.ts";
+import {
 	addRendererColumn,
 	createWorldRenderer,
 	disposeWorldRenderer,
@@ -31,11 +39,13 @@ export type Viewer = {
 	readonly camera: THREE.PerspectiveCamera;
 	readonly renderer: THREE.WebGLRenderer;
 	readonly worldRenderer: WorldRenderer;
+	readonly entityRenderer: EntityRenderer;
 };
 
 export type ViewerOptions = {
 	readonly numWorkers?: number;
 	readonly workerUrl: string | URL;
+	readonly textureUrl?: string;
 };
 
 // ── Lifecycle ──
@@ -64,7 +74,9 @@ export const createViewer = (
 		options.numWorkers,
 	);
 
-	return { scene, camera, renderer, worldRenderer };
+	const entityRenderer = createEntityRenderer(scene, options.textureUrl ?? "/textures/steve.png");
+
+	return { scene, camera, renderer, worldRenderer, entityRenderer };
 };
 
 // ── Version & assets ──
@@ -121,6 +133,37 @@ export const setViewerBlockStateId = (
 ): void => {
 	setRendererBlockStateId(viewer.worldRenderer, pos, stateId);
 };
+
+// ── Entities ──
+
+export const addViewerEntity = (
+	viewer: Viewer,
+	id: number,
+	username: string | null,
+	x: number,
+	y: number,
+	z: number,
+	yaw: number,
+	skinUrl?: string,
+): void => addEntity(viewer.entityRenderer, id, username, x, y, z, yaw, skinUrl);
+
+export const updateViewerEntity = (
+	viewer: Viewer,
+	id: number,
+	x: number,
+	y: number,
+	z: number,
+	yaw: number,
+): void => updateEntity(viewer.entityRenderer, id, x, y, z, yaw);
+
+export const removeViewerEntity = (
+	viewer: Viewer,
+	id: number,
+): void => removeEntity(viewer.entityRenderer, id);
+
+export const clearViewerEntities = (
+	viewer: Viewer,
+): void => clearEntities(viewer.entityRenderer);
 
 // ── Camera ──
 

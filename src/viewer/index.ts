@@ -24,9 +24,12 @@ export {
 } from "./mesher.ts";
 export {
 	addViewerColumn,
+	addViewerEntity,
+	clearViewerEntities,
 	createViewer,
 	disposeViewer,
 	removeViewerColumn,
+	removeViewerEntity,
 	renderViewer,
 	resizeViewer,
 	setViewerAssets,
@@ -35,8 +38,10 @@ export {
 	setViewerVersion,
 	type Viewer,
 	type ViewerOptions,
+	updateViewerEntity,
 	waitForViewerRender,
 } from "./viewer.ts";
+export { type EntityRenderer } from "./entityRenderer.ts";
 export {
 	initMesherWorker,
 	type WorkerMessage,

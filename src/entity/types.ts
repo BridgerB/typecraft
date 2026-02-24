@@ -47,4 +47,8 @@ export type Entity = {
 	elytraFlying: boolean;
 	isValid: boolean;
 	count: number | null;
+	/** Fixed-point position tracking (integer, avoids float drift). */
+	_fixedX: number;
+	_fixedY: number;
+	_fixedZ: number;
 };

@@ -17,7 +17,9 @@ import {
 } from "../entity/index.ts";
 import { fromNotch } from "../item/index.ts";
 import {
+	fromNotchianPitch,
 	fromNotchianPitchByte,
+	fromNotchianYaw,
 	fromNotchianYawByte,
 	fromNotchVelocity,
 } from "./conversions.ts";
@@ -37,6 +39,8 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		return entity;
 	};
 
+	const FIXED_SCALE = 128 * 32; // 4096 — server fixed-point scale for 1.9+
+
 	const updateEntityPos = (
 		entity: Entity,
 		packet: Record<string, unknown>,
@@ -44,14 +48,19 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	) => {
 		const pos = entity.position as MutableVec3;
 		if (isFixed) {
-			pos.x = (packet.x as number) / 32;
-			pos.y = (packet.y as number) / 32;
-			pos.z = (packet.z as number) / 32;
+			// Pre-1.9: position as fixed-point /32
+			entity._fixedX = (packet.x as number) * (FIXED_SCALE / 32);
+			entity._fixedY = (packet.y as number) * (FIXED_SCALE / 32);
+			entity._fixedZ = (packet.z as number) * (FIXED_SCALE / 32);
 		} else {
-			pos.x = packet.x as number;
-			pos.y = packet.y as number;
-			pos.z = packet.z as number;
+			// 1.9+: position as doubles
+			entity._fixedX = Math.round((packet.x as number) * FIXED_SCALE);
+			entity._fixedY = Math.round((packet.y as number) * FIXED_SCALE);
+			entity._fixedZ = Math.round((packet.z as number) * FIXED_SCALE);
 		}
+		pos.x = entity._fixedX / FIXED_SCALE;
+		pos.y = entity._fixedY / FIXED_SCALE;
+		pos.z = entity._fixedZ / FIXED_SCALE;
 	};
 
 	const setEntityData = (entity: Entity, typeId: number) => {
@@ -128,7 +137,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		// Check if it's a player (1.19+)
 		const entityDef = bot.registry.entitiesById.get(typeId);
 		if (entityDef?.type === "player") {
-			const uuid = packet.entityUUID as string;
+			const uuid = (packet.objectUUID ?? packet.entityUUID) as string;
 			const entity = addNewPlayer(packet.entityId as number, uuid, packet);
 			bot.emit("entitySpawn", entity);
 			return;
@@ -244,20 +253,48 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Movement ──
 
-	bot.client.on("rel_entity_move", (packet: Record<string, unknown>) => {
+	// ── Sync entity position (1.21.5+, absolute doubles) ──
+
+	bot.client.on("sync_entity_position", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
 		const pos = entity.position as MutableVec3;
-		if (bot.supportFeature("fixedPointDelta128")) {
-			pos.x += (packet.dX as number) / (128 * 32);
-			pos.y += (packet.dY as number) / (128 * 32);
-			pos.z += (packet.dZ as number) / (128 * 32);
-		} else {
-			pos.x += (packet.dX as number) / 32;
-			pos.y += (packet.dY as number) / 32;
-			pos.z += (packet.dZ as number) / 32;
+		pos.x = packet.x as number;
+		pos.y = packet.y as number;
+		pos.z = packet.z as number;
+		entity._fixedX = Math.round(pos.x * FIXED_SCALE);
+		entity._fixedY = Math.round(pos.y * FIXED_SCALE);
+		entity._fixedZ = Math.round(pos.z * FIXED_SCALE);
+
+		if (packet.yaw != null) {
+			entity.yaw = fromNotchianYaw(packet.yaw as number);
 		}
+		if (packet.pitch != null) {
+			entity.pitch = fromNotchianPitch(packet.pitch as number);
+		}
+		entity.onGround = (packet.onGround as boolean) ?? entity.onGround;
+
+		bot.emit("entityMoved", entity);
+	});
+
+	bot.client.on("rel_entity_move", (packet: Record<string, unknown>) => {
+		const entity = bot.entities[packet.entityId as number];
+		if (!entity) return;
+
+		if (bot.supportFeature("fixedPointDelta128")) {
+			entity._fixedX += packet.dX as number;
+			entity._fixedY += packet.dY as number;
+			entity._fixedZ += packet.dZ as number;
+		} else {
+			entity._fixedX += (packet.dX as number) * (FIXED_SCALE / 32);
+			entity._fixedY += (packet.dY as number) * (FIXED_SCALE / 32);
+			entity._fixedZ += (packet.dZ as number) * (FIXED_SCALE / 32);
+		}
+		const pos = entity.position as MutableVec3;
+		pos.x = entity._fixedX / FIXED_SCALE;
+		pos.y = entity._fixedY / FIXED_SCALE;
+		pos.z = entity._fixedZ / FIXED_SCALE;
 		entity.onGround = (packet.onGround as boolean) ?? entity.onGround;
 
 		bot.emit("entityMoved", entity);
@@ -276,16 +313,19 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
-		const pos = entity.position as MutableVec3;
 		if (bot.supportFeature("fixedPointDelta128")) {
-			pos.x += (packet.dX as number) / (128 * 32);
-			pos.y += (packet.dY as number) / (128 * 32);
-			pos.z += (packet.dZ as number) / (128 * 32);
+			entity._fixedX += packet.dX as number;
+			entity._fixedY += packet.dY as number;
+			entity._fixedZ += packet.dZ as number;
 		} else {
-			pos.x += (packet.dX as number) / 32;
-			pos.y += (packet.dY as number) / 32;
-			pos.z += (packet.dZ as number) / 32;
+			entity._fixedX += (packet.dX as number) * (FIXED_SCALE / 32);
+			entity._fixedY += (packet.dY as number) * (FIXED_SCALE / 32);
+			entity._fixedZ += (packet.dZ as number) * (FIXED_SCALE / 32);
 		}
+		const pos = entity.position as MutableVec3;
+		pos.x = entity._fixedX / FIXED_SCALE;
+		pos.y = entity._fixedY / FIXED_SCALE;
+		pos.z = entity._fixedZ / FIXED_SCALE;
 		entity.yaw = fromNotchianYawByte(packet.yaw as number);
 		entity.pitch = fromNotchianPitchByte(packet.pitch as number);
 		entity.onGround = (packet.onGround as boolean) ?? entity.onGround;

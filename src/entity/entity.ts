@@ -38,6 +38,9 @@ export const createEntity = (id: number): Entity => ({
 	elytraFlying: false,
 	isValid: true,
 	count: null,
+	_fixedX: 0,
+	_fixedY: 0,
+	_fixedZ: 0,
 });
 
 // ── Initialization ──
