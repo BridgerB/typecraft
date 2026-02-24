@@ -11,6 +11,7 @@ import { compressPacket, decompressPacket } from "./compression.js";
 import { createDecryptor, createEncryptor } from "./encryption.js";
 import { createSplitter, framePacket } from "./framing.js";
 import { Direction, ProtocolState } from "./states.js";
+import { readVarInt } from "./varint.js";
 
 // ── Types ──
 
@@ -126,8 +127,9 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 			const packets = splitter.write(decrypted);
 
 			for (const raw of packets) {
+				let decompressed: Buffer | undefined;
 				try {
-					const decompressed =
+					decompressed =
 						compressionThreshold >= 0 ? decompressPacket(raw) : raw;
 					if (!readCodec) continue;
 
@@ -137,7 +139,21 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 					emitter.emit("packet", params, meta);
 					emitter.emit(name, params, meta);
 				} catch (packetErr) {
-					if (!options.hideErrors) emitter.emit("error", packetErr);
+					if (!options.hideErrors) {
+						// Annotate error with packet name and hex dump
+						const err = packetErr as Error;
+						if (decompressed && readCodec) {
+							try {
+								const { value: id } = readVarInt(decompressed, 0);
+								const pktName = readCodec.packetNames.get(id);
+								const hex = decompressed
+									.subarray(0, 64)
+									.toString("hex");
+								err.message = `[${pktName ?? `0x${id.toString(16)}`}] ${err.message} | len=${decompressed.length} hex=${hex}`;
+							} catch {}
+						}
+						emitter.emit("error", err);
+					}
 				}
 			}
 		} catch (err) {

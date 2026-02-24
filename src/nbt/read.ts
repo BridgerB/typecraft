@@ -325,12 +325,12 @@ export const readAnonymousTag = (
 ): ReadResult<NbtRoot | null> => {
 	const tagId = buf.readUInt8(offset);
 	if (tagId === 0) return { value: null, size: 1 };
-	if (tagId !== 10)
-		throw new Error(`Expected compound tag (10) or end (0), got ${tagId}`);
+	const tagType = TAG_ID_TO_TYPE[tagId] as NbtTagType;
+	if (!tagType) throw new Error(`Unknown NBT tag ID: ${tagId}`);
 	const reader = getReader(format);
-	const result = readCompound(buf, offset + 1, reader);
+	const result = readPayload(buf, offset + 1, tagType, reader);
 	return {
-		value: { type: "compound", name: "", value: result.value },
+		value: { type: tagType, name: "", value: result.value } as NbtRoot,
 		size: 1 + result.size,
 	};
 };

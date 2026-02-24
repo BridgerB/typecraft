@@ -209,8 +209,8 @@ const buildContainer = (
 		type: registry.resolve(f.type),
 	}));
 	return {
-		read: (b, o, _ctx) => {
-			const result: Record<string, unknown> = {};
+		read: (b, o, parentCtx) => {
+			const result: Record<string, unknown> = { __parent: parentCtx };
 			let totalSize = 0;
 			for (const field of resolved) {
 				const r = field.type.read(b, o + totalSize, result);
@@ -221,6 +221,7 @@ const buildContainer = (
 					result[field.name] = r.value;
 				}
 			}
+			delete result.__parent;
 			return { value: result, size: totalSize };
 		},
 		write: (v, b, o, _ctx) => {
@@ -324,11 +325,22 @@ const resolveCompareTo = (
 	path: string,
 	ctx: Record<string, unknown>,
 ): unknown => {
-	if (path.startsWith("../")) {
-		// Parent context — not supported in flat model, just strip prefix
-		return ctx[path.replace(/^\.\.\//g, "")];
+	// Walk up parent chain for ../ prefixes
+	let target = ctx;
+	let cleaned = path;
+	while (cleaned.startsWith("../")) {
+		cleaned = cleaned.slice(3);
+		const parent = target.__parent as Record<string, unknown> | undefined;
+		if (parent) target = parent;
 	}
-	return ctx[path];
+	// Traverse slash-separated paths: "flags/has_redirect_node" → ctx.flags.has_redirect_node
+	const parts = cleaned.split("/");
+	let current: unknown = target;
+	for (const part of parts) {
+		if (current == null || typeof current !== "object") return undefined;
+		current = (current as Record<string, unknown>)[part];
+	}
+	return current;
 };
 
 const buildSwitch = (
@@ -491,24 +503,94 @@ const ANONYMOUS_NBT_TYPE: TypeDef = {
 	sizeOf: (v) => writeAnonymousNbt((v as NbtRoot) ?? null, "big").length,
 };
 
-/** Low-precision Vec3 — 3x i16, used for entity velocity (÷8000 for blocks/tick). */
+/**
+ * Low-precision Vec3 — variable-length packed velocity encoding (1.21.9+).
+ * 1 byte if zero, 6 bytes normally, 6+ bytes with varint scale continuation.
+ * Packs 3x 15-bit quantized values + scale into a compact bit-packed format.
+ */
+const LP_VEC3_DATA_BITS_MASK = 32767;
+const LP_VEC3_MAX_QUANTIZED = 32766.0;
+const LP_VEC3_ABS_MIN = 3.051944088384301e-5;
+const LP_VEC3_ABS_MAX = 1.7179869183e10;
+
+const lpVec3Unpack = (packed: number, shift: number): number => {
+	const val = Math.floor(packed / 2 ** shift) & LP_VEC3_DATA_BITS_MASK;
+	const clamped = val > 32766 ? 32766 : val;
+	return (clamped * 2.0) / 32766.0 - 1.0;
+};
+
+const lpVec3Pack = (value: number): number =>
+	Math.round((value * 0.5 + 0.5) * LP_VEC3_MAX_QUANTIZED);
+
+const lpVec3Sanitize = (v: number): number =>
+	Number.isNaN(v) ? 0 : Math.max(-LP_VEC3_ABS_MAX, Math.min(v, LP_VEC3_ABS_MAX));
+
 const LP_VEC3_TYPE: TypeDef = {
-	read: (b, o) => ({
-		value: {
-			x: b.readInt16BE(o),
-			y: b.readInt16BE(o + 2),
-			z: b.readInt16BE(o + 4),
-		},
-		size: 6,
-	}),
+	read: (b, o) => {
+		const a = b[o];
+		if (a === 0) return { value: { x: 0, y: 0, z: 0 }, size: 1 };
+
+		const byte1 = b[o + 1];
+		const dword = b.readUInt32LE(o + 2);
+		const packed = dword * 65536 + (byte1 << 8) + a;
+
+		let scale = a & 3;
+		let size = 6;
+
+		if ((a & 4) === 4) {
+			const r = readVarInt(b, o + 6);
+			scale = (r.value as number) * 4 + scale;
+			size += r.size;
+		}
+
+		return {
+			value: {
+				x: lpVec3Unpack(packed, 3) * scale,
+				y: lpVec3Unpack(packed, 18) * scale,
+				z: lpVec3Unpack(packed, 33) * scale,
+			},
+			size,
+		};
+	},
 	write: (v, b, o) => {
 		const vec = v as { x: number; y: number; z: number };
-		b.writeInt16BE(vec.x, o);
-		b.writeInt16BE(vec.y, o + 2);
-		b.writeInt16BE(vec.z, o + 4);
+		const x = lpVec3Sanitize(vec.x);
+		const y = lpVec3Sanitize(vec.y);
+		const z = lpVec3Sanitize(vec.z);
+		const max = Math.max(Math.abs(x), Math.abs(y), Math.abs(z));
+
+		if (max < LP_VEC3_ABS_MIN) {
+			b[o] = 0;
+			return o + 1;
+		}
+
+		const scale = Math.ceil(max);
+		const needsCont = (scale & 3) !== scale;
+		const scaleByte = needsCont ? (scale & 3) | 4 : scale & 3;
+
+		const pX = lpVec3Pack(x / scale);
+		const pY = lpVec3Pack(y / scale);
+		const pZ = lpVec3Pack(z / scale);
+
+		const low32 = (scaleByte | (pX << 3) | (pY << 18)) >>> 0;
+		const high16 = ((pY >> 14) & 0x01) | (pZ << 1);
+
+		b.writeUInt32LE(low32, o);
+		b.writeUInt16LE(high16, o + 4);
+
+		if (needsCont) {
+			return writeVarInt(Math.floor(scale / 4), b, o + 6);
+		}
 		return o + 6;
 	},
-	sizeOf: () => 6,
+	sizeOf: (v) => {
+		const vec = v as { x: number; y: number; z: number };
+		const max = Math.max(Math.abs(vec.x), Math.abs(vec.y), Math.abs(vec.z));
+		if (max < LP_VEC3_ABS_MIN) return 1;
+		const scale = Math.ceil(max);
+		if ((scale & 3) !== scale) return 6 + sizeOfVarInt(Math.floor(scale / 4));
+		return 6;
+	},
 };
 
 const ANON_OPTIONAL_NBT_TYPE: TypeDef = {
