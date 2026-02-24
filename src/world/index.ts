@@ -12,6 +12,13 @@ export {
 	type SpiralIterator2d,
 } from "./iterators.ts";
 export {
+	directionFromYawPitch,
+	PLAYER_EYE_HEIGHT,
+	PLAYER_SNEAK_EYE_HEIGHT,
+	raycast,
+	type RaycastResult,
+} from "./raycast.ts";
+export {
 	anvilProvider,
 	type ChunkGenerator,
 	type ChunkProvider,

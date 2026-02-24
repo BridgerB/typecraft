@@ -12,7 +12,10 @@ import {
 import { type Vec3, vec3 } from "../vec3/index.ts";
 import {
 	createWorld,
+	directionFromYawPitch,
 	onWorldEvent,
+	PLAYER_EYE_HEIGHT,
+	raycast,
 	setColumn,
 	unloadColumn,
 	worldGetBlockStateId,
@@ -245,9 +248,26 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		return results.length > 0 ? bot.blockAt(results[0]!) : null;
 	};
 
-	bot.canSeeBlock = (_block: Vec3) => {
-		// Simplified: always true (full raycast requires block collision data)
-		return true;
+	bot.canSeeBlock = (block: Vec3) => {
+		if (!bot.world) return false;
+		const eye = vec3(
+			bot.entity.position.x,
+			bot.entity.position.y + PLAYER_EYE_HEIGHT,
+			bot.entity.position.z,
+		);
+		const dx = Math.floor(block.x) + 0.5 - eye.x;
+		const dy = Math.floor(block.y) + 0.5 - eye.y;
+		const dz = Math.floor(block.z) + 0.5 - eye.z;
+		const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		if (dist === 0) return true;
+		const dir = vec3(dx / dist, dy / dist, dz / dist);
+		const hit = raycast(bot.world, eye, dir, dist + 1);
+		if (!hit) return true; // no solid blocks in the way
+		return (
+			Math.floor(hit.position.x) === Math.floor(block.x) &&
+			Math.floor(hit.position.y) === Math.floor(block.y) &&
+			Math.floor(hit.position.z) === Math.floor(block.z)
+		);
 	};
 
 	bot.waitForChunksToLoad = async () => {

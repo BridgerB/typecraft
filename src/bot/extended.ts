@@ -4,6 +4,11 @@
  */
 
 import { type Vec3, vec3 } from "../vec3/index.ts";
+import {
+	directionFromYawPitch,
+	PLAYER_EYE_HEIGHT,
+	raycast,
+} from "../world/index.ts";
 import type {
 	Bot,
 	BotOptions,
@@ -184,10 +189,23 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Block at cursor ──
 
-	bot.blockAtCursor = (_maxDistance?: number) => {
-		// Simplified raycast from player eye position
-		// Full implementation would use createRaycastIterator from world
-		return null;
+	bot.blockAtCursor = (maxDistance = 5) => {
+		if (!bot.world || !bot.registry) return null;
+		const eye = vec3(
+			bot.entity.position.x,
+			bot.entity.position.y + PLAYER_EYE_HEIGHT,
+			bot.entity.position.z,
+		);
+		const dir = directionFromYawPitch(bot.entity.yaw, bot.entity.pitch);
+		const hit = raycast(bot.world, eye, dir, maxDistance);
+		if (!hit) return null;
+		return {
+			position: hit.position,
+			face: hit.face,
+			intersect: hit.intersect,
+			name: hit.name,
+			stateId: hit.stateId,
+		};
 	};
 
 	// ── Command block ──
