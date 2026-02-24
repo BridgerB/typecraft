@@ -49,3 +49,6 @@
 [submodule "upstream/prismarine-web-client"]
 	path = upstream/prismarine-web-client
 	url = git@github.com:PrismarineJS/prismarine-web-client.git
+[submodule "upstream/mineflayer-pathfinder"]
+	path = upstream/mineflayer-pathfinder
+	url = https://github.com/PrismarineJS/mineflayer-pathfinder.git
