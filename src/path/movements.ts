@@ -1,14 +1,15 @@
 /**
  * Movement generation for A* pathfinding.
- * Queries blocks via PhysicsWorld adapter, classifies them,
- * and generates valid neighboring moves (walk, jump, drop, diagonal).
+ * Queries blocks via PhysicsWorld adapter, classifies them with a per-path
+ * cache, and generates valid neighboring moves (walk, jump, drop, diagonal).
  */
 
 import type { Bot } from "../bot/types.ts";
 import { createPhysicsWorld } from "../physics/adapter.ts";
-import type { PhysicsBlock, PhysicsWorld } from "../physics/types.ts";
+import type { PhysicsWorld } from "../physics/types.ts";
 import type { Registry } from "../registry/types.ts";
-import type { BlockQuery, Move } from "./types.ts";
+import type { BlockQuery, Move, Movements } from "./types.ts";
+import { posHash } from "./types.ts";
 
 // Cardinal directions (NESW)
 const CARDINAL = [
@@ -26,20 +27,21 @@ const DIAGONAL = [
 	{ x: 1, z: 1 },
 ] as const;
 
-/** Create a move node at integer coordinates. */
-const createMove = (x: number, y: number, z: number, cost: number): Move => ({
-	x,
-	y,
-	z,
-	cost,
-	hash: `${x},${y},${z}`,
-});
+/** Void/unloaded block query — treated as impassable. */
+const VOID_BLOCK: BlockQuery = {
+	safe: false,
+	physical: false,
+	liquid: false,
+	climbable: false,
+	height: 0,
+	name: "void",
+};
 
 /** Create a movement generator bound to the bot's current world state. */
 export const createMovements = (
 	bot: Bot,
 	maxDropDown = 3,
-): { getNeighbors: (node: Move) => Move[] } => {
+): Movements => {
 	const registry = bot.registry!;
 	const physicsWorld = createPhysicsWorld(bot.world!);
 
@@ -69,12 +71,13 @@ export const createMovements = (
 	addId("ladder", climbableIds);
 	addId("vine", climbableIds);
 
-	// Classify blocks with shapes taller than 1 as fences (can't step onto)
+	// Classify blocks with shapes taller than 1 as fences
 	const collisionShapes = registry.blockCollisionShapes;
 	for (const block of registry.blocksArray) {
 		const shapeRef = collisionShapes.blocks[block.name];
 		if (shapeRef === undefined) continue;
-		const shapeId = typeof shapeRef === "number" ? shapeRef : (shapeRef[0] ?? 0);
+		const shapeId =
+			typeof shapeRef === "number" ? shapeRef : (shapeRef[0] ?? 0);
 		const shapes = collisionShapes.shapes[String(shapeId)] ?? [];
 		for (const shape of shapes) {
 			if ((shape[4] ?? 0) > 1.0) {
@@ -84,18 +87,20 @@ export const createMovements = (
 		}
 	}
 
-	/** Query block properties at an absolute position. */
+	// Block query cache — avoids repeated world lookups for shared neighbors
+	const blockCache = new Map<number, BlockQuery>();
+
+	/** Query block properties at an absolute position (cached). */
 	const queryBlock = (x: number, y: number, z: number): BlockQuery => {
+		const key = posHash(x, y, z);
+		const cached = blockCache.get(key);
+		if (cached) return cached;
+
 		const block = physicsWorld.getBlock({ x, y, z });
-		if (!block)
-			return {
-				safe: false,
-				physical: false,
-				liquid: false,
-				climbable: false,
-				height: 0,
-				name: "void",
-			};
+		if (!block) {
+			blockCache.set(key, VOID_BLOCK);
+			return VOID_BLOCK;
+		}
 
 		const isLiquid = liquidIds.has(block.id);
 		const isClimbable = climbableIds.has(block.id);
@@ -111,7 +116,7 @@ export const createMovements = (
 			if (shapeTop > height) height = shapeTop;
 		}
 
-		return {
+		const result: BlockQuery = {
 			safe: isSafe,
 			physical: isPhysical,
 			liquid: isLiquid,
@@ -119,90 +124,60 @@ export const createMovements = (
 			height,
 			name: block.name,
 		};
+		blockCache.set(key, result);
+		return result;
+	};
+
+	// Pre-allocated neighbors buffer — reused per getNeighbors call
+	let neighbors: Move[] = [];
+	let neighborCount = 0;
+
+	/** Push a move into the neighbors buffer. */
+	const pushNeighbor = (x: number, y: number, z: number, cost: number): void => {
+		neighbors[neighborCount++] = { x, y, z, cost, hash: posHash(x, y, z) };
 	};
 
 	/** Forward walk: move into adjacent block at same Y level. */
-	const getMoveForward = (
-		node: Move,
-		dx: number,
-		dz: number,
-		neighbors: Move[],
-	): void => {
+	const getMoveForward = (node: Move, dx: number, dz: number): void => {
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 
-		const floor = queryBlock(nx, node.y - 1, nz);
-		if (!floor.physical) return;
+		if (!queryBlock(nx, node.y - 1, nz).physical) return;
+		if (!queryBlock(nx, node.y, nz).safe) return;
+		if (!queryBlock(nx, node.y + 1, nz).safe) return;
 
-		const feet = queryBlock(nx, node.y, nz);
-		if (!feet.safe) return;
-
-		const head = queryBlock(nx, node.y + 1, nz);
-		if (!head.safe) return;
-
-		neighbors.push(createMove(nx, node.y, nz, 1));
+		pushNeighbor(nx, node.y, nz, 1);
 	};
 
 	/** Jump up: move into adjacent block one Y higher. */
-	const getMoveJumpUp = (
-		node: Move,
-		dx: number,
-		dz: number,
-		neighbors: Move[],
-	): void => {
+	const getMoveJumpUp = (node: Move, dx: number, dz: number): void => {
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 		const ny = node.y + 1;
 
-		// Need headroom above current position
-		const aboveHead = queryBlock(node.x, node.y + 2, node.z);
-		if (!aboveHead.safe) return;
+		if (!queryBlock(node.x, node.y + 2, node.z).safe) return;
+		if (!queryBlock(nx, node.y, nz).physical) return;
+		if (!queryBlock(nx, ny, nz).safe) return;
+		if (!queryBlock(nx, ny + 1, nz).safe) return;
 
-		// Need solid floor at destination
-		const floor = queryBlock(nx, node.y, nz);
-		if (!floor.physical) return;
-
-		// Need clear space at destination (feet + head)
-		const feet = queryBlock(nx, ny, nz);
-		if (!feet.safe) return;
-
-		const head = queryBlock(nx, ny + 1, nz);
-		if (!head.safe) return;
-
-		neighbors.push(createMove(nx, ny, nz, 2));
+		pushNeighbor(nx, ny, nz, 2);
 	};
 
 	/** Drop down: walk forward and fall until hitting ground. */
-	const getMoveDropDown = (
-		node: Move,
-		dx: number,
-		dz: number,
-		neighbors: Move[],
-	): void => {
+	const getMoveDropDown = (node: Move, dx: number, dz: number): void => {
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 
-		// Need headroom at step-off
-		const head = queryBlock(nx, node.y + 1, nz);
-		if (!head.safe) return;
+		if (!queryBlock(nx, node.y + 1, nz).safe) return;
+		if (!queryBlock(nx, node.y, nz).safe) return;
+		if (queryBlock(nx, node.y - 1, nz).physical) return; // has floor = forward move
 
-		const feet = queryBlock(nx, node.y, nz);
-		if (!feet.safe) return;
-
-		// Already has floor? That's a forward move, not a drop.
-		const floorBelow = queryBlock(nx, node.y - 1, nz);
-		if (floorBelow.physical) return;
-
-		// Fall until we hit ground
 		for (let dy = -2; dy >= -(maxDropDown + 1); dy--) {
 			const landing = queryBlock(nx, node.y + dy, nz);
 			if (landing.physical) {
 				const landY = node.y + dy + 1;
-				// Verify space above landing is clear
-				const aboveLanding = queryBlock(nx, landY, nz);
-				if (!aboveLanding.safe) return;
-				const fallDist = node.y - landY;
-				neighbors.push(createMove(nx, landY, nz, 1 + fallDist * 0.5));
+				if (landY !== node.y && !queryBlock(nx, landY, nz).safe) return;
+				pushNeighbor(nx, landY, nz, 1 + (node.y - landY) * 0.5);
 				return;
 			}
 			if (!landing.safe && !landing.liquid) return;
@@ -210,53 +185,40 @@ export const createMovements = (
 	};
 
 	/** Diagonal: move diagonally if both intermediate cardinal paths are clear. */
-	const getMoveDiagonal = (
-		node: Move,
-		dx: number,
-		dz: number,
-		neighbors: Move[],
-	): void => {
+	const getMoveDiagonal = (node: Move, dx: number, dz: number): void => {
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 
-		// Need solid floor at destination
-		const floor = queryBlock(nx, node.y - 1, nz);
-		if (!floor.physical) return;
+		if (!queryBlock(nx, node.y - 1, nz).physical) return;
+		if (!queryBlock(nx, node.y, nz).safe) return;
+		if (!queryBlock(nx, node.y + 1, nz).safe) return;
 
-		// Need clear space at destination
-		const feet = queryBlock(nx, node.y, nz);
-		if (!feet.safe) return;
+		const p1 =
+			queryBlock(node.x, node.y, node.z + dz).safe &&
+			queryBlock(node.x, node.y + 1, node.z + dz).safe;
+		const p2 =
+			queryBlock(node.x + dx, node.y, node.z).safe &&
+			queryBlock(node.x + dx, node.y + 1, node.z).safe;
+		if (!p1 && !p2) return;
 
-		const head = queryBlock(nx, node.y + 1, nz);
-		if (!head.safe) return;
-
-		// At least one intermediate cardinal path must be passable
-		const path1Feet = queryBlock(node.x, node.y, node.z + dz);
-		const path1Head = queryBlock(node.x, node.y + 1, node.z + dz);
-		const path2Feet = queryBlock(node.x + dx, node.y, node.z);
-		const path2Head = queryBlock(node.x + dx, node.y + 1, node.z);
-
-		const path1Clear = path1Feet.safe && path1Head.safe;
-		const path2Clear = path2Feet.safe && path2Head.safe;
-		if (!path1Clear && !path2Clear) return;
-
-		neighbors.push(createMove(nx, node.y, nz, Math.SQRT2));
+		pushNeighbor(nx, node.y, nz, Math.SQRT2);
 	};
 
-	const getNeighbors = (node: Move): Move[] => {
-		const neighbors: Move[] = [];
+	const getNeighbors = (node: Move): readonly Move[] => {
+		neighborCount = 0;
 
 		for (const dir of CARDINAL) {
-			getMoveForward(node, dir.x, dir.z, neighbors);
-			getMoveJumpUp(node, dir.x, dir.z, neighbors);
-			getMoveDropDown(node, dir.x, dir.z, neighbors);
+			getMoveForward(node, dir.x, dir.z);
+			getMoveJumpUp(node, dir.x, dir.z);
+			getMoveDropDown(node, dir.x, dir.z);
 		}
 
 		for (const dir of DIAGONAL) {
-			getMoveDiagonal(node, dir.x, dir.z, neighbors);
+			getMoveDiagonal(node, dir.x, dir.z);
 		}
 
-		return neighbors;
+		// Return a slice so the caller gets an independent snapshot
+		return neighbors.slice(0, neighborCount);
 	};
 
 	return { getNeighbors };

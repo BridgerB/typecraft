@@ -14,6 +14,7 @@ import type {
 	AStarContext,
 	Goal,
 	Move,
+	Movements,
 	PathNode,
 	PathResult,
 } from "./types.ts";
@@ -26,9 +27,16 @@ export const createAStarContext = (
 	searchRadius: number,
 ): AStarContext => {
 	const openHeap = createHeap();
-	const openMap = new Map<string, PathNode>();
+	const openMap = new Map<number, PathNode>();
 	const h = goal.heuristic(start);
-	const startNode: PathNode = { data: start, g: 0, h, f: h, parent: null };
+	const startNode: PathNode = {
+		data: start,
+		g: 0,
+		h,
+		f: h,
+		parent: null,
+		heapIndex: -1,
+	};
 	heapPush(openHeap, startNode);
 	openMap.set(start.hash, startNode);
 	return {
@@ -70,7 +78,7 @@ const makeResult = (
 /** Run one tick of A* computation. Returns PathResult with status. */
 export const computeAStar = (
 	ctx: AStarContext,
-	getNeighbors: (node: Move) => Move[],
+	movements: Movements,
 	tickTimeout: number,
 	totalTimeout: number,
 ): PathResult => {
@@ -88,7 +96,7 @@ export const computeAStar = (
 		ctx.openMap.delete(node.data.hash);
 		ctx.closedSet.add(node.data.hash);
 
-		for (const neighborData of getNeighbors(node.data)) {
+		for (const neighborData of movements.getNeighbors(node.data)) {
 			if (ctx.closedSet.has(neighborData.hash)) continue;
 
 			const g = node.g + neighborData.cost;
@@ -106,6 +114,7 @@ export const computeAStar = (
 					h,
 					f: g + h,
 					parent: node,
+					heapIndex: -1,
 				};
 				ctx.openMap.set(neighborData.hash, neighborNode);
 			} else {

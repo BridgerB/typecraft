@@ -10,10 +10,11 @@ import type {
 	AStarContext,
 	Goal,
 	Move,
+	Movements,
 	Pathfinder,
 	PathfinderConfig,
-	PathResult,
 } from "./types.ts";
+import { posHash } from "./types.ts";
 
 const DEFAULT_CONFIG: PathfinderConfig = {
 	thinkTimeout: 5000,
@@ -40,6 +41,7 @@ export const createPathfinder = (
 	let astarPartial = false;
 	let pathComputed = false;
 	let lastNodeTime = performance.now();
+	let movements: Movements | null = null;
 	let gotoResolve: (() => void) | null = null;
 	let gotoReject: ((err: Error) => void) | null = null;
 
@@ -49,7 +51,7 @@ export const createPathfinder = (
 		const x = Math.floor(p.x);
 		const y = Math.floor(p.y);
 		const z = Math.floor(p.z);
-		return { x, y, z, cost: 0, hash: `${x},${y},${z}` };
+		return { x, y, z, cost: 0, hash: posHash(x, y, z) };
 	};
 
 	/** Stop all bot controls. */
@@ -64,6 +66,7 @@ export const createPathfinder = (
 		astarCtx = null;
 		astarPartial = false;
 		pathComputed = false;
+		movements = null;
 		lastNodeTime = performance.now();
 		fullStop();
 	};
@@ -91,21 +94,22 @@ export const createPathfinder = (
 		const p = bot.entity.position;
 		const next = path[pathIndex]!;
 
-		// Check if we reached the current waypoint
 		const dx = next.x + 0.5 - p.x;
 		const dz = next.z + 0.5 - p.z;
 		const dy = next.y - p.y;
-		const xzDistSq = dx * dx + dz * dz;
 
-		if (xzDistSq <= cfg.reachDistance * cfg.reachDistance && Math.abs(dy) < 1.5) {
+		if (
+			dx * dx + dz * dz <= cfg.reachDistance * cfg.reachDistance &&
+			Math.abs(dy) < 1.5
+		) {
 			lastNodeTime = performance.now();
 			pathIndex++;
 
 			if (pathIndex >= path.length) {
 				fullStop();
 				if (currentGoal) {
-					const flooredMove = startMoveFromBot();
-					if (currentGoal.isEnd(flooredMove)) {
+					const m = startMoveFromBot();
+					if (currentGoal.isEnd(m)) {
 						bot.emit("goal_reached", currentGoal);
 						resolveGoto();
 						if (!dynamic) currentGoal = null;
@@ -116,33 +120,24 @@ export const createPathfinder = (
 			}
 		}
 
-		// Drive toward next waypoint
 		const wp = path[pathIndex]!;
 		const moveX = wp.x + 0.5 - p.x;
 		const moveZ = wp.z + 0.5 - p.z;
-		const yaw = Math.atan2(-moveX, -moveZ);
 
-		bot.look(yaw, 0, true);
+		bot.look(Math.atan2(-moveX, -moveZ), 0, true);
 		bot.setControlState("forward", true);
 		bot.setControlState("sprint", true);
-
-		// Jump if next waypoint is above us
 		bot.setControlState("jump", wp.y > p.y + 0.5);
 
-		// Stuck detection
-		if (performance.now() - lastNodeTime > cfg.stuckTimeout) {
-			resetPath();
-		}
+		if (performance.now() - lastNodeTime > cfg.stuckTimeout) resetPath();
 	};
 
 	/** Called every physicsTick (~50ms). */
 	const onPhysicsTick = (): void => {
-		if (!currentGoal) return;
-		if (!bot.world || !bot.registry) return;
+		if (!currentGoal || !bot.world || !bot.registry) return;
 
 		// Check goal validity
 		if (currentGoal.isValid && !currentGoal.isValid()) {
-			const goal = currentGoal;
 			currentGoal = null;
 			resetPath();
 			bot.emit("path_stop");
@@ -151,16 +146,13 @@ export const createPathfinder = (
 		}
 
 		// Check dynamic goal changes
-		if (currentGoal.hasChanged?.()) {
-			resetPath();
-		}
+		if (currentGoal.hasChanged?.()) resetPath();
 
-		// Continue incremental A* if partial
-		if (astarCtx && astarPartial) {
-			const movements = createMovements(bot, cfg.maxDropDown);
+		// Continue incremental A* if partial (reuse existing movements)
+		if (astarCtx && astarPartial && movements) {
 			const result = computeAStar(
 				astarCtx,
-				movements.getNeighbors,
+				movements,
 				cfg.tickTimeout,
 				cfg.thinkTimeout,
 			);
@@ -168,9 +160,7 @@ export const createPathfinder = (
 			pathIndex = 0;
 			astarPartial = result.status === "partial";
 			if (result.status !== "partial") astarCtx = null;
-			if (result.status === "noPath") {
-				rejectGoto("No path found");
-			}
+			if (result.status === "noPath") rejectGoto("No path found");
 			return;
 		}
 
@@ -178,7 +168,6 @@ export const createPathfinder = (
 		if (pathIndex >= path.length && !pathComputed) {
 			const currentMove = startMoveFromBot();
 
-			// Already at goal?
 			if (currentGoal.isEnd(currentMove)) {
 				fullStop();
 				bot.emit("goal_reached", currentGoal);
@@ -188,7 +177,8 @@ export const createPathfinder = (
 				return;
 			}
 
-			const movements = createMovements(bot, cfg.maxDropDown);
+			// Create movements once per path computation
+			movements = createMovements(bot, cfg.maxDropDown);
 			astarCtx = createAStarContext(
 				currentMove,
 				currentGoal,
@@ -197,7 +187,7 @@ export const createPathfinder = (
 			);
 			const result = computeAStar(
 				astarCtx,
-				movements.getNeighbors,
+				movements,
 				cfg.tickTimeout,
 				cfg.thinkTimeout,
 			);
@@ -206,19 +196,14 @@ export const createPathfinder = (
 			pathComputed = true;
 			astarPartial = result.status === "partial";
 			if (result.status !== "partial") astarCtx = null;
-			if (result.status === "noPath" && !astarPartial) {
+			if (result.status === "noPath" && !astarPartial)
 				rejectGoto("No path found");
-			}
 			return;
 		}
 
-		// Follow the path
-		if (pathIndex < path.length) {
-			followPath();
-		}
+		if (pathIndex < path.length) followPath();
 	};
 
-	// Attach to physics tick
 	bot.on("physicsTick", onPhysicsTick);
 
 	const setGoal = (goal: Goal | null, isDynamic = false): void => {
@@ -245,13 +230,11 @@ export const createPathfinder = (
 			setGoal(goal);
 		});
 
-	const pathfinder: Pathfinder = {
+	return {
 		setGoal,
 		stop,
 		isMoving: () => pathIndex < path.length || astarPartial,
 		goto,
 		config: cfg,
 	};
-
-	return pathfinder;
 };
