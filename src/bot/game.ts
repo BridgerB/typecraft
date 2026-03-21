@@ -5,6 +5,7 @@
 
 import { simplifyNbt } from "../nbt/index.ts";
 import type { NbtTag } from "../nbt/index.ts";
+import { stringSerializer, stringDeserializer } from "../protocol/pluginChannels.ts";
 import type { Bot, BotOptions, Difficulty, GameMode } from "./types.ts";
 
 const DIFFICULTY_NAMES: readonly Difficulty[] = [
@@ -134,18 +135,13 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 		bot.emit("login");
 		bot.emit("game");
 
-		// Send brand (encoded as VarInt-prefixed string)
+		// Send brand via plugin channel
 		const brand = options.brand ?? "vanilla";
-		const brandBytes = Buffer.from(brand, "utf8");
-		const brandBuf = Buffer.alloc(brandBytes.length + 1);
-		brandBuf[0] = brandBytes.length;
-		brandBytes.copy(brandBuf, 1);
-		bot.client.write("custom_payload", {
-			channel: bot.supportFeature("customChannelMCPrefixed")
-				? "MC|Brand"
-				: "minecraft:brand",
-			data: brandBuf,
-		});
+		const brandChannel = bot.supportFeature("customChannelMCPrefixed")
+			? "MC|Brand"
+			: "minecraft:brand";
+		bot.client.registerChannel(brandChannel, stringSerializer, stringDeserializer);
+		bot.client.writeChannel(brandChannel, brand);
 
 		// 1.21.4+ (protocol 769+) requires player_loaded acknowledgement
 		if (bot.protocolVersion >= 769) {

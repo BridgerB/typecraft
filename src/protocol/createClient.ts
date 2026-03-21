@@ -14,6 +14,7 @@ import {
 import { resolveServer } from "./dns.ts";
 import { registerHandshake } from "./handshake.ts";
 import { registerKeepalive } from "./keepalive.ts";
+import { initPluginChannels } from "./pluginChannels.ts";
 
 /** Create and connect a Minecraft client. */
 export const createClient = (options: ClientOptions): Client => {
@@ -23,6 +24,7 @@ export const createClient = (options: ClientOptions): Client => {
 	const keepAlive = options.keepAlive ?? true;
 
 	const client = createProtocolClient(options);
+	initPluginChannels(client);
 
 	const wireUp = (
 		resolvedHost: string,

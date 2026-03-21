@@ -48,6 +48,17 @@ export type Client = EventEmitter & {
 	readonly setEncryption: (secret: Buffer) => void;
 	/** Enable zlib compression above threshold bytes. */
 	readonly setCompressionThreshold: (threshold: number) => void;
+	/** Register a plugin channel for custom_payload handling. */
+	readonly registerChannel: (
+		name: string,
+		serializer?: ((params: unknown) => Buffer) | null,
+		deserializer?: ((data: Buffer) => unknown) | null,
+		custom?: boolean,
+	) => void;
+	/** Send data on a registered plugin channel. */
+	readonly writeChannel: (name: string, params: unknown) => void;
+	/** Unregister a plugin channel. */
+	readonly unregisterChannel: (name: string, custom?: boolean) => void;
 	/** Current protocol state. */
 	state: string;
 	/** Player username. */
@@ -233,6 +244,15 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 		setCompressionThreshold: (threshold: number) => {
 			compressionThreshold = threshold;
 		},
+
+		registerChannel: (
+			_name: string,
+			_serializer?: ((params: unknown) => Buffer) | null,
+			_deserializer?: ((data: Buffer) => unknown) | null,
+			_custom?: boolean,
+		) => {},
+		writeChannel: (_name: string, _params: unknown) => {},
+		unregisterChannel: (_name: string, _custom?: boolean) => {},
 	}) as Client;
 
 	// Define state as a getter/setter so codec updates happen on assignment.
