@@ -899,6 +899,37 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		}
 	};
 
+	bot.findPlayers = (
+		filter: string | RegExp | ((player: Player) => boolean),
+	): Entity[] => {
+		const results: Entity[] = [];
+
+		for (const username of Object.keys(bot.players)) {
+			const player = bot.players[username];
+			if (!player?.entity) continue;
+
+			let matches = false;
+			if (typeof filter === "string") {
+				matches = player.username === filter;
+			} else if (filter instanceof RegExp) {
+				matches = filter.test(player.username);
+			} else {
+				matches = filter(player);
+			}
+
+			if (matches) results.push(player.entity);
+		}
+
+		return results;
+	};
+
+	bot.findPlayer = (
+		filter: string | RegExp | ((player: Player) => boolean),
+	): Entity | null => {
+		const results = bot.findPlayers(filter);
+		return results.length > 0 ? results[0] : null;
+	};
+
 	// Emit bot's entitySpawn when first spawn happens
 	bot.once("spawn", () => {
 		bot.emit("entitySpawn", bot.entity);

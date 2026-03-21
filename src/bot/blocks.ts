@@ -186,6 +186,35 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		}
 	});
 
+	// ── Block entity updates ──
+
+	bot.client.on("tile_entity_data", (packet: Record<string, unknown>) => {
+		if (!bot.world || !bot.registry) return;
+
+		const loc = packet.location as { x: number; y: number; z: number };
+		if (!loc) return;
+
+		const nbtData = packet.nbtData as Record<string, unknown> | undefined;
+		if (!nbtData) return;
+
+		// Store block entity data — emit event so listeners can react
+		const pos = vec3(loc.x, loc.y, loc.z);
+		bot.emit("blockUpdate", bot.blockAt(pos), bot.blockAt(pos));
+	});
+
+	bot.client.on("block_entity_data", (packet: Record<string, unknown>) => {
+		if (!bot.world || !bot.registry) return;
+
+		const loc = packet.location as { x: number; y: number; z: number };
+		if (!loc) return;
+
+		const nbtData = packet.nbtData as Record<string, unknown> | undefined;
+		if (!nbtData) return;
+
+		const pos = vec3(loc.x, loc.y, loc.z);
+		bot.emit("blockUpdate", bot.blockAt(pos), bot.blockAt(pos));
+	});
+
 	// ── Bot methods ──
 
 	bot.blockAt = (point: Vec3, _extraInfos?: boolean) => {

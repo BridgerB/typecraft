@@ -18,8 +18,22 @@ const isNbt = (v: unknown): boolean =>
 	"type" in (v as Record<string, unknown>) &&
 	"value" in (v as Record<string, unknown>);
 
+type PatternEntry = {
+	name: string;
+	patterns: RegExp[];
+	position: number;
+	matches: string[];
+	messages: ChatMessage[];
+	repeat: boolean;
+	parse: boolean;
+	deprecated: boolean;
+};
+
 export const initChat = (bot: Bot, options: BotOptions): void => {
 	const chatLengthLimit = options.chatLengthLimit ?? 256;
+
+	const _patterns: Record<number, PatternEntry | undefined> = {};
+	let _patternLength = 0;
 
 	// ── Receive chat ──
 
@@ -58,6 +72,38 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 
 		if (!matched) {
 			bot.emit("unmatchedMessage", text, jsonMsg);
+		}
+
+		// Check advanced pattern registry
+		for (const [key, entry] of Object.entries(_patterns)) {
+			if (!entry) continue;
+			const { position: pos, patterns } = entry;
+			if (pos < patterns.length && patterns[pos].test(text)) {
+				entry.matches.push(text);
+				entry.messages.push(jsonMsg);
+				entry.position++;
+
+				if (entry.position >= entry.patterns.length) {
+					// All patterns matched
+					if (entry.parse) {
+						const parsed = entry.patterns.map((p, i) => {
+							const m = entry.matches[i].match(p);
+							return m ? m.slice(1) : [];
+						});
+						bot.emit(`chat:${entry.name}` as never, parsed);
+					} else {
+						bot.emit(`chat:${entry.name}` as never, entry.matches);
+					}
+
+					if (entry.repeat) {
+						entry.position = 0;
+						entry.matches = [];
+						entry.messages = [];
+					} else {
+						_patterns[Number(key)] = undefined;
+					}
+				}
+			}
 		}
 	};
 
@@ -261,10 +307,93 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 		pattern: RegExp,
 		chatType: string,
 		description?: string,
-	): number =>
+	): number => {
+		// Legacy API — add to both old array and new registry
 		bot.chatPatterns.push({
 			pattern,
 			type: chatType,
 			description: description ?? "",
-		}) - 1;
+		});
+		return bot.addChatPattern(chatType, pattern, { deprecated: true } as never);
+	};
+
+	// ── Advanced chat pattern management ──
+
+	bot.addChatPattern = (
+		name: string,
+		pattern: RegExp,
+		opts: { repeat?: boolean; parse?: boolean } = {},
+	): number => {
+		const { repeat = true, parse = false } = opts;
+		_patterns[_patternLength] = {
+			name,
+			patterns: [pattern],
+			position: 0,
+			matches: [],
+			messages: [],
+			repeat,
+			parse,
+			deprecated: false,
+		};
+		return _patternLength++;
+	};
+
+	bot.addChatPatternSet = (
+		name: string,
+		patterns: RegExp[],
+		opts: { repeat?: boolean; parse?: boolean } = {},
+	): number => {
+		const { repeat = true, parse = false } = opts;
+		_patterns[_patternLength++] = {
+			name,
+			patterns,
+			position: 0,
+			matches: [],
+			messages: [],
+			repeat,
+			parse,
+			deprecated: false,
+		};
+		return _patternLength;
+	};
+
+	bot.removeChatPattern = (name: string | number): void => {
+		if (typeof name === "number") {
+			_patterns[name] = undefined;
+		} else {
+			for (const [key, entry] of Object.entries(_patterns)) {
+				if (entry?.name === name) {
+					_patterns[Number(key)] = undefined;
+				}
+			}
+		}
+	};
+
+	bot.awaitMessage = (...args: (string | RegExp | number)[]): Promise<string> => {
+		const timeout =
+			typeof args[args.length - 1] === "number"
+				? (args.pop() as number)
+				: 20000;
+		const filters = args as (string | RegExp)[];
+
+		return new Promise<string>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				bot.removeListener("messagestr", onMsg);
+				reject(new Error(`Timeout waiting for message after ${timeout}ms`));
+			}, timeout);
+
+			const onMsg = (msg: string) => {
+				const matches = filters.some((f) =>
+					f instanceof RegExp ? f.test(msg) : msg === f,
+				);
+				if (matches) {
+					clearTimeout(timer);
+					bot.removeListener("messagestr", onMsg);
+					resolve(msg);
+				}
+			};
+
+			bot.on("messagestr", onMsg);
+		});
+	};
 };

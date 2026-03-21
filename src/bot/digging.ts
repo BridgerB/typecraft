@@ -4,8 +4,12 @@
 
 import { getEnchants } from "../item/index.ts";
 import { length, subtract, type Vec3, vec3 } from "../vec3/index.ts";
+import {
+	PLAYER_EYE_HEIGHT,
+	raycast,
+} from "../world/index.ts";
 import type { Bot, BotOptions, Task } from "./types.ts";
-import { createTask, sleep } from "./utils.ts";
+import { createTask } from "./utils.ts";
 
 export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	let digging = false;
@@ -15,7 +19,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	bot.dig = async (
 		block: unknown,
 		forceLook?: boolean | "ignore",
-		_digFace?: unknown,
+		digFace?: unknown,
 	): Promise<void> => {
 		if (!block || !bot.registry) return;
 
@@ -23,18 +27,118 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		const pos = blockObj.position;
 		if (!pos) return;
 
-		// Face direction (default: top)
-		const face = 1;
+		const time = bot.digTime(block);
+		if (time === Infinity)
+			throw new Error(`dig time for ${blockObj.name} is Infinity`);
 
-		// Look at block unless ignored
+		// Determine face
+		let face = 1; // default top
+
 		if (forceLook !== "ignore") {
-			await bot.lookAt(
-				vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
-				forceLook === true,
-			);
+			const faceVec = digFace as Vec3 | "raycast" | "auto" | undefined;
+
+			if (faceVec && typeof faceVec === "object" && "x" in faceVec) {
+				// Explicit Vec3 face direction
+				const v = faceVec as Vec3;
+				if (v.x) face = v.x > 0 ? 5 : 4; // EAST : WEST
+				else if (v.y) face = v.y > 0 ? 1 : 0; // TOP : BOTTOM
+				else if (v.z) face = v.z > 0 ? 3 : 2; // SOUTH : NORTH
+
+				await bot.lookAt(
+					vec3(
+						pos.x + 0.5 + v.x * 0.5,
+						pos.y + 0.5 + v.y * 0.5,
+						pos.z + 0.5 + v.z * 0.5,
+					),
+					forceLook === true,
+				);
+			} else if (faceVec === "raycast" && bot.world) {
+				// Raycast face detection
+				const eyePos = vec3(
+					bot.entity.position.x,
+					bot.entity.position.y + PLAYER_EYE_HEIGHT,
+					bot.entity.position.z,
+				);
+				const dx = bot.entity.position.x - (pos.x + 0.5);
+				const dy =
+					bot.entity.position.y + PLAYER_EYE_HEIGHT - (pos.y + 0.5);
+				const dz = bot.entity.position.z - (pos.z + 0.5);
+
+				// Check visible faces based on player position relative to block
+				const visibleFaces = {
+					y: Math.sign(Math.abs(dy) > 0.5 ? dy : 0),
+					x: Math.sign(Math.abs(dx) > 0.5 ? dx : 0),
+					z: Math.sign(Math.abs(dz) > 0.5 ? dz : 0),
+				};
+
+				let bestFace: { face: number; target: Vec3 } | null = null;
+				let bestDist = Infinity;
+
+				for (const axis of ["y", "x", "z"] as const) {
+					const sign = visibleFaces[axis];
+					if (!sign) continue;
+
+					const targetPos = vec3(
+						pos.x + 0.5 + (axis === "x" ? sign * 0.5 : 0),
+						pos.y + 0.5 + (axis === "y" ? sign * 0.5 : 0),
+						pos.z + 0.5 + (axis === "z" ? sign * 0.5 : 0),
+					);
+
+					const rayDir = vec3(
+						targetPos.x - eyePos.x,
+						targetPos.y - eyePos.y,
+						targetPos.z - eyePos.z,
+					);
+					const rayLen = Math.sqrt(
+						rayDir.x * rayDir.x +
+							rayDir.y * rayDir.y +
+							rayDir.z * rayDir.z,
+					);
+					if (rayLen === 0) continue;
+
+					const normDir = vec3(
+						rayDir.x / rayLen,
+						rayDir.y / rayLen,
+						rayDir.z / rayLen,
+					);
+					const hit = raycast(bot.world, eyePos, normDir, 5);
+
+					if (
+						hit &&
+						hit.position.x === pos.x &&
+						hit.position.y === pos.y &&
+						hit.position.z === pos.z
+					) {
+						const dist = rayLen;
+						if (dist < bestDist) {
+							bestDist = dist;
+							bestFace = { face: hit.face, target: hit.intersect };
+						}
+					}
+				}
+
+				if (bestFace) {
+					face = bestFace.face;
+					await bot.lookAt(bestFace.target, forceLook === true);
+				} else {
+					// Fallback: look at block center
+					await bot.lookAt(
+						vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
+						forceLook === true,
+					);
+				}
+			} else {
+				// Default: look at block center
+				await bot.lookAt(
+					vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5),
+					forceLook === true,
+				);
+			}
 		}
 
-		// Start digging
+		// Cancel current dig if any
+		if (digging) bot.stopDigging();
+
 		digging = true;
 		bot.targetDigBlock = block as never;
 
@@ -45,28 +149,56 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			sequence: 0,
 		});
 
-		// Swing arm periodically
+		bot.swingArm();
 		swingInterval = setInterval(() => bot.swingArm(), 350);
 
-		// Calculate dig time
-		const time = bot.digTime(block);
 		if (time === 0) {
-			// Instant break
 			finishDig(pos, face);
 			return;
 		}
 
 		digTask = createTask<void>();
 
-		// Wait for dig time, then finish
-		await sleep(time);
+		// Set up both timeout and blockUpdate event-driven completion
+		const digTimeout = setTimeout(() => {
+			if (digging) finishDig(pos, face);
+		}, time);
 
-		if (digging) {
-			finishDig(pos, face);
-		}
+		const onBlockUpdate = (_oldBlock: unknown, newBlock: unknown) => {
+			const nb = newBlock as { position?: Vec3; type?: number } | null;
+			if (!nb?.position) return;
+			if (
+				nb.position.x === pos.x &&
+				nb.position.y === pos.y &&
+				nb.position.z === pos.z
+			) {
+				if (nb.type === 0) {
+					// Block became air — digging completed by server
+					clearTimeout(digTimeout);
+					bot.removeListener("blockUpdate", onBlockUpdate);
+					digging = false;
+					if (swingInterval) {
+						clearInterval(swingInterval);
+						swingInterval = null;
+					}
+					bot.targetDigBlock = null;
+					bot.lastDigTime = Date.now();
+					bot.emit("diggingCompleted", newBlock);
+					if (digTask) {
+						digTask.finish(undefined as never);
+						digTask = null;
+					}
+				}
+			}
+		};
 
-		if (digTask) {
-			digTask.finish(undefined as never);
+		bot.on("blockUpdate", onBlockUpdate);
+
+		try {
+			await digTask.promise;
+		} finally {
+			clearTimeout(digTimeout);
+			bot.removeListener("blockUpdate", onBlockUpdate);
 		}
 	};
 

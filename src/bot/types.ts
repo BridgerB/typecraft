@@ -267,6 +267,17 @@ export type CommandBlockOptions = {
 	readonly alwaysActive: boolean;
 };
 
+// ── Place block options ──
+
+export type PlaceBlockOptions = {
+	readonly half?: "top" | "bottom";
+	readonly delta?: Vec3;
+	readonly forceLook?: boolean | "ignore";
+	readonly offhand?: boolean;
+	readonly swingArm?: "left" | "right";
+	readonly showHand?: boolean;
+};
+
 // ── Particle ──
 
 export type Particle = {
@@ -452,6 +463,18 @@ export type Bot = EventEmitter & {
 		chatType: string,
 		description?: string,
 	) => number;
+	addChatPattern: (
+		name: string,
+		pattern: RegExp,
+		options?: { repeat?: boolean; parse?: boolean },
+	) => number;
+	addChatPatternSet: (
+		name: string,
+		patterns: RegExp[],
+		options?: { repeat?: boolean; parse?: boolean },
+	) => number;
+	removeChatPattern: (name: string | number) => void;
+	awaitMessage: (...args: (string | RegExp | number)[]) => Promise<string>;
 
 	// ── Methods: Inventory ──
 	clickWindow: (
@@ -511,6 +534,11 @@ export type Bot = EventEmitter & {
 
 	// ── Methods: Placing ──
 	placeBlock: (referenceBlock: unknown, faceVector: Vec3) => Promise<void>;
+	placeBlockWithOptions: (
+		referenceBlock: unknown,
+		faceVector: Vec3,
+		options?: PlaceBlockOptions,
+	) => Promise<void>;
 	placeEntity: (referenceBlock: unknown, faceVector: Vec3) => Promise<Entity>;
 	activateBlock: (
 		block: Vec3,
@@ -526,6 +554,12 @@ export type Bot = EventEmitter & {
 	dismount: () => void;
 	moveVehicle: (left: number, forward: number) => void;
 	nearestEntity: (filter?: (entity: Entity) => boolean) => Entity | null;
+	findPlayer: (
+		filter: string | RegExp | ((player: Player) => boolean),
+	) => Entity | null;
+	findPlayers: (
+		filter: string | RegExp | ((player: Player) => boolean),
+	) => Entity[];
 	entityAtCursor: (maxDistance?: number) => Entity | null;
 	getExplosionDamages: (
 		targetEntity: Entity,
