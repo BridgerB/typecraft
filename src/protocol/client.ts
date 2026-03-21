@@ -59,6 +59,8 @@ export type Client = EventEmitter & {
 	readonly writeChannel: (name: string, params: unknown) => void;
 	/** Unregister a plugin channel. */
 	readonly unregisterChannel: (name: string, custom?: boolean) => void;
+	/** Hooks for external modules to respond to version detection (e.g. Forge/FML). */
+	autoVersionHooks: ((response: unknown, client: Client, options: ClientOptions) => void)[];
 	/** Current protocol state. */
 	state: string;
 	/** Player username. */
@@ -193,6 +195,7 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 		version: options.version,
 		protocolVersion,
 		socket: null as Socket | null,
+		autoVersionHooks: [] as ((response: unknown, client: Client, options: ClientOptions) => void)[],
 
 		setSocket: (socket: Socket) => {
 			currentSocket = socket;

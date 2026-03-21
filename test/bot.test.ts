@@ -36,6 +36,7 @@ const createMockClient = (): Client & { packets: [string, unknown][] } => {
 		registerChannel: () => {},
 		writeChannel: () => {},
 		unregisterChannel: () => {},
+		autoVersionHooks: [],
 		state: "play",
 		username: "TestBot",
 		uuid: "00000000-0000-0000-0000-000000000000",
