@@ -745,15 +745,65 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	bot.client.on(
 		"entity_update_attributes",
 		(packet: Record<string, unknown>) => {
-			const entity = bot.entities[packet.entityId as number];
+			const entityId = packet.entityId as number;
+			const entity = bot.entities[entityId];
 			if (!entity) return;
+
+			const properties = packet.properties as Array<{
+				key: string;
+				value: number;
+				modifiers: Array<{
+					uuid: string;
+					amount: number;
+					operation: number;
+				}>;
+			}>;
+
+			if (!properties) return;
+
+			for (const prop of properties) {
+				entity.attributes[prop.key] = {
+					value: prop.value,
+					modifiers: (prop.modifiers ?? []).map((m) => ({
+						uuid: m.uuid,
+						amount: m.amount,
+						operation: m.operation,
+					})),
+				};
+			}
+
 			bot.emit("entityAttributes", entity);
 		},
 	);
 
 	bot.client.on("update_attributes", (packet: Record<string, unknown>) => {
-		const entity = bot.entities[packet.entityId as number];
+		const entityId = packet.entityId as number;
+		const entity = bot.entities[entityId];
 		if (!entity) return;
+
+		const properties = packet.properties as Array<{
+			key: string;
+			value: number;
+			modifiers: Array<{
+				uuid: string;
+				amount: number;
+				operation: number;
+			}>;
+		}>;
+
+		if (!properties) return;
+
+		for (const prop of properties) {
+			entity.attributes[prop.key] = {
+				value: prop.value,
+				modifiers: (prop.modifiers ?? []).map((m) => ({
+					uuid: m.uuid,
+					amount: m.amount,
+					operation: m.operation,
+				})),
+			};
+		}
+
 		bot.emit("entityAttributes", entity);
 	});
 

@@ -61,6 +61,12 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		const block = referenceBlock as { position: Vec3 };
 		if (!block.position) return;
 
+		const dest = vec3(
+			block.position.x + faceVector.x,
+			block.position.y + faceVector.y,
+			block.position.z + faceVector.z,
+		);
+
 		await bot.lookAt(
 			vec3(
 				block.position.x + 0.5 + faceVector.x * 0.5,
@@ -71,6 +77,30 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		);
 
 		await bot.activateBlock(block.position, faceVector);
+
+		// Wait for block update confirmation
+		await new Promise<void>((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				bot.removeListener("blockUpdate", onUpdate);
+				reject(new Error("Place block timeout"));
+			}, 5000);
+
+			const onUpdate = (oldBlock: unknown, newBlock: unknown) => {
+				const nb = newBlock as { position?: Vec3; type?: number } | null;
+				const ob = oldBlock as { type?: number } | null;
+				if (!nb?.position) return;
+				if (nb.position.x === dest.x && nb.position.y === dest.y && nb.position.z === dest.z) {
+					if (ob?.type !== nb.type) {
+						clearTimeout(timeout);
+						bot.removeListener("blockUpdate", onUpdate);
+						bot.emit("blockPlaced", oldBlock, newBlock);
+						resolve();
+					}
+				}
+			};
+
+			bot.on("blockUpdate", onUpdate);
+		});
 	};
 
 	bot.placeEntity = async (

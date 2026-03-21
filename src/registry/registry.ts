@@ -111,6 +111,9 @@ export const createRegistry = (version: string): Registry => {
 	const blockCollisionShapes = (mcData.blockCollisionShapes ??
 		{}) as BlockCollisionShapes;
 
+	const materials = ((mcData as any).materials ?? {}) as Readonly<Record<string, Readonly<Record<number, number>>>>;
+
+
 	const versionInfo: VersionInfo = {
 		type: mcData.type as "pc" | "bedrock",
 		majorVersion: mcData.version.majorVersion ?? version,
@@ -146,6 +149,7 @@ export const createRegistry = (version: string): Registry => {
 		attributesByName,
 		attributesArray,
 		blockCollisionShapes,
+		materials,
 		recipes: ((mcData as unknown as Record<string, unknown>).recipes ??
 			{}) as Readonly<Record<number, readonly RawRecipe[]>>,
 		language: (mcData.language as Record<string, string>) ?? {},
@@ -175,6 +179,7 @@ const toBlockDefinition = (
 	maxStateId: block.maxStateId,
 	states: (block.states ?? []).map(toBlockStateProperty),
 	drops: block.drops ?? [],
+	harvestTools: (block as any).harvestTools ?? undefined,
 });
 
 type McBlockState = NonNullable<MinecraftData.Block["states"]>[number];

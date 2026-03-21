@@ -74,6 +74,7 @@ export type BlockDefinition = {
 	readonly maxStateId: number;
 	readonly states: readonly BlockStateProperty[];
 	readonly drops: readonly unknown[];
+	readonly harvestTools?: Readonly<Record<number, boolean>>;
 };
 
 /** A block state property (e.g. facing, powered, waterlogged). */
@@ -177,6 +178,7 @@ export type Registry = {
 	readonly attributesArray: readonly AttributeDefinition[];
 	readonly blockCollisionShapes: BlockCollisionShapes;
 	readonly recipes: Readonly<Record<number, readonly RawRecipe[]>>;
+	readonly materials: Readonly<Record<string, Readonly<Record<number, number>>>>;
 	readonly language: Readonly<Record<string, string>>;
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;

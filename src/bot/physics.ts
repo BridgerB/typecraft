@@ -19,7 +19,6 @@ import {
 	toNotchianYaw,
 } from "./conversions.ts";
 import type { Bot, BotOptions, ControlState } from "./types.ts";
-import { createTask } from "./utils.ts";
 
 /** Writable version of Vec3 for entity position/velocity mutation. */
 type MutableVec3 = { x: number; y: number; z: number };
@@ -33,8 +32,9 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 	let lastSentYaw = 0;
 	let lastSentPitch = 0;
 	let positionUpdateTimer = 0;
-	const lookTask = createTask<void>();
-	lookTask.finish(undefined as never);
+	let targetYaw: number | null = null;
+	let targetPitch: number | null = null;
+	let lookResolve: (() => void) | null = null;
 	let physicsWorld: PhysicsWorld | null = null;
 
 	// ── Control state ──
@@ -55,10 +55,26 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 	// ── Look ──
 
 	bot.look = async (yaw: number, pitch: number, force?: boolean) => {
-		bot.entity.yaw = yaw;
-		bot.entity.pitch = pitch;
-		if (force) return;
-		// If not forcing, we still set immediately (simplified from upstream gradual lerp)
+		if (force) {
+			// Instant look
+			bot.entity.yaw = yaw;
+			bot.entity.pitch = pitch;
+			targetYaw = null;
+			targetPitch = null;
+			if (lookResolve) {
+				lookResolve();
+				lookResolve = null;
+			}
+			return;
+		}
+
+		// Gradual lerp — set target and wait for physics ticks to reach it
+		targetYaw = yaw;
+		targetPitch = pitch;
+
+		return new Promise<void>((resolve) => {
+			lookResolve = resolve;
+		});
 	};
 
 	bot.lookAt = async (point: Vec3, force?: boolean) => {
@@ -185,6 +201,33 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 		// Apply back to entity
 		applyPlayerState(state, bot.entity);
+
+		// Interpolate look toward target
+		if (targetYaw !== null && targetPitch !== null) {
+			const LERP_FACTOR = 0.5;
+			const EPSILON = 0.01;
+
+			// Normalize yaw difference to [-PI, PI]
+			let yawDiff = targetYaw - bot.entity.yaw;
+			while (yawDiff > Math.PI) yawDiff -= 2 * Math.PI;
+			while (yawDiff < -Math.PI) yawDiff += 2 * Math.PI;
+
+			const pitchDiff = targetPitch - bot.entity.pitch;
+
+			if (Math.abs(yawDiff) < EPSILON && Math.abs(pitchDiff) < EPSILON) {
+				bot.entity.yaw = targetYaw;
+				bot.entity.pitch = targetPitch;
+				targetYaw = null;
+				targetPitch = null;
+				if (lookResolve) {
+					lookResolve();
+					lookResolve = null;
+				}
+			} else {
+				bot.entity.yaw += yawDiff * LERP_FACTOR;
+				bot.entity.pitch += pitchDiff * LERP_FACTOR;
+			}
+		}
 
 		bot.emit("physicsTick");
 

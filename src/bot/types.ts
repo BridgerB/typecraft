@@ -295,6 +295,59 @@ export type VillagerTrade = {
 	realPrice: number;
 };
 
+// ── Anvil window ──
+
+export type AnvilWindow = Window & {
+	combine: (itemOne: Item, itemTwo: Item, name?: string) => Promise<void>;
+	rename: (item: Item, name?: string) => Promise<void>;
+};
+
+// ── Villager window ──
+
+export type VillagerWindow = Window & {
+	trades: VillagerTrade[] | null;
+	selectedTrade: VillagerTrade | null;
+	trade: (index: number, count?: number) => Promise<void>;
+};
+
+// ── Furnace window ──
+
+export type FurnaceWindow = Window & {
+	fuel: number | null;
+	totalFuel: number | null;
+	fuelSeconds: number | null;
+	totalFuelSeconds: number | null;
+	progress: number | null;
+	totalProgress: number | null;
+	progressSeconds: number | null;
+	totalProgressSeconds: number | null;
+	inputItem: () => Item | null;
+	fuelItem: () => Item | null;
+	outputItem: () => Item | null;
+	takeInput: () => Promise<void>;
+	takeFuel: () => Promise<void>;
+	takeOutput: () => Promise<void>;
+	putInput: (itemType: number, metadata: number | null, count: number) => Promise<void>;
+	putFuel: (itemType: number, metadata: number | null, count: number) => Promise<void>;
+};
+
+// ── Enchantment table window ──
+
+export type EnchantmentOption = {
+	level: number;
+	expected: { enchant: number; level: number };
+};
+
+export type EnchantmentTableWindow = Window & {
+	xpseed: number;
+	enchantments: EnchantmentOption[];
+	enchant: (choice: number) => Promise<Item | null>;
+	takeTargetItem: () => Promise<void>;
+	putTargetItem: (item: Item) => Promise<void>;
+	putLapis: (item: Item) => Promise<void>;
+	targetItem: () => Item | null;
+};
+
 // ── Task (controllable promise) ──
 
 export type Task<T> = {
@@ -473,6 +526,13 @@ export type Bot = EventEmitter & {
 	dismount: () => void;
 	moveVehicle: (left: number, forward: number) => void;
 	nearestEntity: (filter?: (entity: Entity) => boolean) => Entity | null;
+	entityAtCursor: (maxDistance?: number) => Entity | null;
+	getExplosionDamages: (
+		targetEntity: Entity,
+		explosionPos: Vec3,
+		power: number,
+		rawDamages?: boolean,
+	) => number;
 
 	// ── Methods: Crafting ──
 	recipesFor: (
@@ -498,6 +558,9 @@ export type Bot = EventEmitter & {
 	fish: () => Promise<void>;
 	setSettings: (options: Partial<GameSettings>) => void;
 	blockAtCursor: (maxDistance?: number) => unknown | null;
+	updateSign: (block: Vec3, text: string, back?: boolean) => void;
+	writeBook: (slot: number, pages: string[]) => Promise<void>;
+	signBook: (slot: number, pages: string[], title: string, author: string) => Promise<void>;
 	acceptResourcePack: () => void;
 	denyResourcePack: () => void;
 	setCommandBlock: (
@@ -512,10 +575,15 @@ export type Bot = EventEmitter & {
 		direction?: Vec3,
 		cursorPos?: Vec3,
 	) => Promise<Window>;
-	openFurnace: (furnaceBlock: unknown) => Promise<Window>;
-	openAnvil: (anvilBlock: unknown) => Promise<Window>;
-	openEnchantmentTable: (tableBlock: unknown) => Promise<Window>;
-	openVillager: (villagerEntity: Entity) => Promise<Window>;
+	openFurnace: (furnaceBlock: unknown) => Promise<FurnaceWindow>;
+	openAnvil: (anvilBlock: unknown) => Promise<AnvilWindow>;
+	openEnchantmentTable: (tableBlock: unknown) => Promise<EnchantmentTableWindow>;
+	openVillager: (villagerEntity: Entity) => Promise<VillagerWindow>;
+	trade: (villager: Window, index: number, count?: number) => Promise<void>;
+
+	// ── Methods: Plugins ──
+	loadPlugin: (plugin: (bot: Bot, options: BotOptions) => void) => void;
+	hasPlugin: (plugin: (bot: Bot, options: BotOptions) => void) => boolean;
 
 	// ── Methods: Creative ──
 	creative: {

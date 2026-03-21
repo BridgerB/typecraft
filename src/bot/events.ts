@@ -93,6 +93,7 @@ export type BotEventMap = {
 
 	// ── Blocks / world ──
 	blockUpdate: [oldBlock: unknown, newBlock: unknown];
+	blockPlaced: [oldBlock: unknown, newBlock: unknown];
 	chunkColumnLoad: [point: Vec3];
 	chunkColumnUnload: [point: Vec3];
 

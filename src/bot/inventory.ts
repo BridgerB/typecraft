@@ -264,20 +264,54 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 	// ── Transfer ──
 
 	bot.transfer = async (opts: TransferOptions): Promise<void> => {
-		// Simplified: click source slot, click dest slot
-		const { sourceStart, sourceEnd, destStart, destEnd, itemType } = opts;
+		const { window: win, sourceStart, sourceEnd, destStart, destEnd, itemType, metadata } = opts;
 		let remaining = opts.count ?? Number.POSITIVE_INFINITY;
-		for (let i = sourceStart; i < sourceEnd; i++) {
-			const item = opts.window.slots[i];
+		let firstSourceSlot: number | null = null;
+
+		for (let i = sourceStart; i < sourceEnd && remaining > 0; i++) {
+			const item = win.slots[i];
 			if (!item || item.type !== itemType) continue;
-			await bot.clickWindow(i, 0, 0);
+			if (metadata != null && item.metadata !== metadata) continue;
+
+			if (firstSourceSlot === null) firstSourceSlot = i;
+
+			// Pick up the source item
+			if (remaining < item.count) {
+				// Need only part of this stack — right-click to pick up half, or pick up all and put back
+				await bot.clickWindow(i, 0, 0);
+			} else {
+				await bot.clickWindow(i, 0, 0);
+			}
+
+			// Try to place into destination range
 			for (let j = destStart; j < destEnd; j++) {
-				if (!opts.window.slots[j]) {
+				const destItem = win.slots[j];
+				if (destItem === null) {
+					// Empty slot — drop all
 					await bot.clickWindow(j, 0, 0);
 					break;
+				} else if (
+					destItem.type === itemType &&
+					(metadata == null || destItem.metadata === metadata) &&
+					destItem.count < destItem.stackSize
+				) {
+					// Matching partial stack — fill it
+					await bot.clickWindow(j, 0, 0);
+					if (!win.selectedItem) break;
 				}
 			}
-			if (--remaining <= 0) break;
+
+			// If still holding items, put them back
+			if (win.selectedItem) {
+				await bot.putSelectedItemRange(
+					sourceStart,
+					sourceEnd,
+					win,
+					firstSourceSlot,
+				);
+			}
+
+			remaining -= item.count;
 		}
 	};
 
@@ -363,9 +397,76 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 		}
 	};
 
-	bot.putSelectedItemRange = async () => {};
-	bot.putAway = async () => {};
-	bot.moveSlotItem = async () => {};
+	bot.putSelectedItemRange = async (
+		start: number,
+		end: number,
+		window: Window,
+		slot: number,
+	): Promise<void> => {
+		// While we're holding an item (selectedItem), try to put it away
+		while (window.selectedItem) {
+			// First, try to find a matching partial stack to fill
+			let destSlot: number | null = null;
+			for (let i = start; i < end; i++) {
+				const item = window.slots[i];
+				if (
+					item &&
+					item.type === window.selectedItem.type &&
+					item.metadata === window.selectedItem.metadata &&
+					item.count < item.stackSize
+				) {
+					destSlot = i;
+					break;
+				}
+			}
+
+			// If no partial stack, find an empty slot
+			if (destSlot === null) {
+				for (let i = start; i < end; i++) {
+					if (!window.slots[i]) {
+						destSlot = i;
+						break;
+					}
+				}
+			}
+
+			// If no space at all, toss
+			if (destSlot === null) {
+				if (slot != null) {
+					await bot.clickWindow(slot, 0, 0);
+				}
+				await bot.clickWindow(-999, 0, 0);
+				break;
+			}
+
+			await bot.clickWindow(destSlot, 0, 0);
+		}
+	};
+
+	bot.putAway = async (slot: number): Promise<void> => {
+		const window = bot.currentWindow ?? bot.inventory;
+		if (!window) return;
+		await bot.clickWindow(slot, 0, 0); // Pick up the item
+		await bot.putSelectedItemRange(
+			window.inventoryStart,
+			window.inventoryEnd,
+			window,
+			slot,
+		);
+	};
+
+	bot.moveSlotItem = async (
+		sourceSlot: number,
+		destSlot: number,
+	): Promise<void> => {
+		await bot.clickWindow(sourceSlot, 0, 0); // Pick up from source
+		await bot.clickWindow(destSlot, 0, 0); // Place at dest
+		// If we still have an item (swap occurred), put it back
+		const window = bot.currentWindow ?? bot.inventory;
+		if (window?.selectedItem) {
+			await bot.clickWindow(sourceSlot, 0, 0);
+		}
+	};
 };
 
 const getEquipSlot = (dest: EquipmentDestination | null): number => {

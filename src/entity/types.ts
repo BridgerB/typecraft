@@ -19,6 +19,19 @@ export type Effect = {
 	duration: number;
 };
 
+/** An attribute modifier on an entity. */
+export type AttributeModifier = {
+	uuid: string;
+	amount: number;
+	operation: number;
+};
+
+/** An entity attribute (e.g. max_health, movement_speed). */
+export type EntityAttribute = {
+	value: number;
+	modifiers: AttributeModifier[];
+};
+
 /** A Minecraft entity — player, mob, object, or other. */
 export type Entity = {
 	id: number;
@@ -39,11 +52,13 @@ export type Entity = {
 	equipment: (Item | null)[];
 	metadata: unknown[];
 	effects: Map<number, Effect>;
+	attributes: Record<string, EntityAttribute>;
 	vehicle: Entity | null;
 	passengers: Entity[];
 	health: number;
 	food: number;
 	foodSaturation: number;
+	isInWater: boolean;
 	elytraFlying: boolean;
 	isValid: boolean;
 	count: number | null;

@@ -7,6 +7,7 @@ import { createEntity } from "../entity/index.ts";
 import { type Client, createClient } from "../protocol/index.ts";
 import { createRegistry } from "../registry/index.ts";
 import { type Vec3, ZERO } from "../vec3/index.ts";
+import { initBlockActions } from "./block_actions.ts";
 import { initBlocks } from "./blocks.ts";
 import { initChat } from "./chat.ts";
 import { initContainers } from "./containers.ts";
@@ -35,6 +36,7 @@ export const createBot = (options: BotOptions): Bot => {
 		(options as unknown as { client?: Client }).client ?? createClient(options);
 
 	const emitter = new EventEmitter();
+	const loadedPlugins = new Set<Function>();
 
 	// Default settings
 	const settings: GameSettings = {
@@ -209,6 +211,8 @@ export const createBot = (options: BotOptions): Bot => {
 		dismount: () => {},
 		moveVehicle: () => {},
 		nearestEntity: () => null,
+		entityAtCursor: () => null,
+		getExplosionDamages: () => 0,
 		recipesFor: () => [],
 		recipesAll: () => [],
 		craft: async () => {},
@@ -217,6 +221,9 @@ export const createBot = (options: BotOptions): Bot => {
 		fish: async () => {},
 		setSettings: () => {},
 		blockAtCursor: () => null,
+		updateSign: () => {},
+		writeBook: async () => {},
+		signBook: async () => {},
 		acceptResourcePack: () => {},
 		denyResourcePack: () => {},
 		setCommandBlock: () => {},
@@ -225,6 +232,9 @@ export const createBot = (options: BotOptions): Bot => {
 		openAnvil: async () => null as never,
 		openEnchantmentTable: async () => null as never,
 		openVillager: async () => null as never,
+		trade: async () => {},
+		loadPlugin: () => {},
+		hasPlugin: () => false,
 		creative: {
 			setInventorySlot: async () => {},
 			clearSlot: async () => {},
@@ -234,6 +244,16 @@ export const createBot = (options: BotOptions): Bot => {
 			stopFlying: () => {},
 		},
 	}) as unknown as Bot;
+
+	bot.loadPlugin = (plugin: (bot: Bot, options: BotOptions) => void) => {
+		if (!loadedPlugins.has(plugin)) {
+			loadedPlugins.add(plugin);
+			plugin(bot, options);
+		}
+	};
+
+	bot.hasPlugin = (plugin: (bot: Bot, options: BotOptions) => void): boolean =>
+		loadedPlugins.has(plugin);
 
 	// Wire client events to bot
 	client.on("error", (err: Error) => {
@@ -276,6 +296,7 @@ export const createBot = (options: BotOptions): Bot => {
 	initSocial(bot, options);
 	initExtended(bot, options);
 	initContainers(bot, options);
+	initBlockActions(bot, options);
 
 	return bot;
 };

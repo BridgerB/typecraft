@@ -2,6 +2,7 @@
  * Block mining — dig, stopDigging, canDigBlock, digTime.
  */
 
+import { getEnchants } from "../item/index.ts";
 import { length, subtract, type Vec3, vec3 } from "../vec3/index.ts";
 import type { Bot, BotOptions, Task } from "./types.ts";
 import { createTask, sleep } from "./utils.ts";
@@ -132,14 +133,87 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.digTime = (block: unknown): number => {
-		// Simplified: return 0 for creative, estimated time otherwise
 		if (bot.game.gameMode === "creative") return 0;
 
-		const blockObj = block as { hardness?: number };
-		if (!blockObj.hardness || blockObj.hardness < 0) return 0;
+		const blockObj = block as { hardness?: number; name?: string; stateId?: number };
+		const hardness = blockObj.hardness;
+		if (hardness == null || hardness < 0) return Infinity;
+		if (hardness === 0) return 0;
 
-		// Basic dig time estimate (hardness * 1500ms base, without tool optimization)
-		return Math.ceil(blockObj.hardness * 1500);
+		const registry = bot.registry;
+		if (!registry) return Math.ceil(hardness * 1500);
+
+		// Get block definition for harvestTools and material
+		const blockDef = blockObj.name ? registry.blocksByName.get(blockObj.name) : null;
+
+		let speed = 1.0;
+		let canHarvest = !blockDef?.harvestTools; // If no harvestTools, any tool can harvest
+
+		// Check held tool against block's material speeds
+		const heldItem = bot.heldItem;
+		if (heldItem && blockDef?.material) {
+			const materialSpeeds = registry.materials[blockDef.material];
+			if (materialSpeeds) {
+				const toolSpeed = materialSpeeds[heldItem.type];
+				if (toolSpeed) {
+					speed = toolSpeed;
+				}
+			}
+			// Check if held tool can harvest this block
+			if (blockDef.harvestTools && blockDef.harvestTools[heldItem.type]) {
+				canHarvest = true;
+			}
+		}
+
+		// Efficiency enchantment
+		if (heldItem && registry) {
+			const enchants = getEnchants(registry, heldItem);
+			const efficiency = enchants.find(e => e.name === "efficiency");
+			if (efficiency) {
+				speed += efficiency.level * efficiency.level + 1;
+			}
+		}
+
+		// Haste effect (id 2)
+		const haste = bot.entity.effects.get(2);
+		if (haste) {
+			speed *= 1 + (haste.amplifier + 1) * 0.2;
+		}
+
+		// Mining Fatigue effect (id 3)
+		const fatigue = bot.entity.effects.get(3);
+		if (fatigue) {
+			speed *= Math.pow(0.3, fatigue.amplifier + 1);
+		}
+
+		// Underwater penalty (unless Aqua Affinity helmet)
+		if (bot.entity.isInWater) {
+			let hasAquaAffinity = false;
+			// Helmet is slot 5 in inventory
+			const helmet = bot.inventory?.slots[5];
+			if (helmet && registry) {
+				const enchants = getEnchants(registry, helmet);
+				hasAquaAffinity = enchants.some(e => e.name === "aqua_affinity");
+			}
+			if (!hasAquaAffinity) {
+				speed *= 0.2;
+			}
+		}
+
+		// Not on ground penalty
+		if (!bot.entity.onGround) {
+			speed *= 0.2;
+		}
+
+		// Calculate damage per tick
+		const damage = speed / hardness / (canHarvest ? 30 : 100);
+
+		// Instant break check
+		if (damage >= 1) return 0;
+
+		// Calculate ticks and convert to ms
+		const ticks = Math.ceil(1 / damage);
+		return ticks * 50;
 	};
 
 	// Stop digging on death
