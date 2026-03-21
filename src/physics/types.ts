@@ -54,6 +54,7 @@ export type PlayerState = {
 
 	elytraFlying: boolean;
 	fireworkRocketDuration: number;
+	riptideTicks: number;
 
 	jumpTicks: number;
 	jumpQueued: boolean;
@@ -71,6 +72,8 @@ export type PlayerState = {
 	readonly levitation: number;
 
 	readonly depthStrider: number;
+	readonly soulSpeed: number;
+	readonly swiftSneak: number;
 	readonly elytraEquipped: boolean;
 };
 

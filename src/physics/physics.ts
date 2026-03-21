@@ -137,6 +137,7 @@ export const createPhysics = (registry: Registry): PhysicsEngine => {
 	const ladderId = blockId("ladder");
 	const vineId = blockId("vine");
 	const bubblecolumnId = blockId("bubble_column");
+	const powderSnowId = blockId("powder_snow");
 
 	const waterIds = new Set([waterId, flowingWaterId].filter((id) => id !== -1));
 	const lavaIds = new Set([lavaId, flowingLavaId].filter((id) => id !== -1));
@@ -552,12 +553,31 @@ export const createPhysics = (registry: Registry): PhysicsEngine => {
 			const blockBelow = world.getBlock(flooredPos);
 			if (blockBelow) {
 				if (blockBelow.id === soulsandId) {
-					vel.x *= config.soulsandSpeed;
-					vel.z *= config.soulsandSpeed;
+					// Soul speed enchantment counteracts soul sand slowdown
+					if (entity.soulSpeed > 0) {
+						vel.x *= 1.0 + entity.soulSpeed * 0.105;
+						vel.z *= 1.0 + entity.soulSpeed * 0.105;
+					} else {
+						vel.x *= config.soulsandSpeed;
+						vel.z *= config.soulsandSpeed;
+					}
 				} else if (blockBelow.id === honeyblockId) {
 					vel.x *= config.honeyblockSpeed;
 					vel.z *= config.honeyblockSpeed;
 				}
+			}
+		}
+
+		// Powder snow: slow movement and apply freezing
+		if (powderSnowId !== -1) {
+			const feetBlock = world.getBlock({
+				x: Math.floor(entity.pos.x),
+				y: Math.floor(entity.pos.y),
+				z: Math.floor(entity.pos.z),
+			});
+			if (feetBlock && feetBlock.id === powderSnowId) {
+				vel.x *= 0.9;
+				vel.z *= 0.9;
 			}
 		}
 	};
@@ -1025,8 +1045,11 @@ export const createPhysics = (registry: Registry): PhysicsEngine => {
 			(Number(state.control.forward) - Number(state.control.back)) * 0.98;
 
 		if (state.control.sneak) {
-			strafe *= config.sneakSpeed;
-			forward *= config.sneakSpeed;
+			const sneakMult = state.swiftSneak > 0
+				? Math.min(0.3 + state.swiftSneak * 0.15, 1.0)
+				: config.sneakSpeed;
+			strafe *= sneakMult;
+			forward *= sneakMult;
 		}
 
 		state.elytraFlying =
@@ -1034,6 +1057,16 @@ export const createPhysics = (registry: Registry): PhysicsEngine => {
 			state.elytraEquipped &&
 			!state.onGround &&
 			!state.levitation;
+
+		// Riptide: trident launch in water/rain
+		if (state.riptideTicks > 0) {
+			const { lookDir } = getLookingVector(state);
+			const riptideSpeed = state.riptideTicks;
+			vel.x += lookDir.x * riptideSpeed;
+			vel.y += lookDir.y * riptideSpeed;
+			vel.z += lookDir.z * riptideSpeed;
+			state.riptideTicks = 0;
+		}
 
 		if (state.fireworkRocketDuration > 0) {
 			if (!state.elytraFlying) {
@@ -1103,11 +1136,21 @@ export const createPlayerState = (
 	};
 
 	let depthStrider = 0;
+	let soulSpeed = 0;
+	let swiftSneak = 0;
 	const boots = entity.equipment[2];
 	if (boots) {
 		const enchants = getEnchants(registry, boots);
-		const found = enchants.find((e) => e.name === "depth_strider");
-		if (found) depthStrider = found.level;
+		const dsEnch = enchants.find((e) => e.name === "depth_strider");
+		if (dsEnch) depthStrider = dsEnch.level;
+		const ssEnch = enchants.find((e) => e.name === "soul_speed");
+		if (ssEnch) soulSpeed = ssEnch.level;
+	}
+	const leggings = entity.equipment[3];
+	if (leggings) {
+		const enchants = getEnchants(registry, leggings);
+		const snEnch = enchants.find((e) => e.name === "swift_sneak");
+		if (snEnch) swiftSneak = snEnch.level;
 	}
 
 	const elytraEquipped = entity.equipment[4]?.name === "elytra";
@@ -1123,6 +1166,7 @@ export const createPlayerState = (
 		isCollidedVertically: false,
 		elytraFlying: entity.elytraFlying,
 		fireworkRocketDuration: opts?.fireworkRocketDuration ?? 0,
+		riptideTicks: 0,
 		jumpTicks: opts?.jumpTicks ?? 0,
 		jumpQueued: opts?.jumpQueued ?? false,
 		yaw: entity.yaw,
@@ -1136,6 +1180,8 @@ export const createPlayerState = (
 		slowFalling: getEffectLevel("SlowFalling"),
 		levitation: getEffectLevel("Levitation"),
 		depthStrider,
+		soulSpeed,
+		swiftSneak,
 		elytraEquipped,
 	};
 };
