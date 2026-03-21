@@ -542,3 +542,43 @@ export {
 	worldSetBlockStateId,
 	worldSetSkyLight,
 } from "./world/index.ts";
+
+// ── Pathfinder ──
+
+export {
+	computeAStar,
+	createAStarContext,
+	createGoalBlock,
+	createGoalBreakBlock,
+	createGoalCompositeAll,
+	createGoalCompositeAny,
+	createGoalFollow,
+	createGoalGetToBlock,
+	createGoalInvert,
+	createGoalLookAtBlock,
+	createGoalNear,
+	createGoalNearXZ,
+	createGoalPlaceBlock,
+	createGoalXZ,
+	createGoalY,
+	createMovements,
+	createPathfinder,
+	defaultMovementsConfig,
+	posHash,
+} from "./path/index.ts";
+
+export type {
+	AStarContext,
+	BlockQuery,
+	Goal,
+	LookAtBlockOptions,
+	Move,
+	Movements,
+	MovementsConfig,
+	Pathfinder,
+	PathfinderConfig,
+	PathNode,
+	PathResult,
+	PlaceAction,
+	PlaceBlockGoalOptions,
+} from "./path/index.ts";
