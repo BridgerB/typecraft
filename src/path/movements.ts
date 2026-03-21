@@ -8,8 +8,8 @@ import type { Bot } from "../bot/types.ts";
 import { createPhysicsWorld } from "../physics/adapter.ts";
 import type { PhysicsWorld } from "../physics/types.ts";
 import type { Registry } from "../registry/types.ts";
-import type { BlockQuery, Move, Movements } from "./types.ts";
-import { posHash } from "./types.ts";
+import type { BlockQuery, Move, Movements, MovementsConfig, PlaceAction } from "./types.ts";
+import { defaultMovementsConfig, posHash } from "./types.ts";
 
 // Cardinal directions (NESW)
 const CARDINAL = [
@@ -35,13 +35,18 @@ const VOID_BLOCK: BlockQuery = {
 	climbable: false,
 	height: 0,
 	name: "void",
+	replaceable: false,
+	canFall: false,
+	openable: false,
+	id: -1,
 };
 
 /** Create a movement generator bound to the bot's current world state. */
 export const createMovements = (
 	bot: Bot,
-	maxDropDown = 3,
+	config?: Partial<MovementsConfig>,
 ): Movements => {
+	const cfg: MovementsConfig = { ...defaultMovementsConfig(), ...config };
 	const registry = bot.registry!;
 	const physicsWorld = createPhysicsWorld(bot.world!);
 
@@ -87,6 +92,20 @@ export const createMovements = (
 		}
 	}
 
+	// Pre-compute gravity (falling) block IDs
+	const gravityIds = new Set<number>();
+	for (const name of ["sand", "gravel", "red_sand"]) {
+		addId(name, gravityIds);
+	}
+
+	// Pre-compute gate IDs
+	const gateIds = new Set<number>();
+	for (const block of registry.blocksArray) {
+		if (block.name.includes("fence_gate")) {
+			gateIds.add(block.id);
+		}
+	}
+
 	// Block query cache — avoids repeated world lookups for shared neighbors
 	const blockCache = new Map<number, BlockQuery>();
 
@@ -123,6 +142,10 @@ export const createMovements = (
 			climbable: isClimbable,
 			height,
 			name: block.name,
+			replaceable: isEmpty && !isClimbable && !isLiquid,
+			canFall: gravityIds.has(block.id),
+			openable: gateIds.has(block.id),
+			id: block.id,
 		};
 		blockCache.set(key, result);
 		return result;
@@ -133,8 +156,44 @@ export const createMovements = (
 	let neighborCount = 0;
 
 	/** Push a move into the neighbors buffer. */
-	const pushNeighbor = (x: number, y: number, z: number, cost: number): void => {
-		neighbors[neighborCount++] = { x, y, z, cost, hash: posHash(x, y, z) };
+	const pushNeighbor = (
+		x: number, y: number, z: number, cost: number,
+		toBreak: readonly { readonly x: number; readonly y: number; readonly z: number }[] = [],
+		toPlace: readonly PlaceAction[] = [],
+		parkour = false,
+	): void => {
+		neighbors[neighborCount++] = {
+			x, y, z, cost, hash: posHash(x, y, z),
+			remainingBlocks: 0,
+			toBreak,
+			toPlace,
+			parkour,
+		};
+	};
+
+	/** Check if block is safe, or can be broken. Returns cost addition (0 if safe, digCost if breakable, -1 if impassable). */
+	const safeOrBreak = (
+		x: number, y: number, z: number,
+		toBreak: { readonly x: number; readonly y: number; readonly z: number }[],
+	): number => {
+		const block = queryBlock(x, y, z);
+		if (block.safe || block.liquid) return 0;
+		if (!cfg.canDig) return -1;
+		if (cfg.blocksCantBreak.has(block.id)) return -1;
+
+		// Don't break blocks that would cause flow
+		if (cfg.dontCreateFlow) {
+			for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+				if (queryBlock(x + dx, y, z + dz).liquid) return -1;
+			}
+			if (queryBlock(x, y + 1, z).liquid) return -1;
+		}
+
+		// Don't mine under falling blocks
+		if (cfg.dontMineUnderFallingBlock && queryBlock(x, y + 1, z).canFall) return -1;
+
+		toBreak.push({ x, y, z });
+		return cfg.digCost;
 	};
 
 	/** Forward walk: move into adjacent block at same Y level. */
@@ -142,11 +201,24 @@ export const createMovements = (
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 
-		if (!queryBlock(nx, node.y - 1, nz).physical) return;
-		if (!queryBlock(nx, node.y, nz).safe) return;
-		if (!queryBlock(nx, node.y + 1, nz).safe) return;
+		const floor = queryBlock(nx, node.y - 1, nz);
+		if (!floor.physical && !floor.liquid) return;
 
-		pushNeighbor(nx, node.y, nz, 1);
+		const toBreak: { readonly x: number; readonly y: number; readonly z: number }[] = [];
+		let cost = 1;
+
+		if (floor.liquid) cost *= cfg.liquidCost;
+
+		// Check body and head — try breaking if not safe
+		const bodyCost = safeOrBreak(nx, node.y, nz, toBreak);
+		if (bodyCost < 0) return;
+		cost += bodyCost;
+
+		const headCost = safeOrBreak(nx, node.y + 1, nz, toBreak);
+		if (headCost < 0) return;
+		cost += headCost;
+
+		pushNeighbor(nx, node.y, nz, cost, toBreak);
 	};
 
 	/** Jump up: move into adjacent block one Y higher. */
@@ -155,12 +227,27 @@ export const createMovements = (
 		const nz = node.z + dz;
 		const ny = node.y + 1;
 
-		if (!queryBlock(node.x, node.y + 2, node.z).safe) return;
-		if (!queryBlock(nx, node.y, nz).physical) return;
-		if (!queryBlock(nx, ny, nz).safe) return;
-		if (!queryBlock(nx, ny + 1, nz).safe) return;
+		const toBreak: { readonly x: number; readonly y: number; readonly z: number }[] = [];
+		let cost = 2;
 
-		pushNeighbor(nx, ny, nz, 2);
+		// Need clear head space above current position
+		const aboveCost = safeOrBreak(node.x, node.y + 2, node.z, toBreak);
+		if (aboveCost < 0) return;
+		cost += aboveCost;
+
+		// Need the block we're jumping onto to be physical
+		if (!queryBlock(nx, node.y, nz).physical) return;
+
+		// Need body and head clear at destination
+		const bodyCost = safeOrBreak(nx, ny, nz, toBreak);
+		if (bodyCost < 0) return;
+		cost += bodyCost;
+
+		const headCost = safeOrBreak(nx, ny + 1, nz, toBreak);
+		if (headCost < 0) return;
+		cost += headCost;
+
+		pushNeighbor(nx, ny, nz, cost, toBreak);
 	};
 
 	/** Drop down: walk forward and fall until hitting ground. */
@@ -172,7 +259,7 @@ export const createMovements = (
 		if (!queryBlock(nx, node.y, nz).safe) return;
 		if (queryBlock(nx, node.y - 1, nz).physical) return; // has floor = forward move
 
-		for (let dy = -2; dy >= -(maxDropDown + 1); dy--) {
+		for (let dy = -2; dy >= -(cfg.maxDropDown + 1); dy--) {
 			const landing = queryBlock(nx, node.y + dy, nz);
 			if (landing.physical) {
 				const landY = node.y + dy + 1;
@@ -204,6 +291,73 @@ export const createMovements = (
 		pushNeighbor(nx, node.y, nz, Math.SQRT2);
 	};
 
+	/** Parkour: sprint-jump across 1-4 block gaps. */
+	const getMoveParkour = (node: Move, dx: number, dz: number): void => {
+		if (!cfg.allowParkour) return;
+
+		const nx1 = node.x + dx;
+		const nz1 = node.z + dz;
+
+		// Must have floor at current position
+		if (!queryBlock(node.x, node.y - 1, node.z).physical) return;
+		// Must have no floor at the first gap position (otherwise it's a forward move)
+		if (queryBlock(nx1, node.y - 1, nz1).physical) return;
+		// Must have head clearance for the jump
+		if (!queryBlock(node.x, node.y + 2, node.z).safe) return;
+
+		// Scan 2-4 blocks forward
+		const maxDist = cfg.allowSprinting ? 4 : 2;
+
+		for (let dist = 2; dist <= maxDist; dist++) {
+			const nx = node.x + dx * dist;
+			const nz = node.z + dz * dist;
+
+			// Check ceiling along the arc
+			if (!queryBlock(node.x + dx * (dist - 1), node.y + 2, node.z + dz * (dist - 1)).safe) break;
+
+			// Same-level landing
+			if (queryBlock(nx, node.y - 1, nz).physical &&
+				queryBlock(nx, node.y, nz).safe &&
+				queryBlock(nx, node.y + 1, nz).safe) {
+				pushNeighbor(nx, node.y, nz, dist + 1, [], [], true);
+			}
+
+			// Landing one block up
+			if (dist <= 2 &&
+				queryBlock(nx, node.y, nz).physical &&
+				queryBlock(nx, node.y + 1, nz).safe &&
+				queryBlock(nx, node.y + 2, nz).safe) {
+				pushNeighbor(nx, node.y + 1, nz, dist + 2, [], [], true);
+			}
+
+			// Landing one block down
+			if (queryBlock(nx, node.y - 2, nz).physical &&
+				queryBlock(nx, node.y - 1, nz).safe &&
+				queryBlock(nx, node.y, nz).safe) {
+				pushNeighbor(nx, node.y - 1, nz, dist + 0.5, [], [], true);
+			}
+		}
+	};
+
+	/** Move up: jump-place scaffold block to climb vertically. */
+	const getMoveUp = (node: Move): void => {
+		if (!cfg.allow1by1towers) return;
+		if (cfg.scaffoldingBlocks.length === 0) return;
+
+		// Need head room 2 blocks above
+		if (!queryBlock(node.x, node.y + 2, node.z).safe) return;
+		// Current block (where we'll place) must be replaceable or safe
+		const current = queryBlock(node.x, node.y, node.z);
+		if (!current.safe && !current.replaceable) return;
+
+		pushNeighbor(
+			node.x, node.y + 1, node.z,
+			1 + cfg.placeCost,
+			[],
+			[{ x: node.x, y: node.y, z: node.z, dx: 0, dy: -1, dz: 0, jump: true }],
+		);
+	};
+
 	const getNeighbors = (node: Move): readonly Move[] => {
 		neighborCount = 0;
 
@@ -211,15 +365,18 @@ export const createMovements = (
 			getMoveForward(node, dir.x, dir.z);
 			getMoveJumpUp(node, dir.x, dir.z);
 			getMoveDropDown(node, dir.x, dir.z);
+			getMoveParkour(node, dir.x, dir.z);
 		}
 
 		for (const dir of DIAGONAL) {
 			getMoveDiagonal(node, dir.x, dir.z);
 		}
 
+		getMoveUp(node);
+
 		// Return a slice so the caller gets an independent snapshot
 		return neighbors.slice(0, neighborCount);
 	};
 
-	return { getNeighbors };
+	return { getNeighbors, config: cfg };
 };

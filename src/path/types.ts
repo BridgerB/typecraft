@@ -14,6 +14,10 @@ export type Move = {
 	readonly z: number;
 	readonly cost: number;
 	readonly hash: number;
+	readonly remainingBlocks: number;
+	readonly toBreak: readonly { readonly x: number; readonly y: number; readonly z: number }[];
+	readonly toPlace: readonly PlaceAction[];
+	readonly parkour: boolean;
 };
 
 /** Goal interface — functions that drive A* toward a target. */
@@ -44,6 +48,52 @@ export type PathfinderConfig = {
 	readonly stuckTimeout: number;
 };
 
+/** Configuration for movement generation. */
+export type MovementsConfig = {
+	readonly canDig: boolean;
+	readonly digCost: number;
+	readonly placeCost: number;
+	readonly liquidCost: number;
+	readonly entityCost: number;
+	readonly dontCreateFlow: boolean;
+	readonly dontMineUnderFallingBlock: boolean;
+	readonly allow1by1towers: boolean;
+	readonly allowParkour: boolean;
+	readonly allowSprinting: boolean;
+	readonly allowEntityDetection: boolean;
+	readonly maxDropDown: number;
+	readonly infiniteLiquidDropdownDistance: boolean;
+	readonly blocksCantBreak: ReadonlySet<number>;
+	readonly blocksToAvoid: ReadonlySet<number>;
+	readonly scaffoldingBlocks: readonly number[];
+	readonly exclusionAreasStep: readonly ((x: number, y: number, z: number) => number)[];
+	readonly exclusionAreasBreak: readonly ((x: number, y: number, z: number) => number)[];
+	readonly exclusionAreasPlace: readonly ((x: number, y: number, z: number) => number)[];
+};
+
+/** Create default movement configuration. */
+export const defaultMovementsConfig = (): MovementsConfig => ({
+	canDig: true,
+	digCost: 1,
+	placeCost: 1,
+	liquidCost: 1,
+	entityCost: 1,
+	dontCreateFlow: true,
+	dontMineUnderFallingBlock: true,
+	allow1by1towers: true,
+	allowParkour: true,
+	allowSprinting: true,
+	allowEntityDetection: true,
+	maxDropDown: 4,
+	infiniteLiquidDropdownDistance: true,
+	blocksCantBreak: new Set(),
+	blocksToAvoid: new Set(),
+	scaffoldingBlocks: [],
+	exclusionAreasStep: [],
+	exclusionAreasBreak: [],
+	exclusionAreasPlace: [],
+});
+
 /** Internal A* node — mutable for heap operations and index tracking. */
 export type PathNode = {
 	data: Move;
@@ -65,6 +115,18 @@ export type AStarContext = {
 	readonly maxCost: number;
 };
 
+/** A block placement action to execute during path following. */
+export type PlaceAction = {
+	readonly x: number;
+	readonly y: number;
+	readonly z: number;
+	readonly dx: number;
+	readonly dy: number;
+	readonly dz: number;
+	readonly jump?: boolean;
+	readonly returnPos?: { readonly x: number; readonly y: number; readonly z: number };
+};
+
 /** Simplified block query result for movement decisions. */
 export type BlockQuery = {
 	readonly safe: boolean;
@@ -73,18 +135,28 @@ export type BlockQuery = {
 	readonly climbable: boolean;
 	readonly height: number;
 	readonly name: string;
+	readonly replaceable: boolean;
+	readonly canFall: boolean;
+	readonly openable: boolean;
+	readonly id: number;
 };
 
 /** Movement generator returned by createMovements. */
 export type Movements = {
 	readonly getNeighbors: (node: Move) => readonly Move[];
+	readonly config: MovementsConfig;
 };
 
 /** The pathfinder object returned by createPathfinder. */
 export type Pathfinder = {
 	readonly setGoal: (goal: Goal | null, dynamic?: boolean) => void;
+	readonly setMovements: (config: Partial<MovementsConfig>) => void;
 	readonly stop: () => void;
 	readonly isMoving: () => boolean;
+	readonly isMining: () => boolean;
+	readonly isBuilding: () => boolean;
 	readonly goto: (goal: Goal) => Promise<void>;
+	readonly getPathTo: (goal: Goal, timeout?: number) => PathResult;
+	readonly bestHarvestTool: (block: unknown) => unknown | null;
 	readonly config: PathfinderConfig;
 };

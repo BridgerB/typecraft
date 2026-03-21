@@ -11,8 +11,10 @@ import type {
 	Goal,
 	Move,
 	Movements,
+	MovementsConfig,
 	Pathfinder,
 	PathfinderConfig,
+	PathResult,
 } from "./types.ts";
 import { posHash } from "./types.ts";
 
@@ -42,6 +44,8 @@ export const createPathfinder = (
 	let pathComputed = false;
 	let lastNodeTime = performance.now();
 	let movements: Movements | null = null;
+	let digging = false;
+	let placing = false;
 	let gotoResolve: (() => void) | null = null;
 	let gotoReject: ((err: Error) => void) | null = null;
 
@@ -51,7 +55,13 @@ export const createPathfinder = (
 		const x = Math.floor(p.x);
 		const y = Math.floor(p.y);
 		const z = Math.floor(p.z);
-		return { x, y, z, cost: 0, hash: posHash(x, y, z) };
+		return {
+			x, y, z, cost: 0, hash: posHash(x, y, z),
+			remainingBlocks: 0,
+			toBreak: [],
+			toPlace: [],
+			parkour: false,
+		};
 	};
 
 	/** Stop all bot controls. */
@@ -120,14 +130,83 @@ export const createPathfinder = (
 			}
 		}
 
-		const wp = path[pathIndex]!;
+		const nextMove = path[pathIndex]!;
+
+		// Handle block breaking before moving to waypoint
+		if (nextMove.toBreak.length > 0 && !digging) {
+			digging = true;
+			const blockPos = nextMove.toBreak[0]!;
+			const block = bot.blockAt({
+				x: blockPos.x,
+				y: blockPos.y,
+				z: blockPos.z,
+			} as any);
+			if (block) {
+				bot.dig(block, true, "raycast")
+					.then(() => {
+						digging = false;
+					})
+					.catch(() => {
+						digging = false;
+						// Reset path on dig error
+						path = [];
+						pathIndex = 0;
+						astarCtx = null;
+						pathComputed = false;
+						bot.emit("path_reset" as any, "dig_error");
+					});
+			} else {
+				digging = false;
+			}
+			return; // Don't move while digging
+		}
+
+		// Handle block placing before moving to waypoint
+		if (nextMove.toPlace.length > 0 && !placing) {
+			placing = true;
+			const action = nextMove.toPlace[0]!;
+			const refPos = {
+				x: action.x + action.dx,
+				y: action.y + action.dy,
+				z: action.z + action.dz,
+			};
+			const faceVec = { x: -action.dx, y: -action.dy, z: -action.dz };
+			if (action.jump) {
+				bot.setControlState("jump", true);
+			}
+			bot.placeBlock({ position: refPos } as any, faceVec as any)
+				.then(() => {
+					placing = false;
+					if (action.jump) bot.setControlState("jump", false);
+				})
+				.catch(() => {
+					placing = false;
+					if (action.jump) bot.setControlState("jump", false);
+					path = [];
+					pathIndex = 0;
+					astarCtx = null;
+					pathComputed = false;
+					bot.emit("path_reset" as any, "place_error");
+				});
+			return; // Don't move while placing
+		}
+
+		// Don't move while digging or placing
+		if (digging || placing) return;
+
+		const wp = nextMove;
 		const moveX = wp.x + 0.5 - p.x;
 		const moveZ = wp.z + 0.5 - p.z;
 
 		bot.look(Math.atan2(-moveX, -moveZ), 0, true);
 		bot.setControlState("forward", true);
-		bot.setControlState("sprint", true);
-		bot.setControlState("jump", wp.y > p.y + 0.5);
+		if (nextMove.parkour) {
+			bot.setControlState("sprint", true);
+			bot.setControlState("jump", true);
+		} else {
+			bot.setControlState("sprint", true);
+			bot.setControlState("jump", wp.y > p.y + 0.5);
+		}
 
 		if (performance.now() - lastNodeTime > cfg.stuckTimeout) resetPath();
 	};
@@ -160,6 +239,7 @@ export const createPathfinder = (
 			pathIndex = 0;
 			astarPartial = result.status === "partial";
 			if (result.status !== "partial") astarCtx = null;
+			bot.emit("path_update" as any, result);
 			if (result.status === "noPath") rejectGoto("No path found");
 			return;
 		}
@@ -178,7 +258,7 @@ export const createPathfinder = (
 			}
 
 			// Create movements once per path computation
-			movements = createMovements(bot, cfg.maxDropDown);
+			movements = createMovements(bot, { maxDropDown: cfg.maxDropDown });
 			astarCtx = createAStarContext(
 				currentMove,
 				currentGoal,
@@ -196,6 +276,7 @@ export const createPathfinder = (
 			pathComputed = true;
 			astarPartial = result.status === "partial";
 			if (result.status !== "partial") astarCtx = null;
+			bot.emit("path_update" as any, result);
 			if (result.status === "noPath" && !astarPartial)
 				rejectGoto("No path found");
 			return;
@@ -210,6 +291,8 @@ export const createPathfinder = (
 		currentGoal = goal;
 		dynamic = isDynamic;
 		resetPath();
+		bot.emit("goal_updated" as any, goal, isDynamic);
+		bot.emit("path_reset" as any, "goal_updated");
 		if (!goal) {
 			bot.emit("path_stop");
 			rejectGoto("Goal cleared");
@@ -223,18 +306,107 @@ export const createPathfinder = (
 		rejectGoto("Pathfinder stopped");
 	};
 
-	const goto = (goal: Goal): Promise<void> =>
+	const gotoGoal = (goal: Goal): Promise<void> =>
 		new Promise((resolve, reject) => {
 			gotoResolve = resolve;
 			gotoReject = reject;
 			setGoal(goal);
 		});
 
+	const isMining = (): boolean => digging;
+	const isBuilding = (): boolean => placing;
+
+	const setMovements = (config: Partial<MovementsConfig>): void => {
+		movements = createMovements(bot, config);
+		// Reset current path since movements changed
+		path = [];
+		pathIndex = 0;
+		astarCtx = null;
+		pathComputed = false;
+		bot.emit("path_reset" as any, "movements_updated");
+	};
+
+	const bestHarvestTool = (block: unknown): unknown | null => {
+		if (!bot.registry || !bot.inventory) return null;
+		const blockObj = block as { name?: string };
+		if (!blockObj.name) return null;
+
+		let bestTool: unknown | null = null;
+
+		// Check each inventory item
+		for (let i = 0; i < bot.inventory.slots.length; i++) {
+			const item = bot.inventory.slots[i];
+			if (!item) continue;
+
+			// Use the block's material to check if this tool is effective
+			const blockDef = bot.registry.blocksByName.get(blockObj.name);
+			if (!blockDef?.material) continue;
+
+			const materialSpeeds = bot.registry.materials[blockDef.material];
+			if (materialSpeeds && materialSpeeds[item.type]) {
+				// This tool has a speed for this material
+				const toolSpeed = materialSpeeds[item.type];
+				// Rough estimate: faster tool = lower time
+				if (toolSpeed > 1) {
+					bestTool = item;
+					break; // Take first matching tool
+				}
+			}
+		}
+
+		return bestTool;
+	};
+
+	const getPathTo = (goal: Goal, timeout?: number): PathResult => {
+		if (!movements) movements = createMovements(bot, {});
+		const ctx = createAStarContext(
+			startMoveFromBot(),
+			goal,
+			timeout ?? cfg.thinkTimeout,
+			cfg.searchRadius,
+		);
+		return computeAStar(
+			ctx,
+			movements,
+			timeout ?? cfg.thinkTimeout,
+			timeout ?? cfg.thinkTimeout,
+		);
+	};
+
+	// Reset path when nearby block changes
+	bot.on("blockUpdate", (_old: unknown, newBlock: unknown) => {
+		if (!path || path.length === 0) return;
+		const nb = newBlock as {
+			position?: { x: number; y: number; z: number };
+		} | null;
+		if (!nb?.position) return;
+
+		// Check if the changed block is near any point on our current path
+		for (const waypoint of path) {
+			const dx = Math.abs(waypoint.x - nb.position.x);
+			const dy = Math.abs(waypoint.y - nb.position.y);
+			const dz = Math.abs(waypoint.z - nb.position.z);
+			if (dx <= 1 && dy <= 2 && dz <= 1) {
+				path = [];
+				pathIndex = 0;
+				astarCtx = null;
+				pathComputed = false;
+				bot.emit("path_reset" as any, "block_updated");
+				break;
+			}
+		}
+	});
+
 	return {
 		setGoal,
+		setMovements,
 		stop,
 		isMoving: () => pathIndex < path.length || astarPartial,
-		goto,
+		isMining,
+		isBuilding,
+		goto: gotoGoal,
+		getPathTo,
+		bestHarvestTool,
 		config: cfg,
 	};
 };
