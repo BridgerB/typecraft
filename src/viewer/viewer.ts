@@ -139,13 +139,14 @@ export const setViewerBlockStateId = (
 export const addViewerEntity = (
 	viewer: Viewer,
 	id: number,
+	entityName: string,
 	username: string | null,
 	x: number,
 	y: number,
 	z: number,
 	yaw: number,
 	skinUrl?: string,
-): void => addEntity(viewer.entityRenderer, id, username, x, y, z, yaw, skinUrl);
+): void => addEntity(viewer.entityRenderer, id, entityName, username, x, y, z, yaw, skinUrl);
 
 export const updateViewerEntity = (
 	viewer: Viewer,

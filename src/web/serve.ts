@@ -55,6 +55,12 @@ type RegistryBiome = {
 	name: string;
 };
 
+type EntityModelDef = {
+	texturewidth: number;
+	textureheight: number;
+	bones: unknown[];
+};
+
 type CachedAssets = {
 	blockStates: Record<string, unknown>;
 	blockModels: Record<string, unknown>;
@@ -63,6 +69,7 @@ type CachedAssets = {
 	tints: SerializedTints;
 	blocks: RegistryBlock[];
 	biomes: RegistryBiome[];
+	entityModels: Record<string, EntityModelDef>;
 };
 
 const require = createRequire(import.meta.url);
@@ -165,6 +172,24 @@ const loadMcAssets = (version: string, bot: Bot): CachedAssets => {
 		biomes.push({ id: biome.id, name: biome.name });
 	}
 
+	// Load entity model geometry from upstream entities.json
+	const entityModels: Record<string, EntityModelDef> = {};
+	try {
+		const entitiesJsonPath = resolve(import.meta.dirname, "../../upstream/prismarine-viewer/viewer/lib/entity/entities.json");
+		const raw = JSON.parse(readFileSync(entitiesJsonPath, "utf8")) as Record<string, {
+			geometry?: { default?: { texturewidth?: number; textureheight?: number; bones?: unknown[] } };
+		}>;
+		for (const [name, def] of Object.entries(raw)) {
+			if (def.geometry?.default) {
+				entityModels[name] = {
+					texturewidth: def.geometry.default.texturewidth ?? 64,
+					textureheight: def.geometry.default.textureheight ?? 64,
+					bones: def.geometry.default.bones ?? [],
+				};
+			}
+		}
+	} catch { /* entity models unavailable — non-player entities will use fallback box */ }
+
 	return {
 		blockStates: mcAssets.blocksStates,
 		blockModels: mcAssets.blocksModels,
@@ -173,6 +198,7 @@ const loadMcAssets = (version: string, bot: Bot): CachedAssets => {
 		tints: serializeTints(tints),
 		blocks,
 		biomes,
+		entityModels,
 	};
 };
 
@@ -468,15 +494,17 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			}
 		}
 
-		// Send all currently tracked player entities
+		// Send all currently tracked entities
 		for (const entity of Object.values(bot.entities)) {
 			if (entity.id === bot.entity?.id) continue;
-			if (entity.type !== "player") continue;
-			const username = entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null);
-			const skinUrl = entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+			const username = entity.type === "player"
+				? (entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
+				: null;
+			const skinUrl = entity.type === "player" && entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
 			sendTo(ws, {
 				type: "entitySpawn",
 				id: entity.id,
+				entityName: entity.name ?? "unknown",
 				username: username ?? entity.username,
 				skinUrl,
 				x: entity.position.x,
@@ -556,13 +584,15 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const onEntitySpawn = (entity: Entity) => {
 		if (entity.id === bot.entity?.id) return;
-		if (entity.type !== "player") return;
-		const username = entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null);
-		// Serve skin through our proxy to avoid CORS
-		const skinUrl = entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+		const username = entity.type === "player"
+			? (entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
+			: null;
+		// Serve skin through our proxy to avoid CORS (players only)
+		const skinUrl = entity.type === "player" && entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
 		broadcast({
 			type: "entitySpawn",
 			id: entity.id,
+			entityName: entity.name ?? "unknown",
 			username: username ?? entity.username,
 			skinUrl,
 			x: entity.position.x,
@@ -574,7 +604,6 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const onEntityMoved = (entity: Entity) => {
 		if (entity.id === bot.entity?.id) return;
-		if (entity.type !== "player") return;
 		broadcast({
 			type: "entityMove",
 			id: entity.id,
@@ -586,7 +615,6 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	};
 
 	const onEntityGone = (entity: Entity) => {
-		if (entity.type !== "player") return;
 		broadcast({ type: "entityGone", id: entity.id });
 	};
 

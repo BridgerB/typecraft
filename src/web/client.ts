@@ -15,6 +15,7 @@ import {
 	createTextureAtlas,
 	prepareBlockStates,
 } from "../viewer/assets.ts";
+import { type EntityModelDef, setEntityModels } from "../viewer/entityRenderer.ts";
 import {
 	addViewerColumn,
 	addViewerEntity,
@@ -74,6 +75,7 @@ type AssetsMessage = {
 	tints: SerializedTints;
 	blocks: BlockDef[];
 	biomes: BiomeDef[];
+	entityModels: Record<string, { texturewidth: number; textureheight: number; bones: unknown[] }>;
 };
 
 type PositionMessage = {
@@ -114,6 +116,7 @@ type TimeMessage = {
 type EntitySpawnMessage = {
 	type: "entitySpawn";
 	id: number;
+	entityName: string;
 	username: string | null;
 	skinUrl?: string;
 	x: number;
@@ -243,7 +246,7 @@ const processMessage = (msg: ServerMessage): void => {
 		setViewerTime(viewer, msg.time);
 	} else if (msg.type === "entitySpawn") {
 		if (!viewer) return;
-		addViewerEntity(viewer, msg.id, msg.username, msg.x, msg.y, msg.z, msg.yaw, msg.skinUrl);
+		addViewerEntity(viewer, msg.id, msg.entityName ?? "player", msg.username, msg.x, msg.y, msg.z, msg.yaw, msg.skinUrl);
 	} else if (msg.type === "entityMove") {
 		if (!viewer) return;
 		updateViewerEntity(viewer, msg.id, msg.x, msg.y, msg.z, msg.yaw);
@@ -306,6 +309,7 @@ const connect = () => {
 			}
 
 			setViewerAssets(viewer, atlas, blockStates, deserializeTints(msg.tints));
+			setEntityModels(msg.entityModels as Record<string, EntityModelDef>);
 			assetsReady = true;
 
 			// Replay messages that arrived during async texture decoding

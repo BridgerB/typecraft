@@ -1,11 +1,11 @@
 /**
- * Entity renderer — builds proper Steve-model player meshes using
- * Bedrock geometry format (bones + UV-mapped cubes) and the Steve skin texture.
+ * Entity renderer — builds Bedrock-format entity meshes (bones + UV-mapped cubes).
+ * Supports all entity types from entities.json, with Steve-model players as a special case.
  */
 
 import * as THREE from "three";
 
-// ── Player geometry (from upstream entities.json "player" default) ──
+// ── Bedrock geometry types ──
 
 type Cube = {
 	readonly origin: readonly [number, number, number];
@@ -20,6 +20,23 @@ type Bone = {
 	readonly pivot?: readonly [number, number, number];
 	readonly cubes?: readonly Cube[];
 };
+
+// ── Entity model definitions (populated by setEntityModels) ──
+
+export type EntityModelDef = {
+	readonly texturewidth: number;
+	readonly textureheight: number;
+	readonly bones: readonly Bone[];
+};
+
+let entityModels: Record<string, EntityModelDef> = {};
+
+export const setEntityModels = (data: Record<string, EntityModelDef>): void => {
+	entityModels = data;
+};
+
+const getEntityModel = (name: string): EntityModelDef | null =>
+	entityModels[name] ?? null;
 
 const PLAYER_BONES: readonly Bone[] = [
 	{ name: "root", pivot: [0, 0, 0] },
@@ -81,14 +98,16 @@ const addCube = (
 	bonePos: THREE.Vector3,
 	boneRot: THREE.Euler,
 	cube: Cube,
+	texW: number,
+	texH: number,
 ): void => {
 	for (const face of FACES) {
 		const ndx = geo.positions.length / 3;
 		const inflate = cube.inflate ?? 0;
 
 		for (const corner of face.corners) {
-			const u = (cube.uv[0] + dot3(corner[3] ? face.u1 : face.u0, cube.size)) / TEX_W;
-			const v = (cube.uv[1] + dot3(corner[4] ? face.v1 : face.v0, cube.size)) / TEX_H;
+			const u = (cube.uv[0] + dot3(corner[3] ? face.u1 : face.u0, cube.size)) / texW;
+			const v = (cube.uv[1] + dot3(corner[4] ? face.v1 : face.v0, cube.size)) / texH;
 
 			const p = new THREE.Vector3(
 				cube.origin[0] + corner[0] * cube.size[0] + (corner[0] ? inflate : -inflate),
@@ -110,12 +129,12 @@ const addCube = (
 	}
 };
 
-const buildPlayerGeometry = (): THREE.BufferGeometry => {
+const buildEntityGeometry = (bones: readonly Bone[], texW: number, texH: number): THREE.BufferGeometry => {
 	const geo: GeoData = { positions: [], normals: [], uvs: [], indices: [], skinIndices: [], skinWeights: [] };
 	const boneMap = new Map<string, { idx: number; pos: THREE.Vector3; rot: THREE.Euler }>();
 
 	let idx = 0;
-	for (const bone of PLAYER_BONES) {
+	for (const bone of bones) {
 		const pos = bone.pivot
 			? new THREE.Vector3(bone.pivot[0], bone.pivot[1], bone.pivot[2])
 			: new THREE.Vector3();
@@ -124,7 +143,7 @@ const buildPlayerGeometry = (): THREE.BufferGeometry => {
 
 		if (bone.cubes) {
 			for (const cube of bone.cubes) {
-				addCube(geo, idx, pos, rot, cube);
+				addCube(geo, idx, pos, rot, cube, texW, texH);
 			}
 		}
 		idx++;
@@ -140,12 +159,15 @@ const buildPlayerGeometry = (): THREE.BufferGeometry => {
 	return bufGeo;
 };
 
-const buildPlayerSkeleton = (): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } => {
+const buildPlayerGeometry = (): THREE.BufferGeometry =>
+	buildEntityGeometry(PLAYER_BONES, TEX_W, TEX_H);
+
+const buildEntitySkeleton = (bones: readonly Bone[]): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } => {
 	const boneMap = new Map<string, THREE.Bone>();
 	const pivotMap = new Map<string, THREE.Vector3>();
 	const rootBones: THREE.Bone[] = [];
 
-	for (const def of PLAYER_BONES) {
+	for (const def of bones) {
 		const bone = new THREE.Bone();
 		const pivot = def.pivot
 			? new THREE.Vector3(def.pivot[0], def.pivot[1], def.pivot[2])
@@ -155,7 +177,7 @@ const buildPlayerSkeleton = (): { skeleton: THREE.Skeleton; rootBones: THREE.Bon
 	}
 
 	// Use positions relative to parent so rotation pivots are correct
-	for (const def of PLAYER_BONES) {
+	for (const def of bones) {
 		const bone = boneMap.get(def.name)!;
 		const pivot = pivotMap.get(def.name)!;
 		if (def.parent) {
@@ -171,9 +193,12 @@ const buildPlayerSkeleton = (): { skeleton: THREE.Skeleton; rootBones: THREE.Bon
 	return { skeleton: new THREE.Skeleton([...boneMap.values()]), rootBones };
 };
 
+const buildPlayerSkeleton = (): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } =>
+	buildEntitySkeleton(PLAYER_BONES);
+
 // ── Animation ──
 
-// Bone indices in PLAYER_BONES array
+// Bone indices in PLAYER_BONES array (used for player walk animation)
 const BONE_LEFT_ARM = 5;
 const BONE_RIGHT_ARM = 7;
 const BONE_LEFT_LEG = 9;
@@ -181,6 +206,7 @@ const BONE_RIGHT_LEG = 11;
 
 type AnimState = {
 	skeleton: THREE.Skeleton;
+	isPlayer: boolean;
 	lastX: number;
 	lastZ: number;
 	distanceMoved: number;
@@ -227,6 +253,7 @@ const loadSkinTexture = (url: string, material: THREE.MeshLambertMaterial): void
 export const addEntity = (
 	er: EntityRenderer,
 	id: number,
+	entityName: string,
 	username: string | null,
 	x: number,
 	y: number,
@@ -238,24 +265,53 @@ export const addEntity = (
 
 	const group = new THREE.Group();
 
-	// Use per-player material if skin URL provided, otherwise shared Steve material
+	let geometry: THREE.BufferGeometry;
+	let skeletonResult: { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] };
+	let scale: number;
+
+	if (entityName === "player") {
+		geometry = er.geometry; // shared player geometry
+		skeletonResult = buildPlayerSkeleton();
+		// Bedrock geometry is 32px tall (2 blocks at 1/16). Real Steve is 1.8 blocks.
+		scale = 1.8 / 32;
+	} else {
+		const model = getEntityModel(entityName);
+		if (model) {
+			geometry = buildEntityGeometry(model.bones, model.texturewidth, model.textureheight);
+			skeletonResult = buildEntitySkeleton(model.bones);
+			// Bedrock geometry uses 1/16 scale (pixels to blocks)
+			scale = 1 / 16;
+		} else {
+			// Fallback: colored box for unknown entities
+			const boxGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+			const boxMat = new THREE.MeshLambertMaterial({ color: 0xff6600 });
+			const box = new THREE.Mesh(boxGeo, boxMat);
+			box.position.y = 0.25;
+			group.add(box);
+			group.position.set(x, y, z);
+			group.rotation.y = yaw;
+			er.scene.add(group);
+			er.entities.set(id, group);
+			return;
+		}
+	}
+
+	// Use per-entity material when a skin/texture URL is provided, otherwise shared Steve for players
 	const material = skinUrl
 		? new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.1 })
-		: er.material;
+		: entityName === "player"
+			? er.material
+			: new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.1 });
 	if (skinUrl) loadSkinTexture(skinUrl, material);
 
 	// Build skinned mesh
-	const { skeleton, rootBones } = buildPlayerSkeleton();
-	const mesh = new THREE.SkinnedMesh(er.geometry, material);
-	mesh.add(...rootBones);
-	mesh.bind(skeleton);
-	// Bedrock geometry is 32px tall (2 blocks at 1/16). Real Steve is 1.8 blocks.
-	// Scale factor: 1.8/32 = 0.05625
-	const s = 1.8 / 32;
-	mesh.scale.set(s, s, s);
+	const mesh = new THREE.SkinnedMesh(geometry, material);
+	mesh.add(...skeletonResult.rootBones);
+	mesh.bind(skeletonResult.skeleton);
+	mesh.scale.set(scale, scale, scale);
 	group.add(mesh);
 
-	// Username label
+	// Username label (players only)
 	if (username) {
 		const label = createTextSprite(username);
 		label.position.y = 2.1;
@@ -267,7 +323,7 @@ export const addEntity = (
 
 	er.scene.add(group);
 	er.entities.set(id, group);
-	er.animStates.set(id, { skeleton, lastX: x, lastZ: z, distanceMoved: 0 });
+	er.animStates.set(id, { skeleton: skeletonResult.skeleton, isPlayer: entityName === "player", lastX: x, lastZ: z, distanceMoved: 0 });
 };
 
 export const updateEntity = (
@@ -283,7 +339,7 @@ export const updateEntity = (
 	group.position.set(x, y, z);
 	group.rotation.y = yaw;
 
-	// Walk animation
+	// Walk animation (player entities only)
 	const anim = er.animStates.get(id);
 	if (!anim) return;
 
@@ -292,6 +348,8 @@ export const updateEntity = (
 	const dist = Math.sqrt(dx * dx + dz * dz);
 	anim.lastX = x;
 	anim.lastZ = z;
+
+	if (!anim.isPlayer) return;
 
 	if (dist > 0.001 && dist < 1) {
 		// Accumulate distance and compute swing
@@ -320,11 +378,17 @@ export const removeEntity = (er: EntityRenderer, id: number): void => {
 	for (const child of group.children) {
 		if (child instanceof THREE.SkinnedMesh) {
 			child.skeleton.dispose();
-			// Dispose per-player material (not the shared Steve one)
+			// Dispose per-entity geometry (not the shared player one)
+			if (child.geometry !== er.geometry) child.geometry.dispose();
+			// Dispose per-entity material (not the shared Steve one)
 			if (child.material !== er.material) {
 				(child.material as THREE.MeshLambertMaterial).map?.dispose();
 				(child.material as THREE.MeshLambertMaterial).dispose();
 			}
+		} else if (child instanceof THREE.Mesh) {
+			// Fallback box or other plain meshes
+			child.geometry.dispose();
+			(child.material as THREE.MeshLambertMaterial).dispose();
 		}
 		if (child instanceof THREE.Sprite) {
 			child.material.map?.dispose();
