@@ -13,6 +13,7 @@ import type {
 	FoodDefinition,
 	ItemDefinition,
 	RawRecipe,
+	RawRecipeItem,
 	Registry,
 	VersionInfo,
 } from "./types.ts";
@@ -21,6 +22,111 @@ const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../data");
 
 const loadJson = <T>(filename: string): T =>
 	JSON.parse(readFileSync(join(DATA_DIR, filename), "utf8")) as T;
+
+// ── Recipe loading ──
+
+type RawVanillaRecipe = {
+	type: string;
+	key?: Record<string, string>;
+	pattern?: string[];
+	ingredients?: (string | string[])[];
+	ingredient?: string | string[];
+	result: { id: string; count?: number };
+};
+
+/** Load item tags (e.g., #minecraft:oak_logs → [oak_log, oak_wood, ...]) */
+const loadItemTags = (): ReadonlyMap<string, readonly string[]> => {
+	const tagsDir = join(DATA_DIR, "tags/item");
+	const tags = new Map<string, readonly string[]>();
+	if (!existsSync(tagsDir)) return tags;
+	for (const file of readdirSync(tagsDir)) {
+		if (!file.endsWith(".json")) continue;
+		const name = file.replace(".json", "");
+		const data = JSON.parse(readFileSync(join(tagsDir, file), "utf8")) as { values: string[] };
+		tags.set(name, data.values.map((v) => v.replace("minecraft:", "")));
+	}
+	return tags;
+};
+
+/** Resolve an ingredient reference to an item ID. Tags use the first item. */
+const resolveIngredient = (
+	ref: string,
+	itemsByName: ReadonlyMap<string, ItemDefinition>,
+	tags: ReadonlyMap<string, readonly string[]>,
+): number | null => {
+	if (ref.startsWith("#minecraft:")) {
+		const tagName = ref.slice("#minecraft:".length);
+		const tagItems = tags.get(tagName);
+		if (!tagItems || tagItems.length === 0) return null;
+		const item = itemsByName.get(tagItems[0]);
+		return item?.id ?? null;
+	}
+	const name = ref.replace("minecraft:", "");
+	return itemsByName.get(name)?.id ?? null;
+};
+
+/** Load crafting recipes from recipes-raw/ and convert to RawRecipe format. */
+const loadRecipes = (
+	itemsByName: ReadonlyMap<string, ItemDefinition>,
+): Readonly<Record<number, readonly RawRecipe[]>> => {
+	const recipesDir = join(DATA_DIR, "recipes-raw");
+	if (!existsSync(recipesDir)) return {};
+
+	const tags = loadItemTags();
+	const byResultId: Record<number, RawRecipe[]> = {};
+
+	for (const file of readdirSync(recipesDir)) {
+		if (!file.endsWith(".json")) continue;
+		try {
+			const raw = JSON.parse(
+				readFileSync(join(recipesDir, file), "utf8"),
+			) as RawVanillaRecipe;
+
+			const resultName = raw.result.id.replace("minecraft:", "");
+			const resultItem = itemsByName.get(resultName);
+			if (!resultItem) continue;
+
+			const result = { id: resultItem.id, count: raw.result.count ?? 1 };
+
+			if (raw.type === "minecraft:crafting_shaped" && raw.pattern && raw.key) {
+				// Shaped recipe: pattern + key → inShape grid
+				const inShape: RawRecipeItem[][] = [];
+				for (const row of raw.pattern) {
+					const shapeRow: RawRecipeItem[] = [];
+					for (const ch of row) {
+						if (ch === " ") {
+							shapeRow.push(null);
+						} else {
+							const ref = raw.key[ch];
+							if (!ref) { shapeRow.push(null); continue; }
+							const id = resolveIngredient(ref, itemsByName, tags);
+							shapeRow.push(id !== null ? id : null);
+						}
+					}
+					inShape.push(shapeRow);
+				}
+				const recipe: RawRecipe = { inShape, result };
+				(byResultId[result.id] ??= []).push(recipe);
+			} else if (raw.type === "minecraft:crafting_shapeless" && raw.ingredients) {
+				// Shapeless recipe: flat ingredient list
+				const ingredients: RawRecipeItem[] = [];
+				for (const ing of raw.ingredients) {
+					const ref = typeof ing === "string" ? ing : ing[0];
+					if (!ref) continue;
+					const id = resolveIngredient(ref, itemsByName, tags);
+					ingredients.push(id !== null ? id : null);
+				}
+				const recipe: RawRecipe = { ingredients, result };
+				(byResultId[result.id] ??= []).push(recipe);
+			}
+			// Skip smelting, stonecutting, smithing — not used by bot.craft()
+		} catch {
+			// Skip malformed recipe files
+		}
+	}
+
+	return byResultId;
+};
 
 /**
  * Create a registry for a specific Minecraft version.
@@ -226,7 +332,7 @@ export const createRegistry = (version: string): Registry => {
 		attributesArray,
 		blockCollisionShapes,
 		materials: {} as Readonly<Record<string, Readonly<Record<number, number>>>>,
-		recipes: {} as Readonly<Record<number, readonly RawRecipe[]>>,
+		recipes: loadRecipes(itemsByName),
 		language: {},
 		isNewerOrEqualTo,
 		isOlderThan,
