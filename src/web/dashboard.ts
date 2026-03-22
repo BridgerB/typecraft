@@ -3,7 +3,7 @@
  * data from multiple bots to a grid-view browser client.
  */
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import {
 	createServer,
 	type IncomingMessage,
@@ -62,6 +62,17 @@ export const createDashboard = (options?: DashboardOptions): Dashboard => {
 	const clients = new Set<WebSocket>();
 	const bots = new Map<string, BotEntry>();
 	const chunkKey = (x: number, z: number) => `${x},${z}`;
+
+	// Disk-backed skin cache
+	const skinCacheDir = resolve(import.meta.dirname, "../../.cache/skins");
+	mkdirSync(skinCacheDir, { recursive: true });
+	const getSkinCache = (uuid: string): Buffer | null => {
+		const p = pathJoin(skinCacheDir, `${uuid}.png`);
+		return existsSync(p) ? readFileSync(p) : null;
+	};
+	const setSkinCache = (uuid: string, buf: Buffer): void => {
+		writeFileSync(pathJoin(skinCacheDir, `${uuid}.png`), buf);
+	};
 
 	// ── Broadcasting ──
 
@@ -150,22 +161,59 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		if (req.url === "/textures/steve.png") {
 			const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
 			if (existsSync(stevePath)) {
-				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
-				res.end(readFileSync(stevePath));
-				return;
-			}
-		}
-
-		// Serve Steve skin texture
-		if (req.url === "/textures/steve.png") {
-			const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
-			if (existsSync(stevePath)) {
 				res.writeHead(200, { "Content-Type": "image/png" });
 				res.end(readFileSync(stevePath));
 				return;
 			}
 			res.writeHead(404);
 			res.end("Not found");
+			return;
+		}
+
+		// Serve player skins (proxy from Mojang to avoid CORS)
+		if (req.url?.startsWith("/skins/") && req.url.endsWith(".png")) {
+			const uuid = req.url.slice("/skins/".length, -".png".length);
+			const skinHeaders = { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" };
+
+			const cached = getSkinCache(uuid);
+			if (cached) {
+				res.writeHead(200, skinHeaders);
+				res.end(cached);
+				return;
+			}
+
+			// Fetch from Mojang session server
+			(async () => {
+				try {
+					const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`);
+					if (!profileRes.ok) { res.writeHead(404); res.end("Not found"); return; }
+					const profile = await profileRes.json() as { properties: { name: string; value: string }[] };
+					const texProp = profile.properties.find((p: { name: string }) => p.name === "textures");
+					if (!texProp) { res.writeHead(404); res.end("Not found"); return; }
+					const decoded = JSON.parse(Buffer.from(texProp.value, "base64").toString("utf8"));
+					const skinUrl = decoded?.textures?.SKIN?.url;
+					if (!skinUrl) { res.writeHead(404); res.end("Not found"); return; }
+
+					const skinRes = await fetch(skinUrl);
+					if (!skinRes.ok) { res.writeHead(404); res.end("Not found"); return; }
+					const buf = Buffer.from(await skinRes.arrayBuffer());
+					setSkinCache(uuid, buf);
+					res.writeHead(200, skinHeaders);
+					res.end(buf);
+				} catch {
+					// Fallback to Steve
+					const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
+					if (existsSync(stevePath)) {
+						const buf = readFileSync(stevePath);
+						setSkinCache(uuid, buf);
+						res.writeHead(200, skinHeaders);
+						res.end(buf);
+					} else {
+						res.writeHead(404);
+						res.end("Not found");
+					}
+				}
+			})();
 			return;
 		}
 
@@ -323,12 +371,15 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		const onEntitySpawn = (entity: Entity) => {
 			if (entity.id === bot.entity?.id) return;
+			const skinUrl = entity.type === "player" && entity.uuid
+				? `/skins/${entity.uuid}.png` : undefined;
 			broadcast({
 				type: "entitySpawn",
 				botId: name,
 				id: entity.id,
 				entityName: entity.name ?? "unknown",
 				username: entity.username ?? null,
+				skinUrl,
 				x: entity.position.x,
 				y: entity.position.y,
 				z: entity.position.z,
