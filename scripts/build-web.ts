@@ -27,6 +27,13 @@ const buildAll = async () => {
 		outfile: resolve(outdir, "client.js"),
 	});
 
+	// Dashboard client bundle
+	const dashboardBuild = build({
+		...shared,
+		entryPoints: [resolve(root, "src/web/dashboardClient.ts")],
+		outfile: resolve(outdir, "dashboardClient.js"),
+	});
+
 	// Worker bundle
 	const workerBuild = build({
 		...shared,
@@ -34,7 +41,7 @@ const buildAll = async () => {
 		outfile: resolve(outdir, "worker.js"),
 	});
 
-	await Promise.all([clientBuild, workerBuild]);
+	await Promise.all([clientBuild, dashboardBuild, workerBuild]);
 
 	cpSync(resolve(root, "src/web/client.html"), resolve(outdir, "index.html"));
 	console.log("Built dist/web/ (client.js, worker.js, index.html)");
@@ -45,6 +52,7 @@ if (watch) {
 		...shared,
 		entryPoints: [
 			resolve(root, "src/web/client.ts"),
+			resolve(root, "src/web/dashboardClient.ts"),
 			resolve(root, "src/web/clientWorker.ts"),
 		],
 		outdir,

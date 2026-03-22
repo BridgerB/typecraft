@@ -151,7 +151,7 @@ const buildTints = (): BiomeTints => {
 	};
 };
 
-const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
+export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 	// Load blockstates from individual JSON files
 	const blockStates: Record<string, unknown> = {};
 	const blockStatesDir = join(DATA_DIR, "assets/blockstates");

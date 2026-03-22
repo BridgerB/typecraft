@@ -401,8 +401,14 @@ export {
 	ZERO,
 } from "./vec3/index.ts";
 export {
+	addBotToDashboard,
+	closeDashboard,
 	closeWebViewer,
+	createDashboard,
 	createWebViewer,
+	type Dashboard,
+	type DashboardOptions,
+	removeBotFromDashboard,
 	type WebViewer,
 	type WebViewerOptions,
 } from "./web/index.ts";

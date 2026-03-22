@@ -58,15 +58,21 @@ export const createViewer = (
 	renderer.setPixelRatio(window.devicePixelRatio);
 	renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
+	return createViewerScene(renderer, options);
+};
+
+/** Create a viewer scene that shares an existing renderer (for dashboard grid). */
+export const createViewerScene = (
+	renderer: THREE.WebGLRenderer,
+	options: ViewerOptions,
+): Viewer => {
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x87ceeb);
 
-	// Shading is baked into vertex colors (Minecraft-style per-face shade + AO)
 	const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
 	scene.add(ambientLight);
 
-	const aspect = canvas.clientWidth / canvas.clientHeight;
-	const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+	const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 
 	const worldRenderer = createWorldRenderer(
 		scene,
