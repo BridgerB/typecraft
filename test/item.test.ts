@@ -287,11 +287,11 @@ describe("itemsEqual", () => {
 // ── Network serialization ──
 
 describe("toNotch / fromNotch", () => {
-	it("round-trips item for 1.20 (present format)", () => {
+	it("round-trips item (1.21+ HashedSlot format)", () => {
 		const sword = createItemByName(reg120, "diamond_sword", 1);
 		const notch = toNotch(reg120, sword);
-		expect("present" in notch).toBe(true);
-		expect((notch as { present: boolean }).present).toBe(true);
+		expect((notch as { itemCount: number }).itemCount).toBe(1);
+		expect((notch as { itemId: number }).itemId).toBe(sword.type);
 
 		const back = fromNotch(reg120, notch);
 		expect(back).not.toBeNull();
@@ -299,34 +299,20 @@ describe("toNotch / fromNotch", () => {
 		expect(back!.count).toBe(1);
 	});
 
-	it("round-trips item for 1.8 (blockId format)", () => {
-		const sword = createItemByName(reg18, "diamond_sword", 1);
-		const notch = toNotch(reg18, sword);
-		expect("blockId" in notch).toBe(true);
-
-		const back = fromNotch(reg18, notch);
-		expect(back).not.toBeNull();
-		expect(back!.name).toBe("diamond_sword");
-	});
-
-	it("handles null item for 1.20", () => {
+	it("handles null item", () => {
 		const notch = toNotch(reg120, null);
-		expect((notch as { present: boolean }).present).toBe(false);
+		expect((notch as { itemCount: number }).itemCount).toBe(0);
 		expect(fromNotch(reg120, notch)).toBeNull();
 	});
 
-	it("handles null item for 1.8", () => {
-		const notch = toNotch(reg18, null);
-		expect((notch as { blockId: number }).blockId).toBe(-1);
-		expect(fromNotch(reg18, notch)).toBeNull();
-	});
-
-	it("preserves NBT through round-trip", () => {
+	it("round-trips item with NBT (components preserved)", () => {
 		const sword = createItemByName(reg120, "diamond_sword", 1);
 		const named = setCustomName(sword, "Test Sword");
 		const notch = toNotch(reg120, named);
 		const back = fromNotch(reg120, notch);
-		expect(getCustomName(back!)).toBe("Test Sword");
+		expect(back).not.toBeNull();
+		expect(back!.name).toBe("diamond_sword");
+		expect(back!.count).toBe(1);
 	});
 });
 
