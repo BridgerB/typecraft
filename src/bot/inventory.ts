@@ -50,6 +50,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 		if (!bot.registry) return;
 		const windowId = packet.windowId as number;
 		const items = packet.items as unknown[];
+
 		const window =
 			windowId === 0
 				? bot.inventory
@@ -164,7 +165,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				mode,
 				stateId,
 				changedSlots: [],
-				cursorItem: { present: false },
+				cursorItem: null,
 			});
 		} else {
 			bot.client.write("window_click", {

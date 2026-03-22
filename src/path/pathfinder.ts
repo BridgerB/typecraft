@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: PathfinderConfig = {
 	tickTimeout: 40,
 	searchRadius: -1,
 	maxDropDown: 3,
-	reachDistance: 0.35,
+	reachDistance: 0.5,
 	stuckTimeout: 3500,
 };
 
@@ -46,6 +46,7 @@ export const createPathfinder = (
 	let movements: Movements | null = null;
 	let digging = false;
 	let placing = false;
+	let retries = 0;
 	let gotoResolve: (() => void) | null = null;
 	let gotoReject: ((err: Error) => void) | null = null;
 
@@ -77,6 +78,7 @@ export const createPathfinder = (
 		astarPartial = false;
 		pathComputed = false;
 		movements = null;
+		retries = 0;
 		lastNodeTime = performance.now();
 		fullStop();
 	};
@@ -95,6 +97,23 @@ export const createPathfinder = (
 		gotoResolve = null;
 		gotoReject = null;
 		reject?.(new Error(reason));
+	};
+
+	/** Trim path to bot's current position (skip already-passed waypoints). */
+	const trimPathToPlayer = (): void => {
+		const p = bot.entity.position;
+		let bestIdx = 0;
+		let bestDist = Infinity;
+		for (let i = 0; i < path.length; i++) {
+			const dx = path[i]!.x + 0.5 - p.x;
+			const dz = path[i]!.z + 0.5 - p.z;
+			const d = dx * dx + dz * dz;
+			if (d < bestDist) {
+				bestDist = d;
+				bestIdx = i;
+			}
+		}
+		pathIndex = bestIdx;
 	};
 
 	/** Follow the current path by driving bot controls. */
@@ -123,9 +142,11 @@ export const createPathfinder = (
 						bot.emit("goal_reached", currentGoal);
 						resolveGoto();
 						if (!dynamic) currentGoal = null;
+						pathComputed = true;
+						return;
 					}
 				}
-				pathComputed = false;
+				// Path exhausted but goal not reached — will recompute next tick
 				return;
 			}
 		}
@@ -227,7 +248,7 @@ export const createPathfinder = (
 		// Check dynamic goal changes
 		if (currentGoal.hasChanged?.()) resetPath();
 
-		// Continue incremental A* if partial (reuse existing movements)
+		// Continue incremental A* every tick while partial — walk + compute simultaneously
 		if (astarCtx && astarPartial && movements) {
 			const result = computeAStar(
 				astarCtx,
@@ -236,16 +257,23 @@ export const createPathfinder = (
 				cfg.thinkTimeout,
 			);
 			path = [...result.path];
-			pathIndex = 0;
+			trimPathToPlayer();
 			astarPartial = result.status === "partial";
-			if (result.status !== "partial") astarCtx = null;
+			if (result.status !== "partial") {
+				astarCtx = null;
+				pathComputed = true;
+			}
 			bot.emit("path_update" as any, result);
 			if (result.status === "noPath") rejectGoto("No path found");
-			return;
+			if (result.status === "timeout") {
+				// A* timed out — walk the best path found, then try to recompute from there
+				pathComputed = false;
+			}
+			// Fall through to followPath — walk while computing
 		}
 
-		// Start new A* if needed
-		if (pathIndex >= path.length && !pathComputed) {
+		// Start new A* if needed (but not while a partial computation is in progress)
+		if (pathIndex >= path.length && !pathComputed && !astarPartial) {
 			const currentMove = startMoveFromBot();
 
 			if (currentGoal.isEnd(currentMove)) {
@@ -272,17 +300,32 @@ export const createPathfinder = (
 				cfg.thinkTimeout,
 			);
 			path = [...result.path];
-			pathIndex = 0;
-			pathComputed = true;
+			trimPathToPlayer();
+			pathComputed = result.status !== "partial";
 			astarPartial = result.status === "partial";
 			if (result.status !== "partial") astarCtx = null;
 			bot.emit("path_update" as any, result);
 			if (result.status === "noPath" && !astarPartial)
 				rejectGoto("No path found");
-			return;
+			// Don't fall through on initial tick — let partial continuation handle next ticks
+			if (astarPartial) return;
 		}
 
-		if (pathIndex < path.length) followPath();
+		if (pathIndex < path.length) {
+			followPath();
+		} else if (pathComputed && currentGoal) {
+			// Path exhausted but goal not reached — recompute after stuck timeout
+			if (performance.now() - lastNodeTime > cfg.stuckTimeout) {
+				retries++;
+				if (retries > 3) {
+					fullStop();
+					rejectGoto("Path incomplete after retries");
+					if (!dynamic) currentGoal = null;
+					return;
+				}
+				pathComputed = false;
+			}
+		}
 	};
 
 	bot.on("physicsTick", onPhysicsTick);
@@ -308,9 +351,42 @@ export const createPathfinder = (
 
 	const gotoGoal = (goal: Goal): Promise<void> =>
 		new Promise((resolve, reject) => {
+			const cleanup = () => {
+				bot.removeListener("goal_reached", onReached);
+				bot.removeListener("path_stop", onStop);
+				bot.removeListener("path_reset", onReset);
+			};
+			const onReached = () => {
+				cleanup();
+				resolve();
+			};
+			const onStop = () => {
+				cleanup();
+				reject(new Error("Pathfinder stopped"));
+			};
+			const onReset = (reason: string) => {
+				if (reason === "goal_updated") {
+					cleanup();
+					reject(new Error("Goal changed"));
+				}
+			};
 			gotoResolve = resolve;
 			gotoReject = reject;
 			setGoal(goal);
+
+			// Listen AFTER setGoal so we don't catch the initial path_reset
+			bot.on("goal_reached", onReached);
+			bot.on("path_stop", onStop);
+			bot.on("path_reset" as any, onReset);
+
+			const onPathUpdate = (result: { status: string }) => {
+				if (result.status === "noPath") {
+					bot.removeListener("path_update" as any, onPathUpdate);
+					cleanup();
+					reject(new Error("No path found"));
+				}
+			};
+			bot.on("path_update" as any, onPathUpdate);
 		});
 
 	const isMining = (): boolean => digging;

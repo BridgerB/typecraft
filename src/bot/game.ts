@@ -105,15 +105,17 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 			bot.supportFeature("dimensionIsAString") ||
 			bot.supportFeature("segmentedRegistryCodecData")
 		) {
-			bot.game.dimension = (packet.dimension as string).replace(
-				"minecraft:",
-				"",
-			);
+			const dim = packet.dimension ?? packet.worldName;
+			bot.game.dimension =
+				typeof dim === "string"
+					? dim.replace("minecraft:", "")
+					: String(dim ?? "overworld");
 		} else if (bot.supportFeature("dimensionIsAWorld")) {
-			bot.game.dimension = (packet.worldName as string).replace(
-				"minecraft:",
-				"",
-			);
+			const wn = packet.worldName;
+			bot.game.dimension =
+				typeof wn === "string"
+					? wn.replace("minecraft:", "")
+					: String(wn ?? "overworld");
 		}
 
 		// World height — resolve from dimension registry

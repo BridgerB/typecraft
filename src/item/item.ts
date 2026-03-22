@@ -331,23 +331,24 @@ export const itemsEqual = (
 
 /** Convert an item to network (Notch) format. */
 export const toNotch = (registry: Registry, item: Item | null): NotchItem => {
-	if (registry.supportFeature("itemSerializationUsesBlockId")) {
-		if (!item) return { blockId: -1, itemCount: 0, itemDamage: 0 };
-		const hasNbt = item.nbt !== null && Object.keys(item.nbt.value).length > 0;
+	// 1.21+ HashedSlot format: { itemId, itemCount, components, removeComponents }
+	if (!registry.supportFeature("itemSerializationUsesBlockId")) {
+		if (!item) return { itemCount: 0, itemId: 0, components: [], removeComponents: [] } as unknown as NotchItem;
 		return {
-			blockId: item.type,
+			itemId: item.type,
 			itemCount: item.count,
-			itemDamage: item.metadata,
-			...(hasNbt ? { nbtData: item.nbt! } : {}),
-		};
+			components: [],
+			removeComponents: [],
+		} as unknown as NotchItem;
 	}
 
-	if (!item) return { present: false };
+	// Legacy blockId format
+	if (!item) return { blockId: -1, itemCount: 0, itemDamage: 0 };
 	const hasNbt = item.nbt !== null && Object.keys(item.nbt.value).length > 0;
 	return {
-		present: true,
-		itemId: item.type,
+		blockId: item.type,
 		itemCount: item.count,
+		itemDamage: item.metadata,
 		...(hasNbt ? { nbtData: item.nbt! } : {}),
 	};
 };
@@ -357,24 +358,41 @@ export const fromNotch = (
 	registry: Registry,
 	networkItem: NotchItem,
 ): Item | null => {
-	if ("present" in networkItem) {
-		if (!networkItem.present) return null;
+	if (!networkItem) return null;
+	const ni = networkItem as Record<string, unknown>;
+
+	// 1.21+ format: { itemCount, itemId, addedComponentCount, ... }
+	// itemCount=0 means empty slot
+	if ("itemCount" in ni) {
+		const count = ni.itemCount as number;
+		if (count === 0) return null;
+		const id = ni.itemId as number;
+		return createItem(registry, id, count, 0, null);
+	}
+
+	// Legacy format with "present" field
+	if ("present" in ni) {
+		if (!ni.present) return null;
 		return createItem(
 			registry,
-			networkItem.itemId!,
-			networkItem.itemCount!,
+			ni.itemId as number,
+			ni.itemCount as number,
 			0,
-			networkItem.nbtData ?? null,
+			(ni.nbtData as NbtCompound | null) ?? null,
 		);
 	}
 
-	const bi = networkItem as NotchItemBlockId;
-	if (bi.blockId === -1) return null;
-	return createItem(
-		registry,
-		bi.blockId,
-		bi.itemCount,
-		bi.itemDamage,
-		bi.nbtData ?? null,
-	);
+	// Legacy format with blockId
+	if ("blockId" in ni) {
+		if ((ni.blockId as number) === -1) return null;
+		return createItem(
+			registry,
+			ni.blockId as number,
+			ni.itemCount as number,
+			(ni.itemDamage as number) ?? 0,
+			(ni.nbtData as NbtCompound | null) ?? null,
+		);
+	}
+
+	return null;
 };
