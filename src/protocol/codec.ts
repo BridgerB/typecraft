@@ -252,10 +252,11 @@ const buildContainer = (
 
 const buildArray = (
 	registry: TypeRegistry,
-	params: { countType?: string; count?: number; type: unknown },
+	params: { countType?: string; count?: number | string; type: unknown },
 ): TypeDef => {
 	const elemType = registry.resolve(params.type);
-	const fixedCount = params.count;
+	const fixedCount = typeof params.count === "number" ? params.count : undefined;
+	const countField = typeof params.count === "string" ? params.count : null;
 	const countType = params.countType
 		? registry.resolve(params.countType)
 		: null;
@@ -265,10 +266,14 @@ const buildArray = (
 			let totalSize = 0;
 			if (fixedCount !== undefined) {
 				count = fixedCount;
-			} else {
-				const len = countType!.read(b, o, ctx);
+			} else if (countField && ctx) {
+				count = (ctx as Record<string, unknown>)[countField] as number;
+			} else if (countType) {
+				const len = countType.read(b, o, ctx);
 				count = len.value as number;
 				totalSize += len.size;
+			} else {
+				count = 0;
 			}
 			const arr: unknown[] = [];
 			for (let i = 0; i < count; i++) {

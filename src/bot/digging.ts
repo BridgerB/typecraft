@@ -223,6 +223,12 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		if (block) {
 			bot.emit("diggingCompleted", block);
 		}
+
+		// Resolve the dig promise
+		if (digTask) {
+			digTask.finish(undefined as never);
+			digTask = null;
+		}
 	};
 
 	bot.stopDigging = () => {
@@ -256,9 +262,15 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 	bot.canDigBlock = (block: unknown): boolean => {
 		if (!block) return false;
-		const blockObj = block as { position: Vec3; diggable?: boolean };
+		const blockObj = block as { position: Vec3; diggable?: boolean; name?: string };
 		if (blockObj.diggable === false) return false;
 		if (!blockObj.position) return false;
+
+		// Check registry for diggable status
+		if (blockObj.name && bot.registry) {
+			const def = bot.registry.blocksByName.get(blockObj.name);
+			if (def && def.diggable === false) return false;
+		}
 
 		const dist = length(subtract(blockObj.position, bot.entity.position));
 		return dist <= 6;
@@ -268,15 +280,18 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		if (bot.game.gameMode === "creative") return 0;
 
 		const blockObj = block as { hardness?: number; name?: string; stateId?: number };
-		const hardness = blockObj.hardness;
+		const registry = bot.registry;
+
+		// Get hardness from block object, or look up from registry
+		let hardness: number | undefined = blockObj.hardness;
+		const blockDef = blockObj.name && registry ? registry.blocksByName.get(blockObj.name) : null;
+		if (hardness == null && blockDef?.hardness != null) {
+			hardness = blockDef.hardness;
+		}
 		if (hardness == null || hardness < 0) return Infinity;
 		if (hardness === 0) return 0;
 
-		const registry = bot.registry;
 		if (!registry) return Math.ceil(hardness * 1500);
-
-		// Get block definition for harvestTools and material
-		const blockDef = blockObj.name ? registry.blocksByName.get(blockObj.name) : null;
 
 		let speed = 1.0;
 		let canHarvest = !blockDef?.harvestTools; // If no harvestTools, any tool can harvest
