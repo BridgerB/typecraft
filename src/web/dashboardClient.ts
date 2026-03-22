@@ -16,7 +16,7 @@ import {
 	createTextureAtlas,
 	prepareBlockStates,
 } from "../viewer/assets.ts";
-import { type EntityModelDef, setEntityModels } from "../viewer/entityRenderer.ts";
+import { type EntityModelDef, setEntityModels, updateEntityEquipment } from "../viewer/entityRenderer.ts";
 import {
 	addViewerColumn,
 	addViewerEntity,
@@ -48,12 +48,9 @@ const canvas = document.getElementById("dashboard") as HTMLCanvasElement;
 const labelsDiv = document.getElementById("labels")!;
 const statusEl = document.getElementById("status")!;
 
-// Single shared renderer for all cells
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Single shared renderer — no devicePixelRatio (20 viewports don't need retina)
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(canvas.width, canvas.height);
+renderer.setSize(window.innerWidth, window.innerHeight, true);
 
 const cells = new Map<string, BotCell>();
 let botOrder: string[] = [];
@@ -224,6 +221,8 @@ const processMessage = (msg: Record<string, unknown>) => {
 		updateViewerEntity(viewer, msg.id as number, msg.x as number, msg.y as number, msg.z as number, msg.yaw as number);
 	} else if (type === "entityGone") {
 		removeViewerEntity(viewer, msg.id as number);
+	} else if (type === "entityEquip") {
+		updateEntityEquipment(viewer.entityRenderer, msg.id as number, msg.slot as number, msg.itemName as string | null);
 	}
 };
 
@@ -295,13 +294,15 @@ const connect = () => {
 
 // ── Render loop — single renderer, multiple viewports ──
 
+const _sizeVec = new THREE.Vector2();
 const loop = () => {
 	requestAnimationFrame(loop);
 	if (cells.size === 0) return;
 
 	const { cols, rows } = getGrid();
-	const w = canvas.width;
-	const h = canvas.height;
+	renderer.getSize(_sizeVec);
+	const w = _sizeVec.x;
+	const h = _sizeVec.y;
 	const cellW = w / cols;
 	const cellH = h / rows;
 
@@ -331,9 +332,7 @@ const loop = () => {
 // ── Resize ──
 
 window.addEventListener("resize", () => {
-	canvas.width = window.innerWidth;
-	canvas.height = window.innerHeight;
-	renderer.setSize(canvas.width, canvas.height);
+	renderer.setSize(window.innerWidth, window.innerHeight, true);
 	updateLabels();
 });
 

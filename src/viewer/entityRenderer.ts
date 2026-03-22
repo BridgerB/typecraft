@@ -371,6 +371,95 @@ export const updateEntity = (
 	}
 };
 
+// ── Equipment rendering ──
+
+// Item texture cache (loaded on demand)
+const itemTextureCache = new Map<string, THREE.Texture>();
+const loadingTextures = new Set<string>();
+
+const getItemTexture = (itemName: string): THREE.Texture | null => {
+	const cached = itemTextureCache.get(itemName);
+	if (cached) return cached;
+	if (loadingTextures.has(itemName)) return null;
+
+	loadingTextures.add(itemName);
+	const url = `/textures/item/${itemName}.png`;
+	new THREE.TextureLoader().load(
+		url,
+		(tex) => {
+			tex.magFilter = THREE.NearestFilter;
+			tex.minFilter = THREE.NearestFilter;
+			itemTextureCache.set(itemName, tex);
+		},
+		undefined,
+		() => loadingTextures.delete(itemName), // failed — allow retry
+	);
+	return null;
+};
+
+const ITEM_SPRITE_GEO = /* lazy */ (() => {
+	const g = new THREE.PlaneGeometry(1, 1);
+	return g;
+})();
+
+/** Attach or update an item sprite on an entity's right hand. */
+export const updateEntityEquipment = (
+	er: EntityRenderer,
+	entityId: number,
+	slot: number,
+	itemName: string | null,
+): void => {
+	const anim = er.animStates.get(entityId);
+	if (!anim) return;
+
+	// Only handle main hand (slot 0) for now
+	if (slot !== 0) return;
+
+	const rightArm = anim.skeleton.bones[BONE_RIGHT_ARM];
+	if (!rightArm) return;
+
+	// Remove existing held item
+	const existing = rightArm.children.find((c) => c.userData.heldItem);
+	if (existing) {
+		rightArm.remove(existing);
+		if (existing instanceof THREE.Mesh) {
+			(existing.material as THREE.MeshBasicMaterial).map?.dispose();
+			(existing.material as THREE.MeshBasicMaterial).dispose();
+		}
+	}
+
+	if (!itemName) return;
+
+	const tex = getItemTexture(itemName);
+	if (!tex) {
+		// Texture not loaded yet — retry on next equip update
+		// For now, create a colored placeholder
+		const mat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, side: THREE.DoubleSide });
+		const mesh = new THREE.Mesh(ITEM_SPRITE_GEO, mat);
+		mesh.userData.heldItem = true;
+		// Position at hand tip: rightArm pivot is [-5, 22, 0], arm is 12px tall
+		// In bone-local space, hand is at bottom of arm (-12 from pivot)
+		mesh.position.set(0, -10, -1);
+		mesh.scale.set(8, 8, 8); // 8px = half a block
+		mesh.rotation.x = -Math.PI / 4; // tilt forward 45°
+		rightArm.add(mesh);
+		return;
+	}
+
+	const mat = new THREE.MeshBasicMaterial({
+		map: tex,
+		transparent: true,
+		alphaTest: 0.1,
+		side: THREE.DoubleSide,
+	});
+	const mesh = new THREE.Mesh(ITEM_SPRITE_GEO, mat);
+	mesh.userData.heldItem = true;
+	mesh.position.set(0, -10, -1);
+	mesh.scale.set(8, 8, 8);
+	mesh.rotation.x = -Math.PI / 4;
+	rightArm.add(mesh);
+};
+
 export const removeEntity = (er: EntityRenderer, id: number): void => {
 	const group = er.entities.get(id);
 	if (!group) return;

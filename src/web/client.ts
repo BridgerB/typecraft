@@ -15,7 +15,7 @@ import {
 	createTextureAtlas,
 	prepareBlockStates,
 } from "../viewer/assets.ts";
-import { type EntityModelDef, setEntityModels } from "../viewer/entityRenderer.ts";
+import { type EntityModelDef, setEntityModels, updateEntityEquipment } from "../viewer/entityRenderer.ts";
 import {
 	addViewerColumn,
 	addViewerEntity,
@@ -139,6 +139,13 @@ type EntityGoneMessage = {
 	id: number;
 };
 
+type EntityEquipMessage = {
+	type: "entityEquip";
+	id: number;
+	slot: number;
+	itemName: string | null;
+};
+
 type ServerMessage =
 	| InitMessage
 	| AssetsMessage
@@ -149,7 +156,8 @@ type ServerMessage =
 	| TimeMessage
 	| EntitySpawnMessage
 	| EntityMoveMessage
-	| EntityGoneMessage;
+	| EntityGoneMessage
+	| EntityEquipMessage;
 
 // ── State ──
 
@@ -264,6 +272,9 @@ const processMessage = (msg: ServerMessage): void => {
 	} else if (msg.type === "entityGone") {
 		if (!viewer) return;
 		removeViewerEntity(viewer, msg.id);
+	} else if (msg.type === "entityEquip") {
+		if (!viewer) return;
+		updateEntityEquipment(viewer.entityRenderer, msg.id, msg.slot, msg.itemName);
 	}
 };
 

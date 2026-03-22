@@ -126,16 +126,20 @@
         ${pkgs.unzip}/bin/unzip -qo "${clientJar}" \
           "assets/minecraft/textures/block/*" \
           "assets/minecraft/textures/entity/*" \
+          "assets/minecraft/textures/item/*" \
           "assets/minecraft/models/block/*" \
+          "assets/minecraft/models/item/*" \
           "assets/minecraft/blockstates/*" \
           -d "$ASSETS_DIR"
         # Flatten: move assets/minecraft/* up one level
-        mv "$ASSETS_DIR/assets/minecraft/"* "$ASSETS_DIR/"
+        cp -r "$ASSETS_DIR/assets/minecraft/"* "$ASSETS_DIR/"
         rm -rf "$ASSETS_DIR/assets"
         echo "Extracted textures, models, blockstates from client JAR"
-        echo "  blocks: $(ls "$ASSETS_DIR/textures/block/" | wc -l) textures"
-        echo "  entities: $(ls "$ASSETS_DIR/textures/entity/" 2>/dev/null | wc -l) textures"
-        echo "  models: $(ls "$ASSETS_DIR/models/block/" | wc -l) models"
+        echo "  blocks: $(ls "$ASSETS_DIR/textures/block/" | wc -l) block textures"
+        echo "  items: $(ls "$ASSETS_DIR/textures/item/" 2>/dev/null | wc -l) item textures"
+        echo "  entities: $(ls "$ASSETS_DIR/textures/entity/" 2>/dev/null | wc -l) entity textures"
+        echo "  models: $(ls "$ASSETS_DIR/models/block/" | wc -l) block models"
+        echo "  item models: $(ls "$ASSETS_DIR/models/item/" 2>/dev/null | wc -l) item models"
         echo "  blockstates: $(ls "$ASSETS_DIR/blockstates/" | wc -l) blockstates"
       else
         echo "WARNING: Client JAR not found at ${clientJar}"

@@ -426,6 +426,20 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			return;
 		}
 
+		// Serve item textures from extracted assets
+		if (req.url?.startsWith("/textures/item/") && req.url.endsWith(".png")) {
+			const itemName = req.url.slice("/textures/item/".length, -".png".length);
+			const itemPath = join(DATA_DIR, "assets/textures/item", `${itemName}.png`);
+			if (existsSync(itemPath)) {
+				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+				res.end(readFileSync(itemPath));
+				return;
+			}
+			res.writeHead(404);
+			res.end("Not found");
+			return;
+		}
+
 		// Serve three.js from node_modules
 		if (req.url?.startsWith("/vendor/")) {
 			const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
@@ -651,6 +665,20 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		broadcast({ type: "entityGone", id: entity.id });
 	};
 
+	const onEntityEquip = (entity: Entity) => {
+		if (entity.id === bot.entity?.id) return;
+		const mainHand = (entity as unknown as Record<string, unknown>).equipment as
+			| Array<{ type?: number; name?: string } | null>
+			| undefined;
+		const item = mainHand?.[0];
+		broadcast({
+			type: "entityEquip",
+			id: entity.id,
+			slot: 0,
+			itemName: item?.name ?? null,
+		});
+	};
+
 	// ── Load assets + wire events ──
 
 	const setup = () => {
@@ -672,6 +700,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	bot.on("entitySpawn", onEntitySpawn);
 	bot.on("entityMoved", onEntityMoved);
 	bot.on("entityGone", onEntityGone);
+	bot.on("entityEquip", onEntityEquip);
 	bot.client.on("level_chunk_with_light", onMapChunk);
 	bot.client.on("forget_level_chunk", onUnloadChunk);
 	bot.client.on("block_update", onBlockChange);
@@ -688,6 +717,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		bot.removeListener("entitySpawn", onEntitySpawn);
 		bot.removeListener("entityMoved", onEntityMoved);
 		bot.removeListener("entityGone", onEntityGone);
+		bot.removeListener("entityEquip", onEntityEquip);
 		bot.client.removeListener("level_chunk_with_light", onMapChunk);
 		bot.client.removeListener("forget_level_chunk", onUnloadChunk);
 		bot.client.removeListener("block_update", onBlockChange);

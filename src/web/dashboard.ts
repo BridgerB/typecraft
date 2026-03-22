@@ -11,9 +11,13 @@ import {
 } from "node:http";
 import { extname, resolve } from "node:path";
 import { type WebSocket, WebSocketServer } from "ws";
+import { dirname, join as pathJoin } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Bot } from "../bot/types.ts";
 import type { Entity } from "../entity/types.ts";
 import { loadMcAssets } from "./serve.ts";
+
+const DASHBOARD_DATA_DIR = pathJoin(dirname(fileURLToPath(import.meta.url)), "../data");
 
 // ── Types ──
 
@@ -142,6 +146,43 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			return;
 		}
 
+		// Serve Steve skin texture
+		if (req.url === "/textures/steve.png") {
+			const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
+			if (existsSync(stevePath)) {
+				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+				res.end(readFileSync(stevePath));
+				return;
+			}
+		}
+
+		// Serve Steve skin texture
+		if (req.url === "/textures/steve.png") {
+			const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
+			if (existsSync(stevePath)) {
+				res.writeHead(200, { "Content-Type": "image/png" });
+				res.end(readFileSync(stevePath));
+				return;
+			}
+			res.writeHead(404);
+			res.end("Not found");
+			return;
+		}
+
+		// Serve item textures
+		if (req.url?.startsWith("/textures/item/") && req.url.endsWith(".png")) {
+			const itemName = req.url.slice("/textures/item/".length, -".png".length);
+			const itemPath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/item", `${itemName}.png`);
+			if (existsSync(itemPath)) {
+				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+				res.end(readFileSync(itemPath));
+				return;
+			}
+			res.writeHead(404);
+			res.end("Not found");
+			return;
+		}
+
 		if (req.url?.startsWith("/vendor/")) {
 			const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
 			if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
@@ -156,6 +197,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		const filePath = resolve(distDir, `.${req.url}`);
 		if (!filePath.startsWith(distDir) || !existsSync(filePath)) {
+			console.error(`[dashboard] 404: ${req.url} → ${filePath}`);
 			res.writeHead(404);
 			res.end("Not found");
 			return;
@@ -311,10 +353,25 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			broadcast({ type: "entityGone", botId: name, id: entity.id });
 		};
 
+		const onEntityEquip = (entity: Entity) => {
+			if (entity.id === bot.entity?.id) return;
+			const equipment = (entity as unknown as Record<string, unknown>).equipment as
+				| Array<{ name?: string } | null>
+				| undefined;
+			broadcast({
+				type: "entityEquip",
+				botId: name,
+				id: entity.id,
+				slot: 0,
+				itemName: equipment?.[0]?.name ?? null,
+			});
+		};
+
 		bot.on("move", onMove);
 		bot.on("entitySpawn", onEntitySpawn);
 		bot.on("entityMoved", onEntityMoved);
 		bot.on("entityGone", onEntityGone);
+		bot.on("entityEquip", onEntityEquip);
 		bot.client.on("level_chunk_with_light", onMapChunk);
 		bot.client.on("forget_level_chunk", onUnloadChunk);
 		bot.client.on("block_update", onBlockChange);
@@ -324,6 +381,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			bot.removeListener("entitySpawn", onEntitySpawn);
 			bot.removeListener("entityMoved", onEntityMoved);
 			bot.removeListener("entityGone", onEntityGone);
+			bot.removeListener("entityEquip", onEntityEquip);
 			bot.client.removeListener("level_chunk_with_light", onMapChunk);
 			bot.client.removeListener("forget_level_chunk", onUnloadChunk);
 			bot.client.removeListener("block_update", onBlockChange);
@@ -331,6 +389,52 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		bots.set(name, { bot, name, chunkCache, cleanups });
 		broadcast({ type: "botAdd", botId: name });
+
+		// Send assets to browser when the first bot with a registry is added
+		const trySendAssets = () => {
+			if (cachedAssets) return; // already sent
+			if (!bot.registry) return;
+			const assets = getAssets(bot);
+			for (const ws of clients) {
+				if (ws.readyState === ws.OPEN) sendTo(ws, assets);
+			}
+		};
+
+		if (bot.registry) {
+			trySendAssets();
+		} else {
+			bot.once("spawn", trySendAssets);
+			cleanups.push(() => bot.removeListener("spawn", trySendAssets));
+		}
+
+		// Send init + current state for this bot to all connected clients
+		const sendBotState = () => {
+			broadcast({
+				type: "init",
+				botId: name,
+				version: bot.version,
+				minY: bot.game.minY,
+				height: bot.game.height,
+			});
+			if (bot.entity) {
+				broadcast({
+					type: "position",
+					botId: name,
+					x: bot.entity.position.x,
+					y: bot.entity.position.y,
+					z: bot.entity.position.z,
+					yaw: bot.entity.yaw,
+					pitch: bot.entity.pitch,
+				});
+			}
+		};
+
+		if (bot.entity) {
+			sendBotState();
+		} else {
+			bot.once("spawn", sendBotState);
+			cleanups.push(() => bot.removeListener("spawn", sendBotState));
+		}
 	};
 
 	const removeBot = (name: string) => {
