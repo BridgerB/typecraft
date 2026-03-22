@@ -9,7 +9,7 @@ import {
 	raycast,
 } from "../world/index.ts";
 import type { Bot, BotOptions, Task } from "./types.ts";
-import { createTask } from "./utils.ts";
+import { createTask, nextSequence } from "./utils.ts";
 
 export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	let digging = false;
@@ -146,7 +146,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			status: 0,
 			location: { x: pos.x, y: pos.y, z: pos.z },
 			face,
-			sequence: 0,
+			sequence: nextSequence(),
 		});
 
 		bot.swingArm();
@@ -213,7 +213,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			status: 2,
 			location: { x: pos.x, y: pos.y, z: pos.z },
 			face,
-			sequence: 0,
+			sequence: nextSequence(),
 		});
 
 		const block = bot.targetDigBlock;
@@ -247,7 +247,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			status: 1,
 			location: { x: 0, y: 0, z: 0 },
 			face: 0,
-			sequence: 0,
+			sequence: nextSequence(),
 		});
 
 		if (digTask) {

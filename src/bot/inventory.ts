@@ -20,7 +20,7 @@ import type {
 	EquipmentDestination,
 	TransferOptions,
 } from "./types.ts";
-import { once } from "./utils.ts";
+import { nextSequence, once } from "./utils.ts";
 
 const WINDOW_TIMEOUT = 5000;
 
@@ -317,7 +317,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 		if (bot.supportFeature("useItemWithOwnPacket")) {
 			bot.client.write("use_item", {
 				hand: offhand ? 1 : 0,
-				sequence: 0,
+				sequence: nextSequence(),
 			});
 		} else {
 			bot.client.write("use_item_on", {
@@ -339,7 +339,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			status: 5,
 			location: { x: 0, y: 0, z: 0 },
 			face: 0,
-			sequence: 0,
+			sequence: nextSequence(),
 		});
 	};
 

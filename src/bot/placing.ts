@@ -6,7 +6,7 @@
 import type { Entity } from "../entity/index.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
 import type { Bot, BotOptions, PlaceBlockOptions } from "./types.ts";
-import { once } from "./utils.ts";
+import { nextSequence, once } from "./utils.ts";
 
 export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 	const _genericPlace = async (
@@ -60,8 +60,8 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 				cursorY: dy,
 				cursorZ: dz,
 				insideBlock: false,
-				sequence: 0,
 				worldBorderHit: false,
+				sequence: nextSequence(),
 			});
 		} else if (bot.supportFeature("blockPlaceHasHandAndFloatCursor")) {
 			bot.client.write("use_item_on", {

@@ -17,7 +17,7 @@ import type {
 	Particle,
 	Task,
 } from "./types.ts";
-import { createTask } from "./utils.ts";
+import { createTask, nextSequence } from "./utils.ts";
 
 export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	// ── Sleeping ──
@@ -31,7 +31,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 			cursorY: 0.5,
 			cursorZ: 0.5,
 			insideBlock: false,
-			sequence: 0,
+			sequence: nextSequence(),
 		});
 
 		// Wait for sleep confirmation

@@ -98,6 +98,10 @@ export const withTimeout = <T>(
 		}),
 	]);
 
+/** Monotonically increasing sequence number for block interactions (1.19+). */
+let _sequenceNumber = 0;
+export const nextSequence = (): number => ++_sequenceNumber;
+
 /** Clamp a value between min and max. */
 export const clamp = (min: number, x: number, max: number): number =>
 	Math.min(Math.max(x, min), max);
