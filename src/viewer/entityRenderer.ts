@@ -306,6 +306,7 @@ export const addEntity = (
 
 	// Build skinned mesh
 	const mesh = new THREE.SkinnedMesh(geometry, material);
+	mesh.frustumCulled = false; // prevent matrixWorld crash during bounding sphere computation
 	mesh.add(...skeletonResult.rootBones);
 	mesh.bind(skeletonResult.skeleton);
 	mesh.scale.set(scale, scale, scale);

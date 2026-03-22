@@ -41,9 +41,7 @@ export const createWorldRenderer = (
 ): WorldRenderer => {
 	const material = new THREE.MeshLambertMaterial({
 		vertexColors: true,
-		transparent: true,
 		alphaTest: 0.1,
-		depthWrite: true,
 	});
 
 	const sectionMeshes = new Map<string, THREE.Mesh>();

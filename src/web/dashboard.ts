@@ -59,6 +59,19 @@ export const createDashboard = (options?: DashboardOptions): Dashboard => {
 	const distDir = resolve(import.meta.dirname, "../../dist");
 	const threeDir = resolve(import.meta.dirname, "../../node_modules/three/build");
 
+	// Offline skin selection — matches Minecraft's built-in skin assignment
+	const BUILTIN_SKINS = ["alex", "ari", "efe", "kai", "makena", "noor", "steve", "sunny", "zuri"];
+	const getOfflineSkin = (uuid: string): string => {
+		// Java UUID.hashCode(): (int)(msb ^ (msb >>> 32)) ^ (int)(lsb ^ (lsb >>> 32))
+		const hex = uuid.replace(/-/g, "");
+		const msb = BigInt(`0x${hex.slice(0, 16)}`);
+		const lsb = BigInt(`0x${hex.slice(16)}`);
+		const toInt = (x: bigint): number => Number(BigInt.asIntN(32, x));
+		const hash = toInt(BigInt.asIntN(64, msb) ^ (BigInt.asIntN(64, msb) >> 32n))
+			^ toInt(BigInt.asIntN(64, lsb) ^ (BigInt.asIntN(64, lsb) >> 32n));
+		return BUILTIN_SKINS[Math.abs(hash) % BUILTIN_SKINS.length]!;
+	};
+
 	const clients = new Set<WebSocket>();
 	const bots = new Map<string, BotEntry>();
 	const chunkKey = (x: number, z: number) => `${x},${z}`;
@@ -185,29 +198,42 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			// Fetch from Mojang session server
 			(async () => {
 				try {
+					const serveFallback = () => {
+						const skinName = getOfflineSkin(uuid);
+						const fallbackPath = pathJoin(DASHBOARD_DATA_DIR, `assets/textures/entity/player/wide/${skinName}.png`);
+						if (existsSync(fallbackPath)) {
+							const buf = readFileSync(fallbackPath);
+							setSkinCache(uuid, buf);
+							res.writeHead(200, skinHeaders);
+							res.end(buf);
+						} else {
+							res.writeHead(404);
+							res.end("Not found");
+						}
+					};
+
 					const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`);
-					if (!profileRes.ok) { res.writeHead(404); res.end("Not found"); return; }
+					if (!profileRes.ok) { serveFallback(); return; }
 					const profile = await profileRes.json() as { properties: { name: string; value: string }[] };
 					const texProp = profile.properties.find((p: { name: string }) => p.name === "textures");
-					if (!texProp) { res.writeHead(404); res.end("Not found"); return; }
+					if (!texProp) { serveFallback(); return; }
 					const decoded = JSON.parse(Buffer.from(texProp.value, "base64").toString("utf8"));
 					const skinUrl = decoded?.textures?.SKIN?.url;
-					if (!skinUrl) { res.writeHead(404); res.end("Not found"); return; }
+					if (!skinUrl) { serveFallback(); return; }
 
 					const skinRes = await fetch(skinUrl);
-					if (!skinRes.ok) { res.writeHead(404); res.end("Not found"); return; }
+					if (!skinRes.ok) { serveFallback(); return; }
 					const buf = Buffer.from(await skinRes.arrayBuffer());
 					setSkinCache(uuid, buf);
 					res.writeHead(200, skinHeaders);
 					res.end(buf);
 				} catch {
-					// Fallback to Steve
-					const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
-					if (existsSync(stevePath)) {
-						const buf = readFileSync(stevePath);
-						setSkinCache(uuid, buf);
+					// Fallback to offline skin selection
+					const skinName = getOfflineSkin(uuid);
+					const fallbackPath = pathJoin(DASHBOARD_DATA_DIR, `assets/textures/entity/player/wide/${skinName}.png`);
+					if (existsSync(fallbackPath)) {
 						res.writeHead(200, skinHeaders);
-						res.end(buf);
+						res.end(readFileSync(fallbackPath));
 					} else {
 						res.writeHead(404);
 						res.end("Not found");
