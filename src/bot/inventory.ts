@@ -48,7 +48,15 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Window items (bulk slot update) ──
 
+	// Debug: log ALL packets that contain "container"
+	bot.client.on("packet", (data: any, meta: any) => {
+		if (meta?.name?.includes("container") && meta?.name?.includes("content")) {
+			console.log(`[inv-debug] RAW PACKET: ${meta.name}`);
+		}
+	});
+
 	bot.client.on("container_set_content", (packet: Record<string, unknown>) => {
+		console.log(`[inv-debug] container_set_content HANDLER FIRED`);
 		if (!bot.registry) return;
 		const windowId = packet.windowId as number;
 		const items = packet.items as unknown[];

@@ -1,9 +1,9 @@
 /**
- * Microsoft authentication via prismarine-auth + Mojang session server join.
+ * Mojang session server join — notifies Mojang that a client is joining a server.
+ * Authentication flow is in src/auth/.
  */
 
 import { createHash } from "node:crypto";
-import { join } from "node:path";
 
 // ── Minecraft server hash (mcHexDigest) ──
 
@@ -71,62 +71,3 @@ export const joinServer = async (
 	}
 };
 
-// ── Microsoft auth flow ──
-
-export type AuthResult = {
-	readonly accessToken: string;
-	readonly username: string;
-	readonly uuid: string;
-};
-
-/**
- * Authenticate with Microsoft via prismarine-auth.
- * Returns access token, username, and UUID from the Minecraft profile.
- */
-export const authenticateMicrosoft = async (options: {
-	readonly username: string;
-	readonly profilesFolder?: string;
-	readonly onMsaCode?: (data: {
-		user_code: string;
-		verification_uri: string;
-	}) => void;
-}): Promise<AuthResult> => {
-	// Dynamic import — prismarine-auth is CJS
-	const { Authflow, Titles } = await import("prismarine-auth");
-
-	const cacheDir =
-		options.profilesFolder ??
-		join(process.env.HOME ?? ".", ".minecraft", "typecraft-cache");
-
-	const authflow = new Authflow(
-		options.username,
-		cacheDir,
-		{
-			flow: "live",
-			authTitle: Titles.MinecraftNintendoSwitch,
-		},
-		options.onMsaCode,
-	);
-
-	const { token, profile } = await authflow.getMinecraftJavaToken({
-		fetchProfile: true,
-	});
-
-	if (!profile || (profile as unknown as Record<string, unknown>).error) {
-		throw new Error(
-			`Failed to obtain Minecraft profile for ${options.username}. Does this account own Minecraft?`,
-		);
-	}
-
-	const prof = profile as { id: string; name: string };
-	const uuid = prof.id.replace(
-		/(\w{8})(\w{4})(\w{4})(\w{4})(\w{12})/,
-		"$1-$2-$3-$4-$5",
-	);
-
-	return {
-		accessToken: token,
-		username: prof.name,
-		uuid,
-	};
-};

@@ -4,7 +4,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { authenticateMicrosoft } from "./auth.ts";
+import { authenticateMicrosoft } from "../auth/auth.ts";
 import {
 	type Client,
 	type ClientOptions,

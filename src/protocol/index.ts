@@ -1,6 +1,7 @@
 export { autoVersion } from "./autoVersion.ts";
-export type { AuthResult } from "./auth.ts";
-export { authenticateMicrosoft, joinServer, mcServerHash } from "./auth.ts";
+export type { AuthResult } from "../auth/auth.ts";
+export { authenticateMicrosoft } from "../auth/auth.ts";
+export { joinServer, mcServerHash } from "./auth.ts";
 export type { Client, ClientOptions, PacketMeta } from "./client.ts";
 export { connectClient, createProtocolClient } from "./client.ts";
 export type {
