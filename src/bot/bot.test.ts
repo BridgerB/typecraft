@@ -15,8 +15,8 @@ import {
 	toNotchianYaw,
 	toRadians,
 	withTimeout,
-} from "../src/bot/index.ts";
-import type { Client } from "../src/protocol/index.ts";
+} from "./index.ts";
+import type { Client } from "../protocol/index.ts";
 
 // ── Mock client factory ──
 
@@ -284,7 +284,7 @@ describe("initGame", () => {
 // ── Status ──
 
 describe("initStatus", () => {
-	it("updates health/food on update_health", () => {
+	it("updates health/food on set_health", () => {
 		const client = createMockClient();
 		const bot = createBot({
 			username: "TestBot",
@@ -297,7 +297,7 @@ describe("initStatus", () => {
 			healthEmitted = true;
 		});
 
-		client.emit("update_health", {
+		client.emit("set_health", {
 			health: 15,
 			food: 18,
 			foodSaturation: 3,
@@ -322,7 +322,7 @@ describe("initStatus", () => {
 			spawned = true;
 		});
 
-		client.emit("update_health", {
+		client.emit("set_health", {
 			health: 20,
 			food: 20,
 			foodSaturation: 5,
@@ -346,9 +346,9 @@ describe("initStatus", () => {
 		});
 
 		// First update alive
-		client.emit("update_health", { health: 20, food: 20, foodSaturation: 5 });
+		client.emit("set_health", { health: 20, food: 20, foodSaturation: 5 });
 		// Second update dead
-		client.emit("update_health", { health: 0, food: 20, foodSaturation: 5 });
+		client.emit("set_health", { health: 0, food: 20, foodSaturation: 5 });
 
 		expect(died).toBe(true);
 	});
@@ -361,7 +361,7 @@ describe("initStatus", () => {
 			client,
 		} as never);
 
-		client.emit("experience", {
+		client.emit("set_experience", {
 			experienceBar: 0.5,
 			level: 10,
 			totalExperience: 1000,
@@ -415,10 +415,10 @@ describe("initChat", () => {
 
 		bot.chat("Hello server!");
 
-		// 1.20.4 (protocol 765) uses chat_message for regular messages
+		// 1.20.4 (protocol 765) uses chat for regular messages
 		const chatPacket = (
 			client as ReturnType<typeof createMockClient>
-		).packets.find(([name]) => name === "chat_message");
+		).packets.find(([name]) => name === "chat");
 		expect(chatPacket).toBeDefined();
 		expect((chatPacket![1] as Record<string, unknown>).message).toBe(
 			"Hello server!",
@@ -481,7 +481,7 @@ describe("initChat", () => {
 // ── World state ──
 
 describe("initWorldState", () => {
-	it("updates time on update_time", () => {
+	it("updates time on set_time", () => {
 		const client = createMockClient();
 		const bot = createBot({
 			username: "TestBot",
@@ -489,7 +489,7 @@ describe("initWorldState", () => {
 			client,
 		} as never);
 
-		client.emit("update_time", {
+		client.emit("set_time", {
 			age: 24000n,
 			time: 6000n,
 		});
@@ -507,7 +507,7 @@ describe("initWorldState", () => {
 			client,
 		} as never);
 
-		client.emit("update_time", {
+		client.emit("set_time", {
 			age: 48000n,
 			time: 18000n,
 		});
@@ -524,7 +524,7 @@ describe("initWorldState", () => {
 			client,
 		} as never);
 
-		client.emit("spawn_position", {
+		client.emit("set_default_spawn_position", {
 			location: { x: 100, y: 64, z: 200 },
 		});
 
@@ -537,7 +537,7 @@ describe("initWorldState", () => {
 // ── Social ──
 
 describe("initSocial", () => {
-	it("creates scoreboard on scoreboard_objective", () => {
+	it("creates scoreboard on set_objective", () => {
 		const client = createMockClient();
 		const bot = createBot({
 			username: "TestBot",
@@ -550,7 +550,7 @@ describe("initSocial", () => {
 			created = true;
 		});
 
-		client.emit("scoreboard_objective", {
+		client.emit("set_objective", {
 			name: "kills",
 			action: 0,
 			displayText: "Kills",
@@ -570,7 +570,7 @@ describe("initSocial", () => {
 		} as never);
 
 		// Create team
-		client.emit("teams", {
+		client.emit("set_player_team", {
 			team: "red",
 			mode: 0,
 			players: ["Player1", "Player2"],
@@ -581,7 +581,7 @@ describe("initSocial", () => {
 		expect(bot.teamMap.Player1).toBe(bot.teams.red);
 
 		// Remove team
-		client.emit("teams", { team: "red", mode: 1 });
+		client.emit("set_player_team", { team: "red", mode: 1 });
 
 		expect(bot.teams.red).toBeUndefined();
 		expect(bot.teamMap.Player1).toBeUndefined();
@@ -595,7 +595,7 @@ describe("initSocial", () => {
 			client,
 		} as never);
 
-		client.emit("boss_bar", {
+		client.emit("boss_event", {
 			entityUUID: "uuid-123",
 			action: 0,
 			title: JSON.stringify({ text: "Ender Dragon" }),
@@ -609,7 +609,7 @@ describe("initSocial", () => {
 		expect(bot.bossBars["uuid-123"].health).toBe(1.0);
 
 		// Update health
-		client.emit("boss_bar", {
+		client.emit("boss_event", {
 			entityUUID: "uuid-123",
 			action: 2,
 			health: 0.5,
@@ -641,7 +641,7 @@ describe("initInventory", () => {
 		expect(bot.inventory.id).toBe(0);
 	});
 
-	it("updates held item on held_item_slot", () => {
+	it("updates held item on set_held_slot", () => {
 		const client = createMockClient();
 		const bot = createBot({
 			username: "TestBot",
@@ -649,12 +649,12 @@ describe("initInventory", () => {
 			client,
 		} as never);
 
-		client.emit("held_item_slot", { slot: 3 });
+		client.emit("set_held_slot", { slot: 3 });
 
 		expect(bot.quickBarSlot).toBe(3);
 	});
 
-	it("sends held_item_slot on setQuickBarSlot", () => {
+	it("sends set_carried_item on setQuickBarSlot", () => {
 		const client = createMockClient();
 		const bot = createBot({
 			username: "TestBot",
@@ -666,7 +666,7 @@ describe("initInventory", () => {
 
 		expect(bot.quickBarSlot).toBe(5);
 		const packet = (client as ReturnType<typeof createMockClient>).packets.find(
-			([name]) => name === "held_item_slot",
+			([name]) => name === "set_carried_item",
 		);
 		expect(packet).toBeDefined();
 	});

@@ -1,20 +1,20 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { buildProtocol } from "../src/protocol/build-protocol.ts";
+import { buildProtocol } from "./build-protocol.ts";
 import {
 	createPacketCodec,
 	createTypeRegistry,
-} from "../src/protocol/codec.ts";
+} from "./codec.ts";
 import {
 	compressPacket,
 	decompressPacket,
-} from "../src/protocol/compression.ts";
+} from "./compression.ts";
 import {
 	createDecryptor,
 	createEncryptor,
-} from "../src/protocol/encryption.ts";
-import { createSplitter, framePacket } from "../src/protocol/framing.ts";
-import { Direction, ProtocolState } from "../src/protocol/states.ts";
+} from "./encryption.ts";
+import { createSplitter, framePacket } from "./framing.ts";
+import { Direction, ProtocolState } from "./states.ts";
 import {
 	readVarInt,
 	readVarLong,
@@ -22,7 +22,7 @@ import {
 	sizeOfVarLong,
 	writeVarInt,
 	writeVarLong,
-} from "../src/protocol/varint.ts";
+} from "./varint.ts";
 
 // ── VarInt ──
 

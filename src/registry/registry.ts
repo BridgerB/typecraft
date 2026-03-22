@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -35,8 +35,32 @@ export const createRegistry = (version: string): Registry => {
 	const attributesArray = loadJson<AttributeDefinition[]>("attributes.json");
 	const blockCollisionShapes = loadJson<BlockCollisionShapes>("blockCollisionShapes.json");
 
-	// These aren't extracted by datagen yet — provide empty defaults
+	// Load biomes from biomes-raw/ (name + temperature/downfall from datagen)
+	const biomesRawDir = join(DATA_DIR, "biomes-raw");
 	const biomesArray: BiomeDefinition[] = [];
+	if (existsSync(biomesRawDir)) {
+		const files = readdirSync(biomesRawDir).filter((f) => f.endsWith(".json")).sort();
+		for (let i = 0; i < files.length; i++) {
+			const name = files[i].replace(".json", "");
+			const raw = JSON.parse(readFileSync(join(biomesRawDir, files[i]), "utf8")) as {
+				temperature?: number;
+				downfall?: number;
+				effects?: { water_color?: string };
+			};
+			biomesArray.push({
+				id: i,
+				name,
+				displayName: name,
+				category: "none",
+				temperature: raw.temperature ?? 0.5,
+				dimension: "overworld",
+				color: 0,
+				rainfall: raw.downfall,
+			});
+		}
+	}
+
+	// These aren't extracted by datagen yet — provide empty defaults
 	const enchantmentsArray: EnchantmentDefinition[] = [];
 	const foodsArray: FoodDefinition[] = [];
 
@@ -115,9 +139,64 @@ export const createRegistry = (version: string): Registry => {
 	// Version comparison (simple numeric comparison on dataVersion)
 	const dataVersion = versionInfo.dataVersion ?? 0;
 	const versionLookup: Record<string, number> = {
+		"1.8": 100, "1.9": 169, "1.10": 510, "1.11": 819, "1.12": 1139,
+		"1.13": 1519, "1.14": 1901, "1.15": 2225, "1.16": 2566, "1.17": 2724,
 		"1.18": 2860, "1.19": 3105, "1.20": 3463, "1.20.4": 3700,
 		"1.20.5": 3837, "1.21": 3953, "1.21.1": 3955, "1.21.11": 4384,
 	};
+
+	const isNewerOrEqualTo = (v: string) => dataVersion >= (versionLookup[v] ?? 0);
+	const isOlderThan = (v: string) => dataVersion < (versionLookup[v] ?? Infinity);
+
+	// Feature flags derived from version — mirrors prismarine-data features.json
+	const featureMap: Record<string, unknown> = {
+		// Window system
+		"village&pillageInventoryWindows": isNewerOrEqualTo("1.14"),
+		netherUpdateInventoryWindows: isNewerOrEqualTo("1.16"),
+		shieldSlot: isNewerOrEqualTo("1.9"),
+		// Item serialization
+		itemSerializationUsesBlockId: isOlderThan("1.13"),
+		nbtNameForEnchant: isNewerOrEqualTo("1.13") ? "Enchantments" : "ench",
+		typeOfValueForEnchantLevel: isNewerOrEqualTo("1.13") ? "string" : "short",
+		booksUseStoredEnchantments: true,
+		whereDurabilityIsSerialized: isNewerOrEqualTo("1.13") ? "Damage" : "metadata",
+		spawnEggsHaveSpawnedEntityInName: isNewerOrEqualTo("1.13"),
+		spawnEggsUseEntityTagInNbt: isOlderThan("1.13"),
+		// Entity / network
+		fixedPointPosition: isOlderThan("1.9"),
+		fixedPointDelta128: isOlderThan("1.9"),
+		entityVelocityIsLpVec3: isNewerOrEqualTo("1.21"),
+		playerInfoActionIsBitfield: isNewerOrEqualTo("1.19"),
+		armAnimationBeforeUse: isNewerOrEqualTo("1.9"),
+		newPlayerInputPacket: isNewerOrEqualTo("1.21"),
+		entityActionUsesStringMapper: isNewerOrEqualTo("1.21"),
+		// Game / world
+		spawnRespawnWorldDataField: isNewerOrEqualTo("1.21"),
+		dimensionIsAnInt: isOlderThan("1.16"),
+		dimensionIsAString: isNewerOrEqualTo("1.16") && isOlderThan("1.19"),
+		dimensionIsAWorld: isNewerOrEqualTo("1.19"),
+		segmentedRegistryCodecData: isNewerOrEqualTo("1.20.5"),
+		customChannelMCPrefixed: isNewerOrEqualTo("1.13"),
+		// Inventory / blocks
+		stateIdUsed: isNewerOrEqualTo("1.17"),
+		useItemWithOwnPacket: isNewerOrEqualTo("1.9"),
+		usesBlockStates: isNewerOrEqualTo("1.13"),
+		usesMultiblockSingleLong: isNewerOrEqualTo("1.16"),
+		blockPlaceHasInsideBlock: isNewerOrEqualTo("1.19"),
+		blockPlaceHasHandAndFloatCursor: isNewerOrEqualTo("1.9") && isOlderThan("1.19"),
+		blockPlaceHasHandAndIntCursor: isOlderThan("1.9"),
+		// Chat
+		chatPacketsUseNbtComponents: isNewerOrEqualTo("1.20"),
+		// Physics
+		independentLiquidGravity: isNewerOrEqualTo("1.13"),
+		velocityBlocksOnTop: isNewerOrEqualTo("1.9"),
+		climbUsingJump: isOlderThan("1.14"),
+		climbableTrapdoor: isNewerOrEqualTo("1.9"),
+		// Respawn
+		respawnIsPayload: isNewerOrEqualTo("1.20"),
+	};
+
+	const supportFeature = (f: string): unknown => featureMap[f] ?? false;
 
 	return {
 		version: versionInfo,
@@ -149,8 +228,8 @@ export const createRegistry = (version: string): Registry => {
 		materials: {} as Readonly<Record<string, Readonly<Record<number, number>>>>,
 		recipes: {} as Readonly<Record<number, readonly RawRecipe[]>>,
 		language: {},
-		isNewerOrEqualTo: (v: string) => dataVersion >= (versionLookup[v] ?? 0),
-		isOlderThan: (v: string) => dataVersion < (versionLookup[v] ?? Infinity),
-		supportFeature: (_f: string) => false,
+		isNewerOrEqualTo,
+		isOlderThan,
+		supportFeature,
 	};
 };

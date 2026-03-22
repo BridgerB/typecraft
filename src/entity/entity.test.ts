@@ -14,9 +14,9 @@ import {
 	removePassenger,
 	setEquipment,
 	setVehicle,
-} from "../src/entity/entity.ts";
-import { createItemByName } from "../src/item/item.ts";
-import { createRegistry } from "../src/registry/registry.ts";
+} from "./entity.ts";
+import { createItemByName } from "../item/item.ts";
+import { createRegistry } from "../registry/registry.ts";
 
 const reg = createRegistry("1.20.4");
 
@@ -54,8 +54,8 @@ describe("initEntity", () => {
 		expect(entity.displayName).toBe("Zombie");
 		expect(entity.height).toBe(1.95);
 		expect(entity.width).toBe(0.6);
-		expect(entity.kind).toBe("Hostile mobs");
-		expect(entity.type).toBe("hostile");
+		// Our datagen produces type "monster" (no separate category field)
+		expect(entity.type).toBe("monster");
 		expect(entity.entityType).toBe(zombie.id);
 	});
 
@@ -72,7 +72,8 @@ describe("initEntity", () => {
 		initEntity(entity, reg, player.id);
 
 		expect(entity.name).toBe("player");
-		expect(entity.type).toBe("player");
+		// Our datagen classifies player as "misc" (not a separate "player" type)
+		expect(entity.type).toBe("misc");
 		expect(entity.height).toBe(1.8);
 	});
 });
@@ -219,6 +220,6 @@ describe("registry entity data", () => {
 	it("has player entity", () => {
 		const player = reg.entitiesByName.get("player");
 		expect(player).toBeDefined();
-		expect(player!.type).toBe("player");
+		expect(player!.type).toBe("misc");
 	});
 });

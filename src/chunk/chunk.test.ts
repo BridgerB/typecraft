@@ -31,7 +31,7 @@ import {
 	setSectionBiome,
 	setSectionBlock,
 	setSkyLight,
-} from "../src/chunk/index.ts";
+} from "./index.ts";
 
 // ── neededBits ──
 

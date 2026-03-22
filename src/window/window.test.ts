@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createItem } from "../src/item/index.ts";
-import type { Item } from "../src/item/types.ts";
-import { createRegistry } from "../src/registry/index.ts";
-import type { Registry } from "../src/registry/types.ts";
+import { createItem } from "../item/index.ts";
+import type { Item } from "../item/types.ts";
+import { createRegistry } from "../registry/index.ts";
+import type { Registry } from "../registry/types.ts";
 import {
 	acceptClick,
 	clearWindow,
@@ -34,14 +34,16 @@ import {
 	updateSlot,
 	windowCount,
 	windowItems,
-} from "../src/window/index.ts";
-import type { Window } from "../src/window/types.ts";
+} from "./index.ts";
+import type { Window } from "./types.ts";
 
 // ── Helpers ──
 
-const reg18 = createRegistry("1.8");
-const reg116 = createRegistry("1.16.5");
-const reg1204 = createRegistry("1.20.4");
+const reg = createRegistry("1.21.11");
+// Legacy version aliases — registry loads the same 1.21.11 data regardless
+const reg18 = reg;
+const reg116 = reg;
+const reg1204 = reg;
 
 const mkItem = (registry: Registry, typeId: number, count: number): Item =>
 	createItem(registry, typeId, count);
@@ -71,32 +73,17 @@ const mkInventoryWindow = (registry: Registry): Window => {
 // ── Window type definitions ──
 
 describe("window types", () => {
-	it("returns legacy window types for 1.8", () => {
-		const types = getWindowTypes(reg18);
-		expect(types["minecraft:inventory"]).toBeDefined();
-		expect(types["minecraft:furnace"]).toBeDefined();
-		expect(types["minecraft:crafting_table"]).toBeDefined();
-		// Legacy types use string type values
-		expect(types["minecraft:inventory"].type).toBe("minecraft:inventory");
-	});
-
-	it("returns modern window types for 1.16", () => {
-		const types = getWindowTypes(reg116);
+	it("returns window types with inventory and crafting", () => {
+		const types = getWindowTypes(reg);
 		expect(types["minecraft:inventory"]).toBeDefined();
 		expect(types["minecraft:crafting"]).toBeDefined();
 		expect(types["minecraft:generic_9x3"]).toBeDefined();
-		// Modern types use numeric protocol IDs
 		expect(typeof types["minecraft:inventory"].type).toBe("number");
 	});
 
-	it("includes crafter for 1.20.4", () => {
-		const types = getWindowTypes(reg1204);
+	it("includes crafter for 1.21.11", () => {
+		const types = getWindowTypes(reg);
 		expect(types["minecraft:crafter_3x3"]).toBeDefined();
-	});
-
-	it("does not include crafter for 1.16", () => {
-		const types = getWindowTypes(reg116);
-		expect(types["minecraft:crafter_3x3"]).toBeUndefined();
 	});
 });
 
@@ -688,29 +675,14 @@ describe("splitSlot", () => {
 // ── Version-dependent behavior ──
 
 describe("version differences", () => {
-	it("1.8 legacy window types have string types", () => {
-		const types = getWindowTypes(reg18);
-		expect(types["minecraft:inventory"].type).toBe("minecraft:inventory");
-		expect(types["minecraft:furnace"].type).toBe("minecraft:furnace");
-	});
-
-	it("1.16 modern window types have numeric types", () => {
-		const types = getWindowTypes(reg116);
+	it("window types have numeric types", () => {
+		const types = getWindowTypes(reg);
 		expect(typeof types["minecraft:furnace"].type).toBe("number");
 	});
 
-	it("creates windows for both eras", () => {
-		const win18 = createWindowFromType(reg18, 0, "minecraft:inventory", "Inv")!;
-		const win116 = createWindowFromType(
-			reg116,
-			0,
-			"minecraft:inventory",
-			"Inv",
-		)!;
-
-		expect(win18).not.toBeNull();
-		expect(win116).not.toBeNull();
-		expect(win18.inventoryStart).toBe(9);
-		expect(win116.inventoryStart).toBe(9);
+	it("creates inventory window", () => {
+		const win = createWindowFromType(reg, 0, "minecraft:inventory", "Inv")!;
+		expect(win).not.toBeNull();
+		expect(win.inventoryStart).toBe(9);
 	});
 });

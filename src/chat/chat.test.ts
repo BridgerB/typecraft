@@ -12,12 +12,16 @@ import {
 	createChatBuilder,
 	parseChatMessage,
 	vsprintf,
-} from "../src/chat/index.ts";
-import type { Language } from "../src/chat/types.ts";
-import { createRegistry } from "../src/registry/index.ts";
-
-const registry = createRegistry("1.16.5");
-const lang: Language = registry.language;
+} from "./index.ts";
+import type { Language } from "./types.ts";
+// Translation strings needed by tests (language data not extracted by datagen yet)
+const lang: Language = {
+	"chat.type.text": "<%s> %s",
+	"chat.type.admin": "[%s: %s]",
+	"commands.clear.success.multiple": "Removed %s items from %s players",
+	"translation.test.invalid": "hi %",
+	"chat.type.announcement": "[%s] %s",
+};
 
 // ── vsprintf ──
 
