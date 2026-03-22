@@ -1,6 +1,7 @@
 /**
  * Server-side bridge — serves static files + WebSocket for streaming
  * bot state (chunks, position, assets) to the browser viewer.
+ * Assets loaded from src/data/assets/ (extracted from client JAR by datagen).
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -9,12 +10,14 @@ import {
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
-import { createRequire } from "node:module";
-import { extname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { Bot } from "../bot/types.ts";
 import type { Entity } from "../entity/types.ts";
 import type { BiomeTints } from "../viewer/assets.ts";
+
+const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../data");
 
 // ── Types ──
 
@@ -72,85 +75,120 @@ type CachedAssets = {
 	entityModels: Record<string, EntityModelDef>;
 };
 
-const require = createRequire(import.meta.url);
+/** Parse a hex color string like "#3f76e4" to an integer. */
+const hexToInt = (hex: string): number => parseInt(hex.replace("#", ""), 16);
 
-const loadMcAssets = (version: string, bot: Bot): CachedAssets => {
-	const mcAssets = require("minecraft-assets")(version) as {
-		blocksStates: Record<string, unknown>;
-		blocksModels: Record<string, unknown>;
-		directory: string;
+/** Convert an integer color to GL [r, g, b] tuple. */
+const tintToGl = (c: number): readonly [number, number, number] =>
+	[
+		((c >> 16) & 0xff) / 255,
+		((c >> 8) & 0xff) / 255,
+		(c & 0xff) / 255,
+	] as const;
+
+/** Compute redstone power level → color. */
+const redstoneTint = (power: number): readonly [number, number, number] => {
+	const f = power / 15;
+	return [f * 0.6 + (f > 0 ? 0.4 : 0.3), f * f * 0.7 - 0.5, f * f * 0.6 - 0.7].map(
+		(v) => Math.max(0, Math.min(1, v)),
+	) as unknown as readonly [number, number, number];
+};
+
+type BiomeJson = {
+	effects?: {
+		water_color?: string;
+		foliage_color?: string;
+		grass_color_modifier?: string;
 	};
+	temperature?: number;
+	downfall?: number;
+};
 
-	// Load individual face textures from blocks/ directory (not textureContent,
-	// which has composite per-block images). Models reference face textures like
-	// "block/grass_block_top" which map to blocks/grass_block_top.png.
-	const textureNames: string[] = [];
-	const textureData: Record<string, string> = {};
-	const blocksDir = join(mcAssets.directory, "blocks");
+/** Build tints from extracted biome data in src/data/biomes-raw/. */
+const buildTints = (): BiomeTints => {
+	const grass = new Map<string, readonly [number, number, number]>();
+	const foliage = new Map<string, readonly [number, number, number]>();
+	const water = new Map<string, readonly [number, number, number]>();
 
-	for (const file of readdirSync(blocksDir)) {
-		if (!file.endsWith(".png")) continue;
-		const name = file.replace(".png", "");
-		const b64 = readFileSync(join(blocksDir, file)).toString("base64");
-		textureNames.push(name);
-		textureData[name] = b64;
+	const biomesDir = join(DATA_DIR, "biomes-raw");
+	if (existsSync(biomesDir)) {
+		for (const file of readdirSync(biomesDir)) {
+			if (!file.endsWith(".json")) continue;
+			const biomeName = file.replace(".json", "");
+			const biome = JSON.parse(readFileSync(join(biomesDir, file), "utf8")) as BiomeJson;
+			const effects = biome.effects;
+			if (!effects) continue;
+
+			if (effects.water_color) {
+				water.set(biomeName, tintToGl(hexToInt(effects.water_color)));
+			}
+			if (effects.foliage_color) {
+				foliage.set(biomeName, tintToGl(hexToInt(effects.foliage_color)));
+			}
+		}
 	}
 
-	const mcData = require("minecraft-data")(version) as {
-		tints: {
-			grass: {
-				default?: number;
-				data: { keys: string[]; color: number }[];
-			};
-			foliage: {
-				default?: number;
-				data: { keys: string[]; color: number }[];
-			};
-			water: {
-				default?: number;
-				data: { keys: string[]; color: number }[];
-			};
-			redstone: { data: { keys: (string | number)[]; color: number }[] };
-			constant: { data: { keys: string[]; color: number }[] };
-		};
+	// Redstone: power levels 0–15
+	const redstone = new Map<string, readonly [number, number, number]>();
+	for (let i = 0; i <= 15; i++) {
+		redstone.set(`${i}`, redstoneTint(i));
+	}
+
+	// Constant tints (lily pad, etc.)
+	const constant = new Map<string, readonly [number, number, number]>();
+	constant.set("attached_stem", [0.9, 0.9, 0.1]);
+	constant.set("lily_pad", [0.135, 0.522, 0.18]);
+
+	return {
+		grass,
+		foliage,
+		water,
+		redstone,
+		constant,
+		grassDefault: [0.48, 0.74, 0.31],
+		foliageDefault: [0.48, 0.74, 0.31],
+		waterDefault: [0.25, 0.29, 0.98],
 	};
+};
 
-	const tintToGl = (c: number): readonly [number, number, number] =>
-		[
-			((c >> 16) & 0xff) / 255,
-			((c >> 8) & 0xff) / 255,
-			(c & 0xff) / 255,
-		] as const;
-
-	const buildMap = (data: { keys: (string | number)[]; color: number }[]) => {
-		const m = new Map<string, readonly [number, number, number]>();
-		for (const e of data) {
-			if (e.color === 0) continue; // 0 = use default colormap color
-			for (const k of e.keys) m.set(`${k}`, tintToGl(e.color));
+const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
+	// Load blockstates from individual JSON files
+	const blockStates: Record<string, unknown> = {};
+	const blockStatesDir = join(DATA_DIR, "assets/blockstates");
+	if (existsSync(blockStatesDir)) {
+		for (const file of readdirSync(blockStatesDir)) {
+			if (!file.endsWith(".json")) continue;
+			const name = file.replace(".json", "");
+			blockStates[name] = JSON.parse(readFileSync(join(blockStatesDir, file), "utf8"));
 		}
-		return m;
-	};
+	}
 
-	const t = mcData.tints;
-	const tints: BiomeTints = {
-		grass: buildMap(t.grass.data),
-		foliage: buildMap(t.foliage.data),
-		water: buildMap(t.water.data),
-		redstone: buildMap(t.redstone.data),
-		constant: buildMap(t.constant.data),
-		grassDefault:
-			t.grass.default !== undefined
-				? tintToGl(t.grass.default)
-				: [0.48, 0.74, 0.31],
-		foliageDefault:
-			t.foliage.default !== undefined
-				? tintToGl(t.foliage.default)
-				: [0.48, 0.74, 0.31],
-		waterDefault:
-			t.water.default !== undefined
-				? tintToGl(t.water.default)
-				: [0.25, 0.29, 0.98],
-	};
+	// Load block models from individual JSON files
+	const blockModels: Record<string, unknown> = {};
+	const modelsDir = join(DATA_DIR, "assets/models/block");
+	if (existsSync(modelsDir)) {
+		for (const file of readdirSync(modelsDir)) {
+			if (!file.endsWith(".json")) continue;
+			const name = file.replace(".json", "");
+			blockModels[`block/${name}`] = JSON.parse(readFileSync(join(modelsDir, file), "utf8"));
+		}
+	}
+
+	// Load block textures as base64
+	const textureNames: string[] = [];
+	const textureData: Record<string, string> = {};
+	const texturesDir = join(DATA_DIR, "assets/textures/block");
+	if (existsSync(texturesDir)) {
+		for (const file of readdirSync(texturesDir)) {
+			if (!file.endsWith(".png")) continue;
+			const name = file.replace(".png", "");
+			const b64 = readFileSync(join(texturesDir, file)).toString("base64");
+			textureNames.push(name);
+			textureData[name] = b64;
+		}
+	}
+
+	const tints = buildTints();
 
 	// Extract minimal block/biome data for the browser worker
 	const blocks: RegistryBlock[] = [];
@@ -191,8 +229,8 @@ const loadMcAssets = (version: string, bot: Bot): CachedAssets => {
 	} catch { /* entity models unavailable — non-player entities will use fallback box */ }
 
 	return {
-		blockStates: mcAssets.blocksStates,
-		blockModels: mcAssets.blocksModels,
+		blockStates,
+		blockModels,
 		textureNames,
 		textureData,
 		tints: serializeTints(tints),
@@ -266,15 +304,10 @@ export const createWebViewer = (
 		"../../node_modules/three/build",
 	);
 
-	// Steve skin texture — find latest version available
-	const mcAssetsDir = resolve(import.meta.dirname, "../../node_modules/minecraft-assets/minecraft-assets/data");
+	// Steve skin texture from extracted client JAR assets
 	const steveTexturePath = (() => {
-		const versions = readdirSync(mcAssetsDir).sort();
-		for (let i = versions.length - 1; i >= 0; i--) {
-			const p = join(mcAssetsDir, versions[i]!, "entity/player/wide/steve.png");
-			if (existsSync(p)) return p;
-		}
-		return null;
+		const p = join(DATA_DIR, "assets/textures/entity/player/wide/steve.png");
+		return existsSync(p) ? p : null;
 	})();
 
 	const INDEX_HTML = `<!DOCTYPE html>
@@ -639,10 +672,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	bot.on("entitySpawn", onEntitySpawn);
 	bot.on("entityMoved", onEntityMoved);
 	bot.on("entityGone", onEntityGone);
-	bot.client.on("map_chunk", onMapChunk);
-	bot.client.on("unload_chunk", onUnloadChunk);
-	bot.client.on("block_change", onBlockChange);
-	bot.client.on("update_time", onTimeUpdate);
+	bot.client.on("level_chunk_with_light", onMapChunk);
+	bot.client.on("forget_level_chunk", onUnloadChunk);
+	bot.client.on("block_update", onBlockChange);
+	bot.client.on("set_time", onTimeUpdate);
 
 	server.listen(port, () => {
 		console.log(`[web] Viewer at http://localhost:${port}`);
@@ -655,10 +688,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		bot.removeListener("entitySpawn", onEntitySpawn);
 		bot.removeListener("entityMoved", onEntityMoved);
 		bot.removeListener("entityGone", onEntityGone);
-		bot.client.removeListener("map_chunk", onMapChunk);
-		bot.client.removeListener("unload_chunk", onUnloadChunk);
-		bot.client.removeListener("block_change", onBlockChange);
-		bot.client.removeListener("update_time", onTimeUpdate);
+		bot.client.removeListener("level_chunk_with_light", onMapChunk);
+		bot.client.removeListener("forget_level_chunk", onUnloadChunk);
+		bot.client.removeListener("block_update", onBlockChange);
+		bot.client.removeListener("set_time", onTimeUpdate);
 		for (const ws of clients) ws.close();
 		clients.clear();
 		wss.close();

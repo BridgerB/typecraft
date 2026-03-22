@@ -158,7 +158,7 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 	});
 
 	// Game state change
-	bot.client.on("game_state_change", (packet: Record<string, unknown>) => {
+	bot.client.on("game_event", (packet: Record<string, unknown>) => {
 		const reason = packet.reason as number | string;
 
 		// Win game — send respawn
@@ -174,7 +174,7 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 	});
 
 	// Difficulty
-	bot.client.on("difficulty", (packet: Record<string, unknown>) => {
+	bot.client.on("change_difficulty", (packet: Record<string, unknown>) => {
 		bot.game.difficulty =
 			DIFFICULTY_NAMES[packet.difficulty as number] ?? "normal";
 	});

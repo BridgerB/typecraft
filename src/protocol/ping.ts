@@ -4,7 +4,7 @@
  */
 
 import { connect as tcpConnect } from "node:net";
-import MinecraftData from "minecraft-data";
+import { buildProtocol } from "./build-protocol.ts";
 import { createPacketCodec, type PacketCodec } from "./codec.ts";
 import { createSplitter, framePacket } from "./framing.ts";
 import { Direction, ProtocolState } from "./states.ts";
@@ -32,15 +32,12 @@ export type PingOptions = {
 export const ping = (options: PingOptions = {}): Promise<PingResponse> => {
 	const host = options.host ?? "localhost";
 	const port = options.port ?? 25565;
-	const version = options.version ?? "1.20.4";
 	const timeout = options.timeout ?? 5000;
 
-	const mcData = MinecraftData(version);
-	if (!mcData) throw new Error(`Unsupported version: ${version}`);
-
-	const protocol = mcData.protocol as Record<string, unknown>;
+	const schema = buildProtocol();
+	const protocol = schema.protocol;
 	const sharedTypes = protocol.types as Record<string, unknown>;
-	const protocolVersion = (mcData.version as { version: number }).version;
+	const protocolVersion = schema.version.version;
 
 	return new Promise((resolve, reject) => {
 		const socket = tcpConnect({ host, port });
@@ -107,13 +104,13 @@ export const ping = (options: PingOptions = {}): Promise<PingResponse> => {
 		};
 
 		socket.on("connect", () => {
-			writePacket(handshakeCodec, "set_protocol", {
+			writePacket(handshakeCodec, "intention", {
 				protocolVersion,
 				serverHost: host,
 				serverPort: port,
 				nextState: 1, // STATUS
 			});
-			writePacket(statusWriteCodec, "ping_start", {});
+			writePacket(statusWriteCodec, "status_request", {});
 		});
 
 		socket.on("data", (chunk: Buffer) => {
@@ -121,11 +118,11 @@ export const ping = (options: PingOptions = {}): Promise<PingResponse> => {
 				for (const raw of splitter.write(chunk)) {
 					const { name, params } = statusReadCodec.read(raw);
 
-					if (name === "server_info") {
+					if (name === "status_response") {
 						serverInfo = JSON.parse(params.response as string);
 						pingTime = process.hrtime.bigint();
-						writePacket(statusWriteCodec, "ping", { time: 0n });
-					} else if (name === "ping" && serverInfo) {
+						writePacket(statusWriteCodec, "ping_request", { time: 0n });
+					} else if (name === "pong_response" && serverInfo) {
 						const latency = Math.round(
 							Number(process.hrtime.bigint() - pingTime) / 1_000_000,
 						);

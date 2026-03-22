@@ -5,7 +5,7 @@
 
 import { EventEmitter } from "node:events";
 import { type Socket, connect as tcpConnect } from "node:net";
-import MinecraftData from "minecraft-data";
+import { buildProtocol } from "./build-protocol.ts";
 import { createPacketCodec, type PacketCodec } from "./codec.ts";
 import { compressPacket, decompressPacket } from "./compression.ts";
 import { createDecryptor, createEncryptor } from "./encryption.ts";
@@ -80,12 +80,10 @@ export type Client = EventEmitter & {
 /** Create a protocol client. Call setSocket() or connectClient() to start. */
 export const createProtocolClient = (options: ClientOptions): Client => {
 	const emitter = new EventEmitter();
-	const mcData = MinecraftData(options.version);
-	if (!mcData) throw new Error(`Unsupported version: ${options.version}`);
-
-	const protocol = mcData.protocol as Record<string, unknown>;
+	const schema = buildProtocol();
+	const protocol = schema.protocol;
 	const sharedTypes = protocol.types as Record<string, unknown>;
-	const protocolVersion = (mcData.version as { version: number }).version;
+	const protocolVersion = schema.version.version;
 
 	// ── Mutable state ──
 

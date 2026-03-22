@@ -91,12 +91,12 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			}
 		};
 
-		bot.client.on("craft_progress_bar", onProperty);
+		bot.client.on("container_set_data", onProperty);
 
 		// Clean up listener when window closes
 		bot.on("windowClose", (w: Window) => {
 			if (w.id === furnace.id) {
-				bot.client.removeListener("craft_progress_bar", onProperty);
+				bot.client.removeListener("container_set_data", onProperty);
 			}
 		});
 
@@ -114,7 +114,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		const anvil = window as unknown as AnvilWindow;
 
 		const sendItemName = (name: string) => {
-			bot.client.write("name_item", { name });
+			bot.client.write("rename_item", { name });
 		};
 
 		const addCustomName = async (name?: string) => {
@@ -200,7 +200,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 				});
 			}
 
-			bot.client.write("enchant_item", {
+			bot.client.write("container_button_click", {
 				windowId: table.id,
 				enchantment: choice,
 			});
@@ -258,10 +258,10 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			}
 		};
 
-		bot.client.on("craft_progress_bar", onProperty);
+		bot.client.on("container_set_data", onProperty);
 		bot.on("windowClose", (w: Window) => {
 			if (w.id === table.id) {
-				bot.client.removeListener("craft_progress_bar", onProperty);
+				bot.client.removeListener("container_set_data", onProperty);
 			}
 		});
 
@@ -331,7 +331,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			}
 		};
 
-		bot.client.on("trade_list", onTradeList);
+		bot.client.on("merchant_offers", onTradeList);
 
 		const window = await villagerPromise;
 		villager = window as unknown as VillagerWindow;
@@ -345,7 +345,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		// Clean up on close
 		bot.on("windowClose", (w: Window) => {
 			if (w.id === villager.id) {
-				bot.client.removeListener("trade_list", onTradeList);
+				bot.client.removeListener("merchant_offers", onTradeList);
 			}
 		});
 
@@ -423,7 +423,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			slot: number,
 			item: Item | null,
 		): Promise<void> => {
-			bot.client.write("set_creative_slot", {
+			bot.client.write("set_creative_mode_slot", {
 				slot,
 				item: item
 					? {
@@ -487,7 +487,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		},
 
 		startFlying: () => {
-			bot.client.write("abilities", {
+			bot.client.write("player_abilities", {
 				flags: 0x06, // flying + allow flying
 				flyingSpeed: 0.05,
 				walkingSpeed: 0.1,
@@ -495,7 +495,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		},
 
 		stopFlying: () => {
-			bot.client.write("abilities", {
+			bot.client.write("player_abilities", {
 				flags: 0x04, // allow flying but not flying
 				flyingSpeed: 0.05,
 				walkingSpeed: 0.1,

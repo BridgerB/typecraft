@@ -102,13 +102,13 @@ export type AttributeDefinition = {
 	readonly default: number;
 };
 
-/** Raw recipe from minecraft-data. Keyed by result item ID. */
+/** Raw recipe item. Keyed by result item ID. */
 export type RawRecipeItem =
 	| null
 	| number
 	| { readonly id: number; readonly metadata?: number | null };
 
-/** Raw recipe entry from minecraft-data. */
+/** Raw recipe entry. */
 export type RawRecipe = {
 	readonly inShape?: readonly (readonly RawRecipeItem[])[];
 	readonly outShape?: readonly (readonly RawRecipeItem[])[];

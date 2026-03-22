@@ -130,7 +130,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Spawn entity (1.19+ unified, or objects pre-1.19) ──
 
-	bot.client.on("spawn_entity", (packet: Record<string, unknown>) => {
+	bot.client.on("add_entity", (packet: Record<string, unknown>) => {
 		const typeId = packet.type as number;
 		if (!bot.registry) return;
 
@@ -219,7 +219,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Entity destroy ──
 
-	bot.client.on("entity_destroy", (packet: Record<string, unknown>) => {
+	bot.client.on("remove_entities", (packet: Record<string, unknown>) => {
 		const ids = (packet.entityIds as number[]) ?? [packet.entityId as number];
 		for (const id of ids) {
 			const entity = bot.entities[id];
@@ -255,7 +255,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Sync entity position (1.21.5+, absolute doubles) ──
 
-	bot.client.on("sync_entity_position", (packet: Record<string, unknown>) => {
+	bot.client.on("entity_position_sync", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -278,7 +278,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityMoved", entity);
 	});
 
-	bot.client.on("rel_entity_move", (packet: Record<string, unknown>) => {
+	bot.client.on("move_entity_pos", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -300,7 +300,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityMoved", entity);
 	});
 
-	bot.client.on("entity_look", (packet: Record<string, unknown>) => {
+	bot.client.on("move_entity_rot", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 		entity.yaw = fromNotchianYawByte(packet.yaw as number);
@@ -309,7 +309,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityMoved", entity);
 	});
 
-	bot.client.on("entity_move_look", (packet: Record<string, unknown>) => {
+	bot.client.on("move_entity_pos_rot", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -333,7 +333,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityMoved", entity);
 	});
 
-	bot.client.on("entity_teleport", (packet: Record<string, unknown>) => {
+	bot.client.on("teleport_entity", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -346,7 +346,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityMoved", entity);
 	});
 
-	bot.client.on("entity_head_rotation", (packet: Record<string, unknown>) => {
+	bot.client.on("rotate_head", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 		// headYaw stored separately but we keep yaw for the primary heading
@@ -355,7 +355,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Velocity ──
 
-	bot.client.on("entity_velocity", (packet: Record<string, unknown>) => {
+	bot.client.on("set_entity_motion", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -372,7 +372,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Equipment ──
 
-	bot.client.on("entity_equipment", (packet: Record<string, unknown>) => {
+	bot.client.on("set_equipment", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity || !bot.registry) return;
 
@@ -391,7 +391,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Entity status ──
 
-	bot.client.on("entity_status", (packet: Record<string, unknown>) => {
+	bot.client.on("entity_event", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -428,7 +428,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Animation ──
 
-	bot.client.on("animation", (packet: Record<string, unknown>) => {
+	bot.client.on("animate", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -457,7 +457,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Entity metadata ──
 
-	bot.client.on("entity_metadata", (packet: Record<string, unknown>) => {
+	bot.client.on("set_entity_data", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -474,7 +474,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Effects ──
 
-	bot.client.on("entity_effect", (packet: Record<string, unknown>) => {
+	bot.client.on("update_mob_effect", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -487,7 +487,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("entityEffect", entity, effect);
 	});
 
-	bot.client.on("remove_entity_effect", (packet: Record<string, unknown>) => {
+	bot.client.on("remove_mob_effect", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -498,7 +498,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Collect ──
 
-	bot.client.on("collect", (packet: Record<string, unknown>) => {
+	bot.client.on("take_item_entity", (packet: Record<string, unknown>) => {
 		const collector = bot.entities[packet.collectorEntityId as number];
 		const collected = bot.entities[packet.collectedEntityId as number];
 		if (collector && collected) {
@@ -508,7 +508,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Attach / passengers ──
 
-	bot.client.on("attach_entity", (packet: Record<string, unknown>) => {
+	bot.client.on("set_entity_link", (packet: Record<string, unknown>) => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
@@ -568,7 +568,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Player info ──
 
-	bot.client.on("player_info", (packet: Record<string, unknown>) => {
+	bot.client.on("player_info_update", (packet: Record<string, unknown>) => {
 		if (bot.supportFeature("playerInfoActionIsBitfield")) {
 			handlePlayerInfoBitfield(packet);
 		} else {
@@ -725,7 +725,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	// 1.19.3+ player_remove
-	bot.client.on("player_remove", (packet: Record<string, unknown>) => {
+	bot.client.on("player_info_remove", (packet: Record<string, unknown>) => {
 		const uuids = packet.players as string[];
 		if (!uuids) return;
 
@@ -830,7 +830,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.swingArm = (hand?: "left" | "right", _showHand?: boolean) => {
-		bot.client.write("arm_animation", {
+		bot.client.write("swing", {
 			hand: hand === "left" ? 1 : 0,
 		});
 	};
@@ -840,7 +840,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 			bot.swingArm();
 		}
 
-		bot.client.write("use_entity", {
+		bot.client.write("interact", {
 			target: target.id,
 			mouse: 1,
 			sneaking: bot.controlState.sneak,
@@ -852,7 +852,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.useOn = (target: Entity) => {
-		bot.client.write("use_entity", {
+		bot.client.write("interact", {
 			target: target.id,
 			mouse: 0,
 			sneaking: bot.controlState.sneak,

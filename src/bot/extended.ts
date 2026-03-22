@@ -23,7 +23,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	// ── Sleeping ──
 
 	bot.sleep = async (bedBlock: Vec3): Promise<void> => {
-		bot.client.write("block_place", {
+		bot.client.write("use_item_on", {
 			location: { x: bedBlock.x, y: bedBlock.y, z: bedBlock.z },
 			direction: 0,
 			hand: 0,
@@ -52,7 +52,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.wake = async (): Promise<void> => {
-		bot.client.write("entity_action", {
+		bot.client.write("player_command", {
 			entityId: bot.entity.id,
 			actionId: bot.supportFeature("entityActionUsesStringMapper")
 				? "leave_bed"
@@ -70,7 +70,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		bot.emit("title", text, "title");
 	});
 
-	bot.client.on("set_title_subtitle", (packet: Record<string, unknown>) => {
+	bot.client.on("set_subtitle_text", (packet: Record<string, unknown>) => {
 		const text = (packet.text as string) ?? "";
 		bot.emit("title", text, "subtitle");
 	});
@@ -87,7 +87,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Sound ──
 
-	bot.client.on("sound_effect", (packet: Record<string, unknown>) => {
+	bot.client.on("sound", (packet: Record<string, unknown>) => {
 		const soundId = packet.soundId as number;
 		const soundCategory = (packet.soundCategory as number) ?? 0;
 		const x = ((packet.x as number) ?? 0) / 8;
@@ -119,7 +119,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Particle ──
 
-	bot.client.on("world_particles", (packet: Record<string, unknown>) => {
+	bot.client.on("level_particles", (packet: Record<string, unknown>) => {
 		const particle: Particle = {
 			id: (packet.particleId as number) ?? 0,
 			position: vec3(
@@ -149,16 +149,16 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	});
 
 	bot.acceptResourcePack = () => {
-		bot.client.write("resource_pack_receive", {
+		bot.client.write("resource_pack", {
 			result: 3, // accepted
 		});
-		bot.client.write("resource_pack_receive", {
+		bot.client.write("resource_pack", {
 			result: 0, // loaded
 		});
 	};
 
 	bot.denyResourcePack = () => {
-		bot.client.write("resource_pack_receive", {
+		bot.client.write("resource_pack", {
 			result: 1, // declined
 		});
 	};
@@ -174,7 +174,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	});
 
 	// Track bobber spawn
-	bot.client.on("spawn_entity", (packet: Record<string, unknown>) => {
+	bot.client.on("add_entity", (packet: Record<string, unknown>) => {
 		if (!fishingTask || lastBobber) return;
 		const registry = bot.registry;
 		if (!registry) return;
@@ -193,7 +193,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	});
 
 	// Detect bite via particles
-	bot.client.on("world_particles", (packet: Record<string, unknown>) => {
+	bot.client.on("level_particles", (packet: Record<string, unknown>) => {
 		if (!lastBobber || !fishingTask) return;
 
 		const pos = lastBobber.position;
@@ -224,7 +224,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 	});
 
 	// Track bobber destruction
-	bot.client.on("entity_destroy", (packet: Record<string, unknown>) => {
+	bot.client.on("remove_entities", (packet: Record<string, unknown>) => {
 		if (!lastBobber) return;
 		const entityIds = packet.entityIds as number[] | undefined;
 		if (entityIds?.includes(lastBobber.id)) {
@@ -279,7 +279,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		command: string,
 		options: CommandBlockOptions,
 	) => {
-		bot.client.write("update_command_block", {
+		bot.client.write("set_command_block", {
 			location: { x: pos.x, y: pos.y, z: pos.z },
 			command,
 			mode: options.mode,
@@ -296,7 +296,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		const lines = text.split("\n");
 		while (lines.length < 4) lines.push("");
 
-		bot.client.write("update_sign", {
+		bot.client.write("sign_update", {
 			location: { x: block.x, y: block.y, z: block.z },
 			isFrontText: back ? false : true,
 			text1: JSON.stringify(lines[0]),

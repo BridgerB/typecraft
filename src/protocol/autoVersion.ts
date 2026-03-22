@@ -3,9 +3,21 @@
  * then invokes autoVersionHooks so external modules (e.g. Forge/FML) can react.
  */
 
-import MinecraftData from "minecraft-data";
 import type { Client, ClientOptions } from "./client.ts";
 import { ping } from "./ping.ts";
+
+/** Known protocol version → Minecraft version mappings. */
+const PROTOCOL_VERSIONS: Record<number, string> = {
+	774: "1.21.11",
+	769: "1.21.4",
+	768: "1.21.2",
+	767: "1.21.1",
+	766: "1.21",
+	765: "1.20.4",
+	764: "1.20.2",
+	763: "1.20.1",
+	762: "1.20",
+};
 
 /** Ping the target server and configure the client to match its version. */
 export const autoVersion = async (
@@ -20,16 +32,8 @@ export const autoVersion = async (
 	const protocolVersion = response.version.protocol;
 	const brandedName = response.version.name;
 
-	// Try to resolve a known minecraft-data version from the ping response
-	const byProtocol =
-		(MinecraftData as unknown as Record<string, Record<string, Record<string, { minecraftVersion: string }[]>>>)
-			.postNettyVersionsByProtocolVersion?.pc?.[protocolVersion] ?? [];
-	const byName =
-		(MinecraftData as unknown as Record<string, Record<string, Record<string, { minecraftVersion: string }>>>)
-			.versionsByMinecraftVersion?.pc?.[brandedName];
-
-	const versions = [...byProtocol, ...(byName ? [byName] : [])];
-	if (versions.length === 0) {
+	const known = PROTOCOL_VERSIONS[protocolVersion];
+	if (!known && !brandedName) {
 		throw new Error(
 			`Unsupported protocol version '${protocolVersion}' (server: ${brandedName})`,
 		);

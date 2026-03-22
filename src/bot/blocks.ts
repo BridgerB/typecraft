@@ -44,7 +44,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Chunk loading ──
 
-	bot.client.on("map_chunk", (packet: Record<string, unknown>) => {
+	bot.client.on("level_chunk_with_light", (packet: Record<string, unknown>) => {
 		if (!bot.registry || !bot.world) return;
 
 		try {
@@ -94,7 +94,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Chunk unloading ──
 
-	bot.client.on("unload_chunk", (packet: Record<string, unknown>) => {
+	bot.client.on("forget_level_chunk", (packet: Record<string, unknown>) => {
 		if (!bot.world) return;
 		const x = packet.chunkX as number;
 		const z = packet.chunkZ as number;
@@ -104,7 +104,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Single block change ──
 
-	bot.client.on("block_change", (packet: Record<string, unknown>) => {
+	bot.client.on("block_update", (packet: Record<string, unknown>) => {
 		if (!bot.world) return;
 
 		const loc = packet.location as Record<string, number>;
@@ -118,7 +118,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Multi block change ──
 
-	bot.client.on("multi_block_change", (packet: Record<string, unknown>) => {
+	bot.client.on("section_blocks_update", (packet: Record<string, unknown>) => {
 		if (!bot.world) return;
 
 		if (bot.supportFeature("usesMultiblockSingleLong")) {
@@ -165,7 +165,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Explosion — set affected blocks to air ──
 
-	bot.client.on("explosion", (packet: Record<string, unknown>) => {
+	bot.client.on("explode", (packet: Record<string, unknown>) => {
 		if (!bot.world) return;
 
 		const x = packet.x as number;
@@ -188,7 +188,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Block entity updates ──
 
-	bot.client.on("tile_entity_data", (packet: Record<string, unknown>) => {
+	bot.client.on("block_entity_data", (packet: Record<string, unknown>) => {
 		if (!bot.world || !bot.registry) return;
 
 		const loc = packet.location as { x: number; y: number; z: number };

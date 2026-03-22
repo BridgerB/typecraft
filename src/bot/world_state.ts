@@ -9,7 +9,7 @@ import type { Bot, BotOptions } from "./types.ts";
 export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 	// ── Time ──
 
-	bot.client.on("update_time", (packet: Record<string, unknown>) => {
+	bot.client.on("set_time", (packet: Record<string, unknown>) => {
 		const age = packet.age as bigint | number;
 		const time = packet.time as bigint | number;
 
@@ -37,7 +37,7 @@ export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Rain / weather ──
 
-	bot.client.on("game_state_change", (packet: Record<string, unknown>) => {
+	bot.client.on("game_event", (packet: Record<string, unknown>) => {
 		const reason = packet.reason as number | string;
 		const value = packet.gameMode as number;
 
@@ -64,7 +64,7 @@ export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Spawn point ──
 
-	bot.client.on("spawn_position", (packet: Record<string, unknown>) => {
+	bot.client.on("set_default_spawn_position", (packet: Record<string, unknown>) => {
 		const loc = packet.location as Record<string, number>;
 		if (loc) {
 			bot.spawnPoint = vec3(loc.x, loc.y, loc.z);

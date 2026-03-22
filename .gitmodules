@@ -52,3 +52,6 @@
 [submodule "upstream/mineflayer-pathfinder"]
 	path = upstream/mineflayer-pathfinder
 	url = https://github.com/PrismarineJS/mineflayer-pathfinder.git
+[submodule "upstream/node-minecraft-data"]
+	path = upstream/node-minecraft-data
+	url = https://github.com/PrismarineJS/node-minecraft-data.git

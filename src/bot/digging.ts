@@ -142,7 +142,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		digging = true;
 		bot.targetDigBlock = block as never;
 
-		bot.client.write("block_dig", {
+		bot.client.write("player_action", {
 			status: 0,
 			location: { x: pos.x, y: pos.y, z: pos.z },
 			face,
@@ -209,7 +209,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			swingInterval = null;
 		}
 
-		bot.client.write("block_dig", {
+		bot.client.write("player_action", {
 			status: 2,
 			location: { x: pos.x, y: pos.y, z: pos.z },
 			face,
@@ -243,7 +243,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		const block = bot.targetDigBlock;
 		bot.targetDigBlock = null;
 
-		bot.client.write("block_dig", {
+		bot.client.write("player_action", {
 			status: 1,
 			location: { x: 0, y: 0, z: 0 },
 			face: 0,

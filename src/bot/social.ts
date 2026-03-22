@@ -34,7 +34,7 @@ const DISPLAY_SLOTS: Record<number, DisplaySlot> = {
 export const initSocial = (bot: Bot, _options: BotOptions): void => {
 	// ── Scoreboard ──
 
-	bot.client.on("scoreboard_objective", (packet: Record<string, unknown>) => {
+	bot.client.on("set_objective", (packet: Record<string, unknown>) => {
 		const name = packet.name as string;
 		const action = packet.action as number;
 
@@ -80,7 +80,7 @@ export const initSocial = (bot: Bot, _options: BotOptions): void => {
 		},
 	);
 
-	bot.client.on("scoreboard_score", (packet: Record<string, unknown>) => {
+	bot.client.on("set_score", (packet: Record<string, unknown>) => {
 		const scoreName = packet.scoreName as string;
 		const itemName = packet.itemName as string;
 		const value = packet.value as number;
@@ -109,7 +109,7 @@ export const initSocial = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Teams ──
 
-	bot.client.on("teams", (packet: Record<string, unknown>) => {
+	bot.client.on("set_player_team", (packet: Record<string, unknown>) => {
 		const teamName = packet.team as string;
 		const mode = packet.mode as number;
 
@@ -197,7 +197,7 @@ export const initSocial = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Boss bars ──
 
-	bot.client.on("boss_bar", (packet: Record<string, unknown>) => {
+	bot.client.on("boss_event", (packet: Record<string, unknown>) => {
 		const entityUUID = packet.entityUUID as string;
 		const action = packet.action as number;
 
@@ -280,7 +280,7 @@ export const initSocial = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Tablist ──
 
-	bot.client.on("playerlist_header", (packet: Record<string, unknown>) => {
+	bot.client.on("tab_list", (packet: Record<string, unknown>) => {
 		try {
 			const header = packet.header as unknown;
 			const footer = packet.footer as unknown;

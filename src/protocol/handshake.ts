@@ -22,7 +22,7 @@ export const registerHandshake = (
 	// ── Step 1: On connect, send handshake + login_start ──
 
 	client.on("connect", () => {
-		client.write("set_protocol", {
+		client.write("intention", {
 			protocolVersion: options.protocolVersion,
 			serverHost: options.host,
 			serverPort: options.port,
@@ -31,7 +31,7 @@ export const registerHandshake = (
 
 		client.state = ProtocolState.LOGIN;
 
-		client.write("login_start", {
+		client.write("hello", {
 			username: client.username,
 			playerUUID: client.uuid || "0".repeat(32),
 		});
@@ -40,19 +40,20 @@ export const registerHandshake = (
 	// ── Step 2: Handle encryption request ──
 	// Always register: even offline clients must respond if the server requests encryption.
 
-	client.on("encryption_begin", (packet: Record<string, unknown>) => {
+	client.on("hello", (packet: Record<string, unknown>) => {
+		// Server sends "hello" to request encryption (contains server ID + public key + verify token)
 		handleEncryption(client, packet, options.accessToken);
 	});
 
 	// ── Step 3: Handle compression ──
 
-	client.on("compress", (packet: Record<string, unknown>) => {
+	client.on("login_compression", (packet: Record<string, unknown>) => {
 		client.setCompressionThreshold(packet.threshold as number);
 	});
 
 	// ── Step 4: Handle login success → CONFIGURATION or PLAY ──
 
-	client.on("success", (packet: Record<string, unknown>) => {
+	client.on("login_finished", (packet: Record<string, unknown>) => {
 		client.uuid = packet.uuid as string;
 		client.username = packet.username as string;
 
@@ -117,7 +118,7 @@ const handleEncryption = (
 			verifyToken,
 		);
 
-		client.write("encryption_begin", {
+		client.write("key", {
 			sharedSecret: encryptedSecret,
 			verifyToken: encryptedToken,
 		});

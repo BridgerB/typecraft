@@ -46,6 +46,7 @@ export const createPathfinder = (
 	let movements: Movements | null = null;
 	let digging = false;
 	let placing = false;
+	let digProgress = 0;
 	let retries = 0;
 	let gotoResolve: (() => void) | null = null;
 	let gotoReject: ((err: Error) => void) | null = null;
@@ -78,7 +79,6 @@ export const createPathfinder = (
 		astarPartial = false;
 		pathComputed = false;
 		movements = null;
-		retries = 0;
 		lastNodeTime = performance.now();
 		fullStop();
 	};
@@ -133,6 +133,7 @@ export const createPathfinder = (
 		) {
 			lastNodeTime = performance.now();
 			pathIndex++;
+			digProgress = 0;
 
 			if (pathIndex >= path.length) {
 				fullStop();
@@ -154,27 +155,23 @@ export const createPathfinder = (
 		const nextMove = path[pathIndex]!;
 
 		// Handle block breaking before moving to waypoint
-		if (nextMove.toBreak.length > 0 && !digging) {
+		if (nextMove.toBreak.length > digProgress && !digging) {
 			digging = true;
-			const blockPos = nextMove.toBreak[0]!;
+			const blockPos = nextMove.toBreak[digProgress]!;
 			const block = bot.blockAt({
 				x: blockPos.x,
 				y: blockPos.y,
 				z: blockPos.z,
 			} as any);
-			if (block) {
-				bot.dig(block, true, "raycast")
+			if (block && (block as any).name !== "air") {
+				bot.dig(block, true)
 					.then(() => {
 						digging = false;
+						digProgress++;
 					})
 					.catch(() => {
 						digging = false;
-						// Reset path on dig error
-						path = [];
-						pathIndex = 0;
-						astarCtx = null;
-						pathComputed = false;
-						bot.emit("path_reset" as any, "dig_error");
+						digProgress++;  // skip this block
 					});
 			} else {
 				digging = false;
@@ -229,7 +226,16 @@ export const createPathfinder = (
 			bot.setControlState("jump", wp.y > p.y + 0.5);
 		}
 
-		if (performance.now() - lastNodeTime > cfg.stuckTimeout) resetPath();
+		if (performance.now() - lastNodeTime > cfg.stuckTimeout) {
+			retries++;
+			if (retries > 5) {
+				fullStop();
+				rejectGoto("Stuck after retries");
+				if (!dynamic) currentGoal = null;
+				return;
+			}
+			resetPath();
+		}
 	};
 
 	/** Called every physicsTick (~50ms). */
@@ -265,10 +271,7 @@ export const createPathfinder = (
 			}
 			bot.emit("path_update" as any, result);
 			if (result.status === "noPath") rejectGoto("No path found");
-			if (result.status === "timeout") {
-				// A* timed out — walk the best path found, then try to recompute from there
-				pathComputed = false;
-			}
+			// "timeout" sets pathComputed=true via the check above — stuck detection handles retries
 			// Fall through to followPath — walk while computing
 		}
 
@@ -313,10 +316,11 @@ export const createPathfinder = (
 
 		if (pathIndex < path.length) {
 			followPath();
-		} else if (pathComputed && currentGoal) {
+		} else if (currentGoal) {
 			// Path exhausted but goal not reached — recompute after stuck timeout
 			if (performance.now() - lastNodeTime > cfg.stuckTimeout) {
 				retries++;
+				lastNodeTime = performance.now();
 				if (retries > 3) {
 					fullStop();
 					rejectGoto("Path incomplete after retries");
@@ -333,6 +337,7 @@ export const createPathfinder = (
 	const setGoal = (goal: Goal | null, isDynamic = false): void => {
 		currentGoal = goal;
 		dynamic = isDynamic;
+		retries = 0;
 		resetPath();
 		bot.emit("goal_updated" as any, goal, isDynamic);
 		bot.emit("path_reset" as any, "goal_updated");
@@ -352,9 +357,11 @@ export const createPathfinder = (
 	const gotoGoal = (goal: Goal): Promise<void> =>
 		new Promise((resolve, reject) => {
 			const cleanup = () => {
+				clearTimeout(gotoTimer);
 				bot.removeListener("goal_reached", onReached);
 				bot.removeListener("path_stop", onStop);
 				bot.removeListener("path_reset", onReset);
+				bot.removeListener("path_update" as any, onPathUpdate);
 			};
 			const onReached = () => {
 				cleanup();
@@ -370,22 +377,28 @@ export const createPathfinder = (
 					reject(new Error("Goal changed"));
 				}
 			};
+			const onPathUpdate = (result: { status: string }) => {
+				if (result.status === "noPath") {
+					cleanup();
+					reject(new Error("No path found"));
+				}
+			};
+
 			gotoResolve = resolve;
 			gotoReject = reject;
 			setGoal(goal);
+
+			// Overall timeout — never hang forever
+			const gotoTimer = setTimeout(() => {
+				cleanup();
+				stop();
+				reject(new Error("Pathfinder timeout"));
+			}, 60000);
 
 			// Listen AFTER setGoal so we don't catch the initial path_reset
 			bot.on("goal_reached", onReached);
 			bot.on("path_stop", onStop);
 			bot.on("path_reset" as any, onReset);
-
-			const onPathUpdate = (result: { status: string }) => {
-				if (result.status === "noPath") {
-					bot.removeListener("path_update" as any, onPathUpdate);
-					cleanup();
-					reject(new Error("No path found"));
-				}
-			};
 			bot.on("path_update" as any, onPathUpdate);
 		});
 

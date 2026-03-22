@@ -1,5 +1,5 @@
 /**
- * Asset pipeline: load block models, textures, and block states from minecraft-assets.
+ * Asset pipeline: load block models, textures, and block states from src/data/assets/.
  * Builds a texture atlas and resolves all model references for use by the mesher.
  */
 

@@ -8,7 +8,7 @@ import type { Bot, BotOptions } from "./types.ts";
 export const initBlockActions = (bot: Bot, _options: BotOptions): void => {
 	const openCountByPos = new Map<string, number>();
 
-	bot.client.on("block_action", (packet: Record<string, unknown>) => {
+	bot.client.on("block_event", (packet: Record<string, unknown>) => {
 		const loc = packet.location as { x: number; y: number; z: number };
 		if (!loc) return;
 
@@ -67,7 +67,7 @@ export const initBlockActions = (bot: Bot, _options: BotOptions): void => {
 		}
 	});
 
-	bot.client.on("block_break_animation", (packet: Record<string, unknown>) => {
+	bot.client.on("block_destruction", (packet: Record<string, unknown>) => {
 		const loc = packet.location as { x: number; y: number; z: number };
 		if (!loc) return;
 

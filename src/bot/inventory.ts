@@ -48,7 +48,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Window items (bulk slot update) ──
 
-	bot.client.on("window_items", (packet: Record<string, unknown>) => {
+	bot.client.on("container_set_content", (packet: Record<string, unknown>) => {
 		if (!bot.registry) return;
 		const windowId = packet.windowId as number;
 		const items = packet.items as unknown[];
@@ -74,7 +74,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Set slot (single slot update) ──
 
-	bot.client.on("set_slot", (packet: Record<string, unknown>) => {
+	bot.client.on("container_set_slot", (packet: Record<string, unknown>) => {
 		if (!bot.registry) return;
 		const windowId = packet.windowId as number;
 		const slot = packet.slot as number;
@@ -122,20 +122,27 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Open window ──
 
-	bot.client.on("open_window", (packet: Record<string, unknown>) => {
+	bot.client.on("open_screen", (packet: Record<string, unknown>) => {
 		if (!bot.registry) return;
 		const windowId = packet.windowId as number;
 		const windowType = packet.inventoryType as string | number;
 		const title = (packet.windowTitle as string) ?? "";
 
 		const windowTypes = getWindowTypes(bot.registry);
-		const info =
-			typeof windowType === "string" ? windowTypes[windowType] : null;
+		let info: ReturnType<typeof getWindowTypes>[string] | null = null;
+		if (typeof windowType === "string") {
+			info = windowTypes[windowType] ?? null;
+		} else {
+			// Numeric type ID — find by matching .type field
+			info = Object.values(windowTypes).find((w) => w.type === windowType) ?? null;
+		}
+
+		console.log(`[typecraft] open_window: id=${windowId} type=${windowType} info=${info ? info.key : "NOT FOUND"}`);
 
 		if (info) {
 			bot.currentWindow = createWindow(
 				windowId,
-				info.type,
+				info.key,
 				title,
 				info.slots,
 				info.inventory,
@@ -151,9 +158,18 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Close window ──
 
-	bot.client.on("close_window", (_packet: Record<string, unknown>) => {
+	bot.client.on("container_close", (_packet: Record<string, unknown>) => {
 		if (bot.currentWindow) {
 			const w = bot.currentWindow;
+			// Sync inventory slots from container window back to player inventory
+			const invLen = w.inventoryEnd - w.inventoryStart;
+			for (let i = 0; i < invLen; i++) {
+				const containerSlot = w.inventoryStart + i;
+				const playerSlot = bot.inventory.inventoryStart + i;
+				if (containerSlot < w.slots.length && playerSlot < bot.inventory.slots.length) {
+					bot.inventory.slots[playerSlot] = w.slots[containerSlot];
+				}
+			}
 			bot.currentWindow = null;
 			bot.emit("windowClose", w);
 		}
@@ -161,7 +177,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Held item slot ──
 
-	bot.client.on("held_item_slot", (packet: Record<string, unknown>) => {
+	bot.client.on("set_held_slot", (packet: Record<string, unknown>) => {
 		bot.quickBarSlot = packet.slot as number;
 		bot.updateHeldItem();
 	});
@@ -193,17 +209,22 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			for (let i = 0; i < window.slots.length; i++) {
 				const oldItem = oldSlots[i];
 				const newItem = window.slots[i];
-				if (oldItem !== newItem) {
+				// Compare by content, not reference
+				const changed = (oldItem === null) !== (newItem === null) ||
+					(oldItem && newItem && (oldItem.type !== newItem.type || oldItem.count !== newItem.count));
+				if (changed) {
 					changedSlots.push({
 						location: i,
 						item: newItem
-							? toNotch(bot.registry, newItem)
-							: false,
+							? toNotch(bot.registry!, newItem)
+							: null,
 					});
 				}
 			}
 
-			bot.client.write("window_click", {
+			console.log(`[click] slot=${slot} btn=${mouseButton} mode=${mode} stateId=${stateId} changed=${changedSlots.length} cursor=${window.selectedItem?.name ?? "null"}`);
+
+			bot.client.write("container_click", {
 				windowId: window.id,
 				slot,
 				mouseButton,
@@ -211,32 +232,32 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				stateId,
 				changedSlots,
 				cursorItem: window.selectedItem
-					? toNotch(bot.registry, window.selectedItem)
-					: false,
+					? toNotch(bot.registry!, window.selectedItem)
+					: null,
 			});
 
 			// Wait for server confirmation (set_slot or window_items resync)
 			await new Promise<void>((resolve) => {
 				const timeout = setTimeout(() => {
-					bot.client.removeListener("set_slot", onSlot);
-					bot.client.removeListener("window_items", onItems);
+					bot.client.removeListener("container_set_slot", onSlot);
+					bot.client.removeListener("container_set_content", onItems);
 					resolve();
 				}, 1000);
 				const onSlot = () => {
 					clearTimeout(timeout);
-					bot.client.removeListener("window_items", onItems);
+					bot.client.removeListener("container_set_content", onItems);
 					resolve();
 				};
 				const onItems = () => {
 					clearTimeout(timeout);
-					bot.client.removeListener("set_slot", onSlot);
+					bot.client.removeListener("container_set_slot", onSlot);
 					resolve();
 				};
-				bot.client.once("set_slot", onSlot);
-				bot.client.once("window_items", onItems);
+				bot.client.once("container_set_slot", onSlot);
+				bot.client.once("container_set_content", onItems);
 			});
 		} else {
-			bot.client.write("window_click", {
+			bot.client.write("container_click", {
 				windowId: window.id,
 				slot,
 				mouseButton,
@@ -250,8 +271,17 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 	// ── Close window (client-side) ──
 
 	bot.closeWindow = (window: Window) => {
-		bot.client.write("close_window", { windowId: window.id });
+		bot.client.write("container_close", { windowId: window.id });
 		if (bot.currentWindow === window) {
+			// Sync inventory slots from container back to player inventory
+			const invLen = window.inventoryEnd - window.inventoryStart;
+			for (let i = 0; i < invLen; i++) {
+				const containerSlot = window.inventoryStart + i;
+				const playerSlot = bot.inventory.inventoryStart + i;
+				if (containerSlot < window.slots.length && playerSlot < bot.inventory.slots.length) {
+					bot.inventory.slots[playerSlot] = window.slots[containerSlot];
+				}
+			}
 			bot.currentWindow = null;
 		}
 		bot.emit("windowClose", window);
@@ -261,7 +291,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	bot.setQuickBarSlot = (slot: number) => {
 		bot.quickBarSlot = slot;
-		bot.client.write("held_item_slot", { slotId: slot });
+		bot.client.write("set_carried_item", { slotId: slot });
 		bot.updateHeldItem();
 	};
 
@@ -282,7 +312,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				sequence: 0,
 			});
 		} else {
-			bot.client.write("block_place", {
+			bot.client.write("use_item_on", {
 				location: { x: -1, y: -1, z: -1 },
 				direction: -1,
 				heldItem: { blockId: -1 },
@@ -297,7 +327,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	bot.deactivateItem = () => {
 		bot.usingHeldItem = false;
-		bot.client.write("block_dig", {
+		bot.client.write("player_action", {
 			status: 5,
 			location: { x: 0, y: 0, z: 0 },
 			face: 0,
@@ -316,14 +346,14 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 					(packet.entityId as number) === bot.entity.id &&
 					(packet.entityStatus as number) === 9
 				) {
-					bot.client.removeListener("entity_status", onStatus);
+					bot.client.removeListener("entity_event", onStatus);
 					bot.usingHeldItem = false;
 					resolve();
 				}
 			};
-			bot.client.on("entity_status", onStatus);
+			bot.client.on("entity_event", onStatus);
 			setTimeout(() => {
-				bot.client.removeListener("entity_status", onStatus);
+				bot.client.removeListener("entity_event", onStatus);
 				bot.usingHeldItem = false;
 				resolve();
 			}, 5000);

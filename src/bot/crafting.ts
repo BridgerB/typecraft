@@ -50,6 +50,12 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 		let windowCraftingTable: Window | null = null;
 
 		try {
+			console.log(`[craft-debug] Starting craft loop, times=${times} requiresTable=${recipe.requiresTable} hasCraftingTable=${!!craftingTable} inShape=${!!recipe.inShape} ingredients=${!!recipe.ingredients}`);
+			if (recipe.inShape) {
+				for (let y = 0; y < recipe.inShape.length; y++) {
+					console.log(`[craft-debug] row ${y}: ${recipe.inShape[y].map(i => i.id).join(",")}`);
+				}
+			}
 			for (let i = 0; i < times; i++) {
 				let window: Window;
 				let w: number;
@@ -57,10 +63,17 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 
 				if (craftingTable) {
 					if (!windowCraftingTable) {
-						const block = craftingTable as { position: Vec3 };
-						bot.activateBlock(block.position);
-						const [win] = await once<[Window]>(bot, "windowOpen", 5000);
-						windowCraftingTable = win;
+						// Reuse already-open crafting window if available
+						if (bot.currentWindow && String(bot.currentWindow.type).startsWith("minecraft:crafting")) {
+							windowCraftingTable = bot.currentWindow;
+						} else {
+							const block = craftingTable as { position: Vec3 };
+							await bot.activateBlock(block.position);
+							const [win] = await once<[Window]>(bot, "windowOpen", 5000);
+							windowCraftingTable = win;
+							// Wait for window_items to sync player inventory into the crafting window
+							await new Promise((r) => setTimeout(r, 500));
+						}
 					}
 					if (
 						!windowCraftingTable.type.toString().startsWith("minecraft:crafting")
@@ -109,12 +122,21 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 				let originalSourceSlot: number | null = null;
 
 				// Place shaped ingredients
+				console.log(`[craft-debug] Placing ingredients, window=${window.type} invStart=${window.inventoryStart} slots=${window.slots.length}`);
+				const invItems = window.slots.map((s, i) => s && s.count > 0 ? `${i}:${s.name}(${s.type})` : null).filter(Boolean);
+				console.log(`[craft-debug] Window contents: ${invItems.join(", ") || "empty"}`);
+				// Full slot dump with counts
+				for (let si = window.inventoryStart; si < window.inventoryEnd; si++) {
+					const s = window.slots[si];
+					if (s) console.log(`[craft-debug]   slot ${si}: ${s.name} type=${s.type} count=${s.count} meta=${s.metadata}`);
+				}
 				if (recipe.inShape) {
 					for (let y = 0; y < recipe.inShape.length; y++) {
 						const row = recipe.inShape[y];
 						for (let x = 0; x < row.length; x++) {
 							const ingredient = row[x];
 							if (ingredient.id === -1) continue;
+							console.log(`[craft-debug] ingredient id=${ingredient.id} at grid (${x},${y}) stateId=${(window as any).stateId}`);
 
 							if (
 								!window.selectedItem ||
@@ -161,6 +183,7 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 								const allItems = window.slots.filter(s => s).map((s, i) => `${s!.name}(${s!.type})@${i}`);
 								throw new Error(`Missing ingredient id=${ingredient.id} meta=${ingredient.metadata} inv=[${allItems}]`);
 							}
+							console.log(`[craft-debug] Found ingredient ${ingredient.id} at slot ${sourceSlot}, item=${window.slots[sourceSlot]?.name}(${window.slots[sourceSlot]?.type})`)
 							if (originalSourceSlot === null)
 								originalSourceSlot = sourceSlot;
 							await bot.clickWindow(sourceSlot, 0, 0);

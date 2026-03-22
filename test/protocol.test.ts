@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import MinecraftData from "minecraft-data";
 import { describe, expect, it } from "vitest";
+import { buildProtocol } from "../src/protocol/build-protocol.ts";
 import {
 	createPacketCodec,
 	createTypeRegistry,
@@ -265,8 +265,8 @@ describe("states", () => {
 // ── Codec ──
 
 describe("codec", () => {
-	const mcData = MinecraftData("1.20.4");
-	const protocol = mcData.protocol as Record<string, unknown>;
+	const schema = buildProtocol();
+	const protocol = schema.protocol;
 	const sharedTypes = protocol.types as Record<string, unknown>;
 
 	describe("type registry", () => {
@@ -374,8 +374,8 @@ describe("codec", () => {
 			};
 			const codec = createPacketCodec({ types });
 
-			expect(codec.packetIds.get("set_protocol")).toBe(0);
-			expect(codec.packetNames.get(0)).toBe("set_protocol");
+			expect(codec.packetIds.get("intention")).toBe(0);
+			expect(codec.packetNames.get(0)).toBe("intention");
 		});
 
 		it("round-trips handshake packet", () => {
@@ -395,17 +395,17 @@ describe("codec", () => {
 				serverPort: 25565,
 				nextState: 2,
 			};
-			const buf = codec.write("set_protocol", params);
+			const buf = codec.write("intention", params);
 			const result = codec.read(buf);
 
-			expect(result.name).toBe("set_protocol");
+			expect(result.name).toBe("intention");
 			expect(result.params.protocolVersion).toBe(765);
 			expect(result.params.serverHost).toBe("localhost");
 			expect(result.params.serverPort).toBe(25565);
 			expect(result.params.nextState).toBe(2);
 		});
 
-		it("round-trips login_start packet", () => {
+		it("round-trips hello (login start) packet", () => {
 			const loginData = protocol[ProtocolState.LOGIN] as Record<
 				string,
 				Record<string, unknown>
@@ -420,17 +420,17 @@ describe("codec", () => {
 				username: "Steve",
 				playerUUID: "12345678-1234-1234-1234-123456789abc",
 			};
-			const buf = codec.write("login_start", params);
+			const buf = codec.write("hello", params);
 			const result = codec.read(buf);
 
-			expect(result.name).toBe("login_start");
+			expect(result.name).toBe("hello");
 			expect(result.params.username).toBe("Steve");
 			expect(result.params.playerUUID).toBe(
 				"12345678-1234-1234-1234-123456789abc",
 			);
 		});
 
-		it("round-trips status ping packet", () => {
+		it("round-trips status_request packet", () => {
 			const statusData = protocol[ProtocolState.STATUS] as Record<
 				string,
 				Record<string, unknown>
@@ -441,9 +441,9 @@ describe("codec", () => {
 			};
 			const codec = createPacketCodec({ types });
 
-			const buf = codec.write("ping_start", {});
+			const buf = codec.write("status_request", {});
 			const result = codec.read(buf);
-			expect(result.name).toBe("ping_start");
+			expect(result.name).toBe("status_request");
 		});
 
 		it("creates codec for play toClient", () => {
@@ -493,7 +493,7 @@ describe("codec", () => {
 			expect(echoed.params.keepAliveId).toBe(12345n);
 		});
 
-		it("round-trips chat_message packet", () => {
+		it("round-trips chat packet", () => {
 			const playData = protocol[ProtocolState.PLAY] as Record<
 				string,
 				Record<string, unknown>
@@ -511,10 +511,10 @@ describe("codec", () => {
 				offset: 0,
 				acknowledged: Buffer.alloc(3, 0),
 			};
-			const buf = codec.write("chat_message", params);
+			const buf = codec.write("chat", params);
 			const result = codec.read(buf);
 
-			expect(result.name).toBe("chat_message");
+			expect(result.name).toBe("chat");
 			expect(result.params.message).toBe("Hello world!");
 		});
 	});

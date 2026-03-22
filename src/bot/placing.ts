@@ -52,7 +52,7 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		const face = vecToFace(faceVector);
 
 		if (bot.supportFeature("blockPlaceHasInsideBlock")) {
-			bot.client.write("block_place", {
+			bot.client.write("use_item_on", {
 				location: { x: block.x, y: block.y, z: block.z },
 				direction: face,
 				hand,
@@ -64,7 +64,7 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 				worldBorderHit: false,
 			});
 		} else if (bot.supportFeature("blockPlaceHasHandAndFloatCursor")) {
-			bot.client.write("block_place", {
+			bot.client.write("use_item_on", {
 				location: { x: block.x, y: block.y, z: block.z },
 				direction: face,
 				hand,
@@ -73,7 +73,7 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 				cursorZ: dz,
 			});
 		} else if (bot.supportFeature("blockPlaceHasHandAndIntCursor")) {
-			bot.client.write("block_place", {
+			bot.client.write("use_item_on", {
 				location: { x: block.x, y: block.y, z: block.z },
 				direction: face,
 				hand,
@@ -82,7 +82,7 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 				cursorZ: Math.floor(dz * 16),
 			});
 		} else {
-			bot.client.write("block_place", {
+			bot.client.write("use_item_on", {
 				location: { x: block.x, y: block.y, z: block.z },
 				direction: face,
 				heldItem: { blockId: -1 },
@@ -131,15 +131,15 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 				reject(new Error("Place block timeout"));
 			}, 5000);
 
-			const onUpdate = (oldBlock: unknown, newBlock: unknown) => {
-				const nb = newBlock as { position?: Vec3; type?: number } | null;
-				const ob = oldBlock as { type?: number } | null;
-				if (!nb?.position) return;
-				if (nb.position.x === dest.x && nb.position.y === dest.y && nb.position.z === dest.z) {
-					if (ob?.type !== nb.type) {
+			// blockUpdate emits (pos: Vec3, oldStateId: number, newStateId: number)
+			const onUpdate = (pos: unknown, oldStateId: unknown, newStateId: unknown) => {
+				const p = pos as Vec3;
+				if (!p || typeof p.x !== "number") return;
+				if (p.x === dest.x && p.y === dest.y && p.z === dest.z) {
+					if (oldStateId !== newStateId) {
 						clearTimeout(timeout);
 						bot.removeListener("blockUpdate", onUpdate);
-						bot.emit("blockPlaced", oldBlock, newBlock);
+						bot.emit("blockPlaced", pos, pos);
 						resolve();
 					}
 				}

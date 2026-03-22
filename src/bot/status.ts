@@ -29,7 +29,7 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 
 	// ── Health ──
 
-	bot.client.on("update_health", (packet: Record<string, unknown>) => {
+	bot.client.on("set_health", (packet: Record<string, unknown>) => {
 		bot.health = packet.health as number;
 		bot.food = packet.food as number;
 		bot.foodSaturation = packet.foodSaturation as number;
@@ -72,7 +72,7 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 
 	// ── Experience ──
 
-	bot.client.on("experience", (packet: Record<string, unknown>) => {
+	bot.client.on("set_experience", (packet: Record<string, unknown>) => {
 		bot.experience = {
 			level: packet.level as number,
 			points: packet.totalExperience as number,
@@ -119,7 +119,7 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 			payload.particleStatus = "all";
 		}
 
-		bot.client.write("settings", payload);
+		bot.client.write("client_information", payload);
 	};
 
 	bot.setSettings = setSettings;

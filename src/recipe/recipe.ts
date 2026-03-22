@@ -78,7 +78,7 @@ const computeDelta = (recipe: Recipe): readonly RecipeItem[] => {
 
 // ── Public API ──
 
-/** Parse a raw recipe from minecraft-data into a Recipe. */
+/** Parse a raw recipe into a Recipe. */
 export const parseRecipe = (raw: RawRecipe): Recipe => {
 	const result: RecipeItem = {
 		id: raw.result.id,

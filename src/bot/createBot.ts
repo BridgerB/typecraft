@@ -281,10 +281,12 @@ export const createBot = (options: BotOptions): Bot => {
 	});
 
 	// Kick handling
-	client.on("kick_disconnect", (packet: Record<string, unknown>) => {
+	client.on("disconnect", (packet: Record<string, unknown>) => {
+		// Play state disconnect (kick)
 		bot.emit("kicked", packet.reason as string, true);
 	});
-	client.on("disconnect", (packet: Record<string, unknown>) => {
+	client.on("login_disconnect", (packet: Record<string, unknown>) => {
+		// Login state disconnect
 		bot.emit("kicked", packet.reason as string, false);
 	});
 

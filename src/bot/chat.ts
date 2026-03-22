@@ -141,7 +141,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 		}
 	});
 
-	bot.client.on("profileless_chat", (packet: Record<string, unknown>) => {
+	bot.client.on("disguised_chat", (packet: Record<string, unknown>) => {
 		if (!bot.registry) return;
 		const content = packet.content ?? packet.message;
 		try {
@@ -239,7 +239,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 				}
 			} else if (bot.protocolVersion >= 759) {
 				// 1.19+ uses chat_message with signing fields
-				bot.client.write("chat_message", {
+				bot.client.write("chat", {
 					message: chunk,
 					timestamp: BigInt(Date.now()),
 					salt: 0n,
@@ -268,7 +268,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 	): Promise<string[]> => {
 		const transactionId = Math.floor(Math.random() * 0x7fffffff);
 
-		bot.client.write("tab_complete", {
+		bot.client.write("command_suggestion", {
 			text: str,
 			assumeCommand: assumeCommand ?? false,
 			transactionId,
@@ -280,7 +280,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 					(packet.transactionId as number) === transactionId ||
 					packet.transactionId == null
 				) {
-					bot.client.removeListener("tab_complete", onComplete);
+					bot.client.removeListener("command_suggestions", onComplete);
 					const matches = packet.matches as
 						| string[]
 						| Array<Record<string, string>>;
@@ -293,9 +293,9 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 					}
 				}
 			};
-			bot.client.on("tab_complete", onComplete);
+			bot.client.on("command_suggestions", onComplete);
 			setTimeout(() => {
-				bot.client.removeListener("tab_complete", onComplete);
+				bot.client.removeListener("command_suggestions", onComplete);
 				resolve([]);
 			}, timeout ?? 5000);
 		});

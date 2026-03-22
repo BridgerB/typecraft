@@ -1,7 +1,7 @@
 /**
  * Browser web worker for chunk meshing.
  * Unlike the Node.js workerEntry, this receives registry data (blocks, biomes)
- * via postMessage instead of calling createRegistry (which requires minecraft-data).
+ * via postMessage instead of calling createRegistry (which requires src/data/).
  */
 
 import {

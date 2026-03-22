@@ -1,6 +1,6 @@
 /**
  * Packet codec — schema-driven serialization replacing protodef.
- * Reads minecraft-data protocol.json and builds read/write functions for every type.
+ * Reads protocol-schema.json and builds read/write functions for every type.
  */
 
 import { readAnonymousNbt, writeAnonymousNbt } from "../nbt/nbt.ts";

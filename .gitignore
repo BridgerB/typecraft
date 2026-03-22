@@ -1,4 +1,16 @@
 node_modules
 dist
 .cache
+
+# Generated data (regenerate with: nix run .#datagen)
+src/data/
+
+# Datagen build artifacts
+datagen/mod/build/
+datagen/mod/.gradle/
+datagen/mod/.fabric/
+datagen/mod/run/
+
+# Dev files
 debug.ts
+bench/

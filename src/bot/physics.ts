@@ -105,7 +105,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	bot.elytraFly = async () => {
 		if (!bot.entity.onGround && !bot.entity.elytraFlying) {
-			bot.client.write("entity_action", {
+			bot.client.write("player_command", {
 				entityId: bot.entity.id,
 				actionId: bot.supportFeature("entityActionUsesStringMapper")
 					? "start_elytra_flying"
@@ -117,7 +117,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Teleport handling ──
 
-	bot.client.on("position", (packet: Record<string, unknown>) => {
+	bot.client.on("player_position", (packet: Record<string, unknown>) => {
 		const flags = (packet.flags as number) ?? 0;
 		const pos = bot.entity.position as MutableVec3;
 
@@ -151,7 +151,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 		// Confirm teleport
 		if (packet.teleportId != null) {
-			bot.client.write("teleport_confirm", {
+			bot.client.write("accept_teleportation", {
 				teleportId: packet.teleportId,
 			});
 		}
@@ -162,7 +162,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Explosion knockback ──
 
-	bot.client.on("explosion", (packet: Record<string, unknown>) => {
+	bot.client.on("explode", (packet: Record<string, unknown>) => {
 		if (packet.playerMotionX != null) {
 			const vel = bot.entity.velocity as MutableVec3;
 			vel.x += packet.playerMotionX as number;
@@ -243,8 +243,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 		// 1.21.2+ uses MovementFlags bitfield instead of plain onGround boolean
 		const movementFlags = {
-			onGround,
-			flags: { onGround, hasHorizontalCollision: false },
+			flags: { onGround: onGround ? 1 : 0, horizontalCollision: 0, _padding: 0 },
 		};
 
 		const posChanged =
@@ -257,7 +256,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 		const forceUpdate = positionUpdateTimer >= 20; // Every 1 second
 
 		if (posChanged && lookChanged) {
-			bot.client.write("position_look", {
+			bot.client.write("move_player_pos_rot", {
 				x: pos.x,
 				y: pos.y,
 				z: pos.z,
@@ -266,20 +265,20 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 				...movementFlags,
 			});
 		} else if (posChanged) {
-			bot.client.write("position", {
+			bot.client.write("move_player_pos", {
 				x: pos.x,
 				y: pos.y,
 				z: pos.z,
 				...movementFlags,
 			});
 		} else if (lookChanged) {
-			bot.client.write("look", {
+			bot.client.write("move_player_rot", {
 				yaw: toNotchianYaw(yaw),
 				pitch: toNotchianPitch(pitch),
 				...movementFlags,
 			});
 		} else if (forceUpdate) {
-			bot.client.write("flying", { ...movementFlags });
+			bot.client.write("move_player_status_only", { ...movementFlags });
 		} else {
 			return;
 		}

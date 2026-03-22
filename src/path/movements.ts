@@ -127,13 +127,14 @@ export const createMovements = (
 		const isFence = fenceIds.has(block.id);
 		const isEmpty = block.boundingBox === "empty";
 		const isPhysical = block.boundingBox === "block" && !isFence;
-		const isSafe = (isEmpty || isClimbable) && !isAvoid && !isLiquid;
-
 		let height = 0;
 		for (const shape of block.shapes) {
 			const shapeTop = shape[4] ?? 0;
 			if (shapeTop > height) height = shapeTop;
 		}
+
+		const isCarpet = isEmpty && height > 0 && height < 0.1;
+		const isSafe = (isEmpty || isClimbable || isLiquid || isCarpet) && !isAvoid;
 
 		const result: BlockQuery = {
 			safe: isSafe,
@@ -235,8 +236,9 @@ export const createMovements = (
 		if (aboveCost < 0) return;
 		cost += aboveCost;
 
-		// Need the block we're jumping onto to be physical
-		if (!queryBlock(nx, node.y, nz).physical) return;
+		// Need the block we're jumping onto to be physical (or liquid — swimming up onto land)
+		const jumpBlock = queryBlock(nx, node.y, nz);
+		if (!jumpBlock.physical && !jumpBlock.liquid) return;
 
 		// Need body and head clear at destination
 		const bodyCost = safeOrBreak(nx, ny, nz, toBreak);
@@ -259,7 +261,8 @@ export const createMovements = (
 		if (!queryBlock(nx, node.y, nz).safe) return;
 		if (queryBlock(nx, node.y - 1, nz).physical) return; // has floor = forward move
 
-		for (let dy = -2; dy >= -(cfg.maxDropDown + 1); dy--) {
+		const maxDrop = cfg.infiniteLiquidDropdownDistance ? 256 : cfg.maxDropDown + 1;
+		for (let dy = -2; dy >= -maxDrop; dy--) {
 			const landing = queryBlock(nx, node.y + dy, nz);
 			if (landing.physical) {
 				const landY = node.y + dy + 1;
@@ -267,7 +270,13 @@ export const createMovements = (
 				pushNeighbor(nx, landY, nz, 1 + (node.y - landY) * 0.5);
 				return;
 			}
-			if (!landing.safe && !landing.liquid) return;
+			if (landing.liquid) {
+				// Land in water — safe with cost
+				pushNeighbor(nx, node.y + dy, nz, 1 + (node.y - (node.y + dy)) * 0.3);
+				return;
+			}
+			if (!landing.safe) return;
+			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1)) return;
 		}
 	};
 
@@ -276,19 +285,49 @@ export const createMovements = (
 		const nx = node.x + dx;
 		const nz = node.z + dz;
 
-		if (!queryBlock(nx, node.y - 1, nz).physical) return;
-		if (!queryBlock(nx, node.y, nz).safe) return;
-		if (!queryBlock(nx, node.y + 1, nz).safe) return;
+		const destFloor = queryBlock(nx, node.y - 1, nz);
 
-		const p1 =
-			queryBlock(node.x, node.y, node.z + dz).safe &&
-			queryBlock(node.x, node.y + 1, node.z + dz).safe;
-		const p2 =
-			queryBlock(node.x + dx, node.y, node.z).safe &&
-			queryBlock(node.x + dx, node.y + 1, node.z).safe;
-		if (!p1 && !p2) return;
+		// Flat diagonal
+		if (destFloor.physical) {
+			if (!queryBlock(nx, node.y, nz).safe) return;
+			if (!queryBlock(nx, node.y + 1, nz).safe) return;
 
-		pushNeighbor(nx, node.y, nz, Math.SQRT2);
+			const p1 =
+				queryBlock(node.x, node.y, node.z + dz).safe &&
+				queryBlock(node.x, node.y + 1, node.z + dz).safe;
+			const p2 =
+				queryBlock(node.x + dx, node.y, node.z).safe &&
+				queryBlock(node.x + dx, node.y + 1, node.z).safe;
+			if (!p1 && !p2) return;
+
+			pushNeighbor(nx, node.y, nz, Math.SQRT2);
+			return;
+		}
+
+		// Diagonal jump up (+1Y) — destination block is physical (step onto it)
+		if (queryBlock(nx, node.y, nz).physical &&
+			queryBlock(nx, node.y + 1, nz).safe &&
+			queryBlock(nx, node.y + 2, nz).safe &&
+			queryBlock(node.x, node.y + 2, node.z).safe) {
+			pushNeighbor(nx, node.y + 1, nz, Math.SQRT2 + 1);
+		}
+
+		// Diagonal drop down — find landing below
+		if (queryBlock(nx, node.y, nz).safe) {
+			for (let dy = -2; dy >= -(cfg.maxDropDown + 1); dy--) {
+				const landing = queryBlock(nx, node.y + dy, nz);
+				if (landing.physical) {
+					const landY = node.y + dy + 1;
+					pushNeighbor(nx, landY, nz, Math.SQRT2 + (node.y - landY) * 0.5);
+					return;
+				}
+				if (landing.liquid) {
+					pushNeighbor(nx, node.y + dy, nz, Math.SQRT2 + (node.y - (node.y + dy)) * 0.3);
+					return;
+				}
+				if (!landing.safe) return;
+			}
+		}
 	};
 
 	/** Parkour: sprint-jump across 1-4 block gaps. */
@@ -358,6 +397,38 @@ export const createMovements = (
 		);
 	};
 
+	/** Move down: drop vertically in place. */
+	const getMoveDown = (node: Move): void => {
+		// Already on solid ground — can't drop
+		if (queryBlock(node.x, node.y - 1, node.z).physical) return;
+
+		const maxDrop = cfg.infiniteLiquidDropdownDistance ? 256 : cfg.maxDropDown + 1;
+		for (let dy = -1; dy >= -maxDrop; dy--) {
+			const landing = queryBlock(node.x, node.y + dy, node.z);
+			if (landing.physical) {
+				const landY = node.y + dy + 1;
+				pushNeighbor(node.x, landY, node.z, 1 + (node.y - landY) * 0.5);
+				return;
+			}
+			if (landing.liquid) {
+				pushNeighbor(node.x, node.y + dy, node.z, 1 + (node.y - (node.y + dy)) * 0.3);
+				return;
+			}
+			if (!landing.safe) return;
+			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1)) return;
+		}
+	};
+
+	/** Swim up: move up one block while in water. */
+	const getMoveSwimUp = (node: Move): void => {
+		const current = queryBlock(node.x, node.y, node.z);
+		if (!current.liquid) return; // only from water
+		const above = queryBlock(node.x, node.y + 1, node.z);
+		if (above.safe || above.liquid) {
+			pushNeighbor(node.x, node.y + 1, node.z, 1);
+		}
+	};
+
 	const getNeighbors = (node: Move): readonly Move[] => {
 		neighborCount = 0;
 
@@ -373,6 +444,8 @@ export const createMovements = (
 		}
 
 		getMoveUp(node);
+		getMoveDown(node);
+		getMoveSwimUp(node);
 
 		// Return a slice so the caller gets an independent snapshot
 		return neighbors.slice(0, neighborCount);

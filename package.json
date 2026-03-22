@@ -29,8 +29,6 @@
 		"vitest": "^3.0.0"
 	},
 	"dependencies": {
-		"minecraft-assets": "^1.17.0",
-		"minecraft-data": "^3.105.0",
 		"prismarine-auth": "^2.7.0",
 		"three": "^0.183.1",
 		"ws": "^8.19.0"
