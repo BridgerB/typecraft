@@ -79,7 +79,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	bot.lookAt = async (point: Vec3, force?: boolean) => {
 		const delta = subtract(point, bot.entity.position);
-		const yaw = Math.atan2(-delta.x, delta.z);
+		const yaw = Math.atan2(-delta.x, -delta.z);
 		const groundDist = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
 		const pitch = Math.atan2(-delta.y, groundDist);
 		return bot.look(yaw, pitch, force);

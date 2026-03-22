@@ -19,10 +19,10 @@ import type {
 import { posHash } from "./types.ts";
 
 const DEFAULT_CONFIG: PathfinderConfig = {
-	thinkTimeout: 5000,
+	thinkTimeout: 10000,
 	tickTimeout: 40,
 	searchRadius: -1,
-	maxDropDown: 3,
+	maxDropDown: 4,
 	reachDistance: 0.5,
 	stuckTimeout: 3500,
 };

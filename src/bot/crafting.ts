@@ -157,8 +157,10 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 								ingredient.id,
 								ingredient.metadata,
 							);
-							if (sourceSlot === null)
-								throw new Error("Missing ingredient");
+							if (sourceSlot === null) {
+								const allItems = window.slots.filter(s => s).map((s, i) => `${s!.name}(${s!.type})@${i}`);
+								throw new Error(`Missing ingredient id=${ingredient.id} meta=${ingredient.metadata} inv=[${allItems}]`);
+							}
 							if (originalSourceSlot === null)
 								originalSourceSlot = sourceSlot;
 							await bot.clickWindow(sourceSlot, 0, 0);

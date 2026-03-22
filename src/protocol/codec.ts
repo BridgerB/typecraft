@@ -383,14 +383,15 @@ const buildOption = (registry: TypeRegistry, innerSchema: unknown): TypeDef => {
 			return { value: r.value, size: 1 + r.size };
 		},
 		write: (v, b, o, ctx) => {
-			if (v == null) {
+			if (v == null || v === false) {
 				b.writeUInt8(0, o);
 				return o + 1;
 			}
 			b.writeUInt8(1, o);
 			return innerType.write(v, b, o + 1, ctx);
 		},
-		sizeOf: (v, ctx) => (v == null ? 1 : 1 + innerType.sizeOf(v, ctx)),
+		sizeOf: (v, ctx) =>
+			v == null || v === false ? 1 : 1 + innerType.sizeOf(v, ctx),
 	};
 };
 

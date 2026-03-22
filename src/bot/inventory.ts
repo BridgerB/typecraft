@@ -7,11 +7,13 @@ import type { Entity } from "../entity/index.ts";
 import { fromNotch, type Item } from "../item/index.ts";
 import type { Vec3 } from "../vec3/index.ts";
 import {
+	acceptClick,
 	createWindow,
 	getWindowTypes,
 	updateSlot,
 	type Window,
 } from "../window/index.ts";
+import { toNotch } from "../item/index.ts";
 import type {
 	Bot,
 	BotOptions,
@@ -89,6 +91,11 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 		if (window) {
 			updateSlot(window, slot, item);
+			// Track stateId for window_click
+			if (packet.stateId != null) {
+				(window as Record<string, unknown>).stateId =
+					packet.stateId as number;
+			}
 		}
 
 		// Update held item if main hand slot changed
@@ -96,6 +103,22 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			bot.heldItem = item;
 		}
 	});
+
+	// ── Set player inventory (1.21.11+) ──
+
+	bot.client.on(
+		"set_player_inventory",
+		(packet: Record<string, unknown>) => {
+			if (!bot.registry) return;
+			const slotId = packet.slotId as number;
+			const item = fromNotch(bot.registry, packet.contents as never);
+			updateSlot(bot.inventory, slotId, item);
+
+			if (slotId === bot.quickBarSlot + 36) {
+				bot.heldItem = item;
+			}
+		},
+	);
 
 	// ── Open window ──
 
@@ -151,21 +174,66 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 		mode: number,
 	): Promise<void> => {
 		const window = bot.currentWindow ?? bot.inventory;
-		if (!window) return;
+		if (!window || !bot.registry) return;
 
 		const actionId = nextActionId++;
 
 		if (bot.supportFeature("stateIdUsed")) {
 			const stateId =
 				((window as Record<string, unknown>).stateId as number) ?? 0;
+
+			// Snapshot old slots, simulate the click client-side, then diff
+			const oldSlots = window.slots.map((s) =>
+				s ? { ...s } : null,
+			);
+			acceptClick(window, bot.registry, { slot, mouseButton, mode });
+
+			// Compute changed slots
+			const changedSlots: { location: number; item: unknown }[] = [];
+			for (let i = 0; i < window.slots.length; i++) {
+				const oldItem = oldSlots[i];
+				const newItem = window.slots[i];
+				if (oldItem !== newItem) {
+					changedSlots.push({
+						location: i,
+						item: newItem
+							? toNotch(bot.registry, newItem)
+							: false,
+					});
+				}
+			}
+
 			bot.client.write("window_click", {
 				windowId: window.id,
 				slot,
 				mouseButton,
 				mode,
 				stateId,
-				changedSlots: [],
-				cursorItem: null,
+				changedSlots,
+				cursorItem: window.selectedItem
+					? toNotch(bot.registry, window.selectedItem)
+					: false,
+			});
+
+			// Wait for server confirmation (set_slot or window_items resync)
+			await new Promise<void>((resolve) => {
+				const timeout = setTimeout(() => {
+					bot.client.removeListener("set_slot", onSlot);
+					bot.client.removeListener("window_items", onItems);
+					resolve();
+				}, 1000);
+				const onSlot = () => {
+					clearTimeout(timeout);
+					bot.client.removeListener("window_items", onItems);
+					resolve();
+				};
+				const onItems = () => {
+					clearTimeout(timeout);
+					bot.client.removeListener("set_slot", onSlot);
+					resolve();
+				};
+				bot.client.once("set_slot", onSlot);
+				bot.client.once("window_items", onItems);
 			});
 		} else {
 			bot.client.write("window_click", {
