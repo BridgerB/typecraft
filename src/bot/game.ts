@@ -140,8 +140,8 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 		// Send brand via plugin channel
 		const brand = options.brand ?? "vanilla";
 		const brandChannel = bot.supportFeature("customChannelMCPrefixed")
-			? "MC|Brand"
-			: "minecraft:brand";
+			? "minecraft:brand"
+			: "MC|Brand";
 		bot.client.registerChannel(brandChannel, stringSerializer, stringDeserializer);
 		bot.client.writeChannel(brandChannel, brand);
 

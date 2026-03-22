@@ -282,7 +282,7 @@ export const createRegistry = (version: string): Registry => {
 		dimensionIsAString: isNewerOrEqualTo("1.16") && isOlderThan("1.19"),
 		dimensionIsAWorld: isNewerOrEqualTo("1.19"),
 		segmentedRegistryCodecData: isNewerOrEqualTo("1.20.5"),
-		customChannelMCPrefixed: isNewerOrEqualTo("1.13"),
+		customChannelMCPrefixed: isNewerOrEqualTo("1.13"), // true = uses "minecraft:" prefix (1.13+), false = uses "MC|" prefix
 		// Inventory / blocks
 		stateIdUsed: isNewerOrEqualTo("1.17"),
 		useItemWithOwnPacket: isNewerOrEqualTo("1.9"),
