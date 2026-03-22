@@ -195,22 +195,33 @@ const decodeTextures = async (
 	textureData: Record<string, string>,
 ): Promise<Map<string, ImageBitmap>> => {
 	const images = new Map<string, ImageBitmap>();
-	const promises: Promise<void>[] = [];
+	let decoded = 0;
+	let failed = 0;
 
-	for (const name of textureNames) {
-		const b64 = textureData[name];
-		if (!b64) continue;
-		promises.push(
-			fetch(`data:image/png;base64,${b64}`)
-				.then((r) => r.blob())
-				.then((blob) => createImageBitmap(blob))
-				.then((bmp) => {
-					images.set(name, bmp);
-				}),
+	// Decode in batches to avoid overwhelming the browser with concurrent fetches
+	const BATCH = 50;
+	const entries = textureNames.filter((n) => textureData[n]);
+
+	for (let i = 0; i < entries.length; i += BATCH) {
+		const batch = entries.slice(i, i + BATCH);
+		await Promise.all(
+			batch.map((name) =>
+				fetch(`data:image/png;base64,${textureData[name]}`)
+					.then((r) => r.blob())
+					.then((blob) => createImageBitmap(blob))
+					.then((bmp) => {
+						images.set(name, bmp);
+						decoded++;
+					})
+					.catch((err) => {
+						failed++;
+						if (failed <= 3) console.error(`[texture] Failed: "${name}":`, err);
+					}),
+			),
 		);
 	}
 
-	await Promise.all(promises);
+	console.log(`[texture] Decoded ${decoded}/${entries.length} textures (${failed} failed)`);
 	return images;
 };
 
@@ -285,39 +296,51 @@ const connect = () => {
 		} else if (msg.type === "assets") {
 			if (!viewer) return;
 
-			setStatus("Decoding textures...");
-			const images = await decodeTextures(msg.textureNames, msg.textureData);
+			try {
+				setStatus("Decoding textures...");
+				console.log(`[assets] Received ${msg.textureNames.length} textures, ${Object.keys(msg.blockStates).length} block states`);
+				const images = await decodeTextures(msg.textureNames, msg.textureData);
 
-			const atlas = createTextureAtlas(msg.textureNames, (name) => {
-				const clean = name.replace(".png", "");
-				return images.get(clean)!;
-			});
-
-			const blockStates = prepareBlockStates(
-				msg.blockStates,
-				msg.blockModels as Parameters<typeof prepareBlockStates>[1],
-				atlas.uvMap,
-			);
-
-			// Send registry data to workers (custom message for browser worker)
-			for (const worker of viewer.worldRenderer.workers) {
-				worker.postMessage({
-					type: "registryData",
-					blocks: msg.blocks,
-					biomes: msg.biomes,
+				setStatus("Building texture atlas...");
+				console.log("[assets] Building atlas...");
+				const atlas = createTextureAtlas(msg.textureNames, (name) => {
+					const clean = name.replace(".png", "");
+					return images.get(clean)!;
 				});
-			}
 
-			setViewerAssets(viewer, atlas, blockStates, deserializeTints(msg.tints));
-			setEntityModels(msg.entityModels as Record<string, EntityModelDef>);
-			assetsReady = true;
+				setStatus("Preparing block states...");
+				console.log("[assets] Preparing block states...");
+				const blockStates = prepareBlockStates(
+					msg.blockStates,
+					msg.blockModels as Parameters<typeof prepareBlockStates>[1],
+					atlas.uvMap,
+				);
 
-			// Replay messages that arrived during async texture decoding
-			setStatus(`Processing ${pendingMessages.length} queued chunks...`);
-			for (const queued of pendingMessages) {
-				processMessage(queued);
+				// Send registry data to workers (custom message for browser worker)
+				console.log("[assets] Sending to workers...");
+				for (const worker of viewer.worldRenderer.workers) {
+					worker.postMessage({
+						type: "registryData",
+						blocks: msg.blocks,
+						biomes: msg.biomes,
+					});
+				}
+
+				setViewerAssets(viewer, atlas, blockStates, deserializeTints(msg.tints));
+				setEntityModels(msg.entityModels as Record<string, EntityModelDef>);
+				assetsReady = true;
+				console.log("[assets] Ready!");
+
+				// Replay messages that arrived during async texture decoding
+				setStatus(`Processing ${pendingMessages.length} queued chunks...`);
+				for (const queued of pendingMessages) {
+					processMessage(queued);
+				}
+				pendingMessages.length = 0;
+			} catch (err) {
+				console.error("[assets] FATAL:", err);
+				setStatus(`ERROR: ${err instanceof Error ? err.message : String(err)}`);
 			}
-			pendingMessages.length = 0;
 		} else if (!assetsReady) {
 			// Buffer messages until workers are initialized
 			pendingMessages.push(msg);

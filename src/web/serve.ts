@@ -170,7 +170,7 @@ const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 		for (const file of readdirSync(modelsDir)) {
 			if (!file.endsWith(".json")) continue;
 			const name = file.replace(".json", "");
-			blockModels[`block/${name}`] = JSON.parse(readFileSync(join(modelsDir, file), "utf8"));
+			blockModels[name] = JSON.parse(readFileSync(join(modelsDir, file), "utf8"));
 		}
 	}
 
