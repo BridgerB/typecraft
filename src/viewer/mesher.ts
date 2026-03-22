@@ -264,9 +264,10 @@ const renderLiquid = (
 		const isUp = dir[1] === 1;
 
 		const neighbor = getBlock(cx + dir[0], cy + dir[1], cz + dir[2]);
-		if (!neighbor) continue;
-		if (neighbor.name === type) continue;
-		if (neighbor.isCube && !isUp) continue;
+		if (neighbor) {
+			if (neighbor.name === type) continue;
+			if (neighbor.isCube && !isUp) continue;
+		}
 
 		let tint: readonly [number, number, number] = [1, 1, 1];
 		if (isWater) {
@@ -321,9 +322,11 @@ const renderElement = (
 
 		if (eFace.cullface) {
 			const neighbor = getBlock(cx + dir[0], cy + dir[1], cz + dir[2]);
-			if (!neighbor) continue;
-			if (cullIfIdentical && neighbor.name === block.name) continue;
-			if (!neighbor.transparent && neighbor.isCube) continue;
+			// null = unloaded/unknown neighbor — render the face (assume visible)
+			if (neighbor) {
+				if (cullIfIdentical && neighbor.name === block.name) continue;
+				if (!neighbor.transparent && neighbor.isCube) continue;
+			}
 		}
 
 		const minx = element.from[0];
