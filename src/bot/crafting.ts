@@ -7,7 +7,7 @@ import { findRecipes, type Recipe } from "../recipe/index.ts";
 import { findInventoryItem, type Window } from "../window/index.ts";
 import type { Vec3 } from "../vec3/index.ts";
 import type { Bot, BotOptions } from "./types.ts";
-import { once } from "./utils.ts";
+import { once, withTimeout } from "./utils.ts";
 
 export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 	bot.recipesFor = (
@@ -49,13 +49,9 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 		const times = count ?? 1;
 		let windowCraftingTable: Window | null = null;
 
+		const doCraft = async () => {
+			bot.emit("debug", "craft", { event: "start", times, requiresTable: recipe.requiresTable, hasTable: !!craftingTable, shaped: !!recipe.inShape, shapeless: !!recipe.ingredients });
 		try {
-			console.log(`[craft-debug] Starting craft loop, times=${times} requiresTable=${recipe.requiresTable} hasCraftingTable=${!!craftingTable} inShape=${!!recipe.inShape} ingredients=${!!recipe.ingredients}`);
-			if (recipe.inShape) {
-				for (let y = 0; y < recipe.inShape.length; y++) {
-					console.log(`[craft-debug] row ${y}: ${recipe.inShape[y].map(i => i.id).join(",")}`);
-				}
-			}
 			for (let i = 0; i < times; i++) {
 				let window: Window;
 				let w: number;
@@ -122,21 +118,13 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 				let originalSourceSlot: number | null = null;
 
 				// Place shaped ingredients
-				console.log(`[craft-debug] Placing ingredients, window=${window.type} invStart=${window.inventoryStart} slots=${window.slots.length}`);
-				const invItems = window.slots.map((s, i) => s && s.count > 0 ? `${i}:${s.name}(${s.type})` : null).filter(Boolean);
-				console.log(`[craft-debug] Window contents: ${invItems.join(", ") || "empty"}`);
-				// Full slot dump with counts
-				for (let si = window.inventoryStart; si < window.inventoryEnd; si++) {
-					const s = window.slots[si];
-					if (s) console.log(`[craft-debug]   slot ${si}: ${s.name} type=${s.type} count=${s.count} meta=${s.metadata}`);
-				}
+				bot.emit("debug", "craft", { event: "place", windowType: String(window.type), invStart: window.inventoryStart, slotCount: window.slots.length });
 				if (recipe.inShape) {
 					for (let y = 0; y < recipe.inShape.length; y++) {
 						const row = recipe.inShape[y];
 						for (let x = 0; x < row.length; x++) {
 							const ingredient = row[x];
 							if (ingredient.id === -1) continue;
-							console.log(`[craft-debug] ingredient id=${ingredient.id} at grid (${x},${y}) stateId=${(window as any).stateId}`);
 
 							if (
 								!window.selectedItem ||
@@ -183,7 +171,7 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 								const allItems = window.slots.filter(s => s).map((s, i) => `${s!.name}(${s!.type})@${i}`);
 								throw new Error(`Missing ingredient id=${ingredient.id} meta=${ingredient.metadata} inv=[${allItems}]`);
 							}
-							console.log(`[craft-debug] Found ingredient ${ingredient.id} at slot ${sourceSlot}, item=${window.slots[sourceSlot]?.name}(${window.slots[sourceSlot]?.type})`)
+							bot.emit("debug", "craft", { event: "ingredient", ingredientId: ingredient.id, sourceSlot });
 							if (originalSourceSlot === null)
 								originalSourceSlot = sourceSlot;
 							await bot.clickWindow(sourceSlot, 0, 0);
@@ -201,6 +189,25 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 					originalSourceSlot ?? 0,
 				);
 
+				// Wait for server to populate the craft result in slot 0
+				if (!window.slots[0]) {
+					await new Promise<void>((resolve) => {
+						const prevCb = window.onSlotUpdate;
+						const timeout = setTimeout(() => {
+							window.onSlotUpdate = prevCb;
+							resolve();
+						}, 2000);
+						window.onSlotUpdate = (slot, _old, newItem) => {
+							prevCb?.(slot, _old, newItem);
+							if (slot === 0 && newItem) {
+								clearTimeout(timeout);
+								window.onSlotUpdate = prevCb;
+								resolve();
+							}
+						};
+					});
+				}
+
 				// Take the result from slot 0
 				await bot.putAway(0);
 
@@ -215,7 +222,23 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 						}
 					}
 				}
+
+				// Clear any items left in the crafting grid back to inventory (including result slot 0)
+				for (let s = 0; s <= w * h; s++) {
+					if (window.slots[s]) {
+						await bot.putAway(s);
+					}
+				}
 			}
+		} finally {
+			if (windowCraftingTable) {
+				bot.closeWindow(windowCraftingTable);
+			}
+		}
+		};
+
+		try {
+			await withTimeout(doCraft(), 30000);
 		} finally {
 			if (windowCraftingTable) {
 				bot.closeWindow(windowCraftingTable);

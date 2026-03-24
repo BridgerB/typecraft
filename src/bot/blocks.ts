@@ -221,7 +221,8 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		if (!bot.world || !bot.registry) return null;
 		const stateId = worldGetBlockStateId(bot.world, point);
 		if (stateId == null || stateId === 0) return null;
-		return stateIdToBlock(bot.registry, stateId);
+		const block = stateIdToBlock(bot.registry, stateId);
+		return { ...block, position: vec3(Math.floor(point.x), Math.floor(point.y), Math.floor(point.z)), stateId };
 	};
 
 	bot.findBlocks = (options: FindBlockOptions): Vec3[] => {

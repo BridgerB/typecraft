@@ -371,7 +371,11 @@ const connect = () => {
 // ── Render loop ──
 
 const loop = () => {
-	if (viewer) renderViewer(viewer);
+	try {
+		if (viewer) renderViewer(viewer);
+	} catch (_) {
+		// Entity mesh errors (e.g. SkinnedMesh bones not ready) must not kill the loop
+	}
 	requestAnimationFrame(loop);
 };
 

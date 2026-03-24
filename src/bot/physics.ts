@@ -54,6 +54,11 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Look ──
 
+	let lockedLookTarget: Vec3 | null = null;
+
+	bot.lockLook = (pos: Vec3) => { lockedLookTarget = pos; };
+	bot.unlockLook = () => { lockedLookTarget = null; };
+
 	bot.look = async (yaw: number, pitch: number, force?: boolean) => {
 		if (force) {
 			// Instant look
@@ -78,10 +83,11 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.lookAt = async (point: Vec3, force?: boolean) => {
-		const delta = subtract(point, bot.entity.position);
+		const eyePos = vec3(bot.entity.position.x, bot.entity.position.y + 1.62, bot.entity.position.z);
+		const delta = subtract(point, eyePos);
 		const yaw = Math.atan2(-delta.x, -delta.z);
 		const groundDist = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-		const pitch = Math.atan2(-delta.y, groundDist);
+		const pitch = Math.atan2(delta.y, groundDist);
 		return bot.look(yaw, pitch, force);
 	};
 
@@ -118,31 +124,26 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 	// ── Teleport handling ──
 
 	bot.client.on("player_position", (packet: Record<string, unknown>) => {
-		const flags = (packet.flags as number) ?? 0;
+		const flags = (packet.flags ?? {}) as Record<string, boolean>;
 		const pos = bot.entity.position as MutableVec3;
 
 		// Apply position (relative or absolute based on flags)
-		pos.x =
-			flags & 0x01
-				? bot.entity.position.x + (packet.x as number)
-				: (packet.x as number);
-		pos.y =
-			flags & 0x02
-				? bot.entity.position.y + (packet.y as number)
-				: (packet.y as number);
-		pos.z =
-			flags & 0x04
-				? bot.entity.position.z + (packet.z as number)
-				: (packet.z as number);
+		pos.x = flags.x
+			? bot.entity.position.x + (packet.x as number)
+			: (packet.x as number);
+		pos.y = flags.y
+			? bot.entity.position.y + (packet.y as number)
+			: (packet.y as number);
+		pos.z = flags.z
+			? bot.entity.position.z + (packet.z as number)
+			: (packet.z as number);
 
-		bot.entity.yaw =
-			flags & 0x08
-				? bot.entity.yaw + fromNotchianYaw(packet.yaw as number)
-				: fromNotchianYaw(packet.yaw as number);
-		bot.entity.pitch =
-			flags & 0x10
-				? bot.entity.pitch + fromNotchianPitch(packet.pitch as number)
-				: fromNotchianPitch(packet.pitch as number);
+		bot.entity.yaw = flags.yaw
+			? bot.entity.yaw + fromNotchianYaw(packet.yaw as number)
+			: fromNotchianYaw(packet.yaw as number);
+		bot.entity.pitch = flags.pitch
+			? bot.entity.pitch + fromNotchianPitch(packet.pitch as number)
+			: fromNotchianPitch(packet.pitch as number);
 
 		const vel = bot.entity.velocity as MutableVec3;
 		vel.x = 0;
@@ -202,8 +203,17 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 		// Apply back to entity
 		applyPlayerState(state, bot.entity);
 
+		// Apply locked look target (dig/place hold)
+		if (lockedLookTarget) {
+			const eyePos = vec3(bot.entity.position.x, bot.entity.position.y + 1.62, bot.entity.position.z);
+			const delta = subtract(lockedLookTarget, eyePos);
+			bot.entity.yaw = Math.atan2(-delta.x, -delta.z);
+			const groundDist = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+			bot.entity.pitch = Math.atan2(delta.y, groundDist);
+		}
+
 		// Interpolate look toward target
-		if (targetYaw !== null && targetPitch !== null) {
+		if (!lockedLookTarget && targetYaw !== null && targetPitch !== null) {
 			const LERP_FACTOR = 0.5;
 			const EPSILON = 0.01;
 
@@ -255,7 +265,9 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 		positionUpdateTimer++;
 		const forceUpdate = positionUpdateTimer >= 20; // Every 1 second
 
+		let packetType: string;
 		if (posChanged && lookChanged) {
+			packetType = "move_player_pos_rot";
 			bot.client.write("move_player_pos_rot", {
 				x: pos.x,
 				y: pos.y,
@@ -265,6 +277,7 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 				...movementFlags,
 			});
 		} else if (posChanged) {
+			packetType = "move_player_pos";
 			bot.client.write("move_player_pos", {
 				x: pos.x,
 				y: pos.y,
@@ -272,16 +285,20 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 				...movementFlags,
 			});
 		} else if (lookChanged) {
+			packetType = "move_player_rot";
 			bot.client.write("move_player_rot", {
 				yaw: toNotchianYaw(yaw),
 				pitch: toNotchianPitch(pitch),
 				...movementFlags,
 			});
 		} else if (forceUpdate) {
+			packetType = "move_player_status_only";
 			bot.client.write("move_player_status_only", { ...movementFlags });
 		} else {
 			return;
 		}
+
+		bot.emit("debug", "packet_tx", { name: packetType, x: pos.x.toFixed(1), y: pos.y.toFixed(1), z: pos.z.toFixed(1) });
 
 		positionUpdateTimer = 0;
 		lastSentPos = { ...pos };

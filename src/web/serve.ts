@@ -14,6 +14,7 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { Bot } from "../bot/types.ts";
+import { dumpChunkColumn } from "../chunk/index.ts";
 import type { Entity } from "../entity/types.ts";
 import type { BiomeTints } from "../viewer/assets.ts";
 
@@ -238,6 +239,18 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 		biomes,
 		entityModels,
 	};
+};
+
+// Global asset cache — computed once, shared across all viewer instances
+let _cachedAssets: CachedAssets | null = null;
+let _cachedAssetsJson: string | null = null;
+
+const getCachedAssets = (bot: Bot): { assets: CachedAssets; json: string } => {
+	if (!_cachedAssets) {
+		_cachedAssets = loadMcAssets(bot.version, bot);
+		_cachedAssetsJson = JSON.stringify({ type: "assets", ..._cachedAssets });
+	}
+	return { assets: _cachedAssets, json: _cachedAssetsJson! };
 };
 
 // ── Chunk buffer cache ──
@@ -507,9 +520,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			height: bot.game.height,
 		});
 
-		// Send assets
-		if (assets) {
-			sendTo(ws, { type: "assets", ...assets });
+		// Send assets (pre-serialized JSON — avoids re-serializing ~15MB per connection)
+		if (assets && _cachedAssetsJson) {
+			if (ws.readyState === ws.OPEN) ws.send(_cachedAssetsJson);
 		}
 
 		// Send current position
@@ -683,7 +696,8 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const setup = () => {
 		if (!bot.registry) return;
-		assets = loadMcAssets(bot.version, bot);
+		const cached = getCachedAssets(bot);
+		assets = cached.assets;
 		console.log(
 			`[web] Assets loaded: ${assets.textureNames.length} textures, ${Object.keys(assets.blockStates).length} block states`,
 		);
@@ -697,6 +711,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	}
 
 	bot.on("move", onMove);
+	bot.on("forcedMove", onMove);
 	bot.on("entitySpawn", onEntitySpawn);
 	bot.on("entityMoved", onEntityMoved);
 	bot.on("entityGone", onEntityGone);
@@ -706,6 +721,17 @@ canvas { display: block; width: 100vw; height: 100vh; }
 	bot.client.on("block_update", onBlockChange);
 	bot.client.on("set_time", onTimeUpdate);
 
+	// Pre-populate chunkCache from chunks already in bot.world
+	// (these arrived before createWebViewer was called)
+	if (bot.world) {
+		for (const [key, column] of bot.world.columns) {
+			if (!chunkCache.has(key)) {
+				const [cx, cz] = key.split(",").map(Number) as [number, number];
+				chunkCache.set(chunkKey(cx, cz), dumpChunkColumn(column, true));
+			}
+		}
+	}
+
 	server.listen(port, () => {
 		console.log(`[web] Viewer at http://localhost:${port}`);
 	});
@@ -714,6 +740,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const close = () => {
 		bot.removeListener("move", onMove);
+		bot.removeListener("forcedMove", onMove);
 		bot.removeListener("entitySpawn", onEntitySpawn);
 		bot.removeListener("entityMoved", onEntityMoved);
 		bot.removeListener("entityGone", onEntityGone);

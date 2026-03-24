@@ -66,6 +66,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 	const setEntityData = (entity: Entity, typeId: number) => {
 		if (!bot.registry) return;
 		initEntity(entity, bot.registry, typeId);
+		bot.emit("debug", "entity", { event: "init", id: entity.id, typeId, name: entity.name, entityType: entity.entityType });
 	};
 
 	const addNewPlayer = (

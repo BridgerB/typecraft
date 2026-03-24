@@ -1,5 +1,12 @@
 import type { NbtCompound } from "../nbt/types.ts";
 
+/** A structured component attached to a 1.21+ item. */
+export type ItemComponent = {
+	readonly type: string;
+	readonly data: unknown;
+	readonly hash: number;
+};
+
 /** A Minecraft item stack. */
 export type Item = {
 	readonly type: number;
@@ -10,6 +17,8 @@ export type Item = {
 	readonly displayName: string;
 	readonly stackSize: number;
 	readonly maxDurability: number | null;
+	readonly components: readonly ItemComponent[];
+	readonly removedComponents: readonly string[];
 };
 
 /** An enchantment applied to an item. */

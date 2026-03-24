@@ -306,9 +306,11 @@ const loop = () => {
 	const cellW = w / cols;
 	const cellH = h / rows;
 
+	// Clear entire framebuffer before rendering viewports
+	renderer.setScissorTest(false);
+	renderer.clear();
 	renderer.setScissorTest(true);
 	renderer.autoClear = false;
-	renderer.clear();
 
 	for (let i = 0; i < botOrder.length; i++) {
 		const cell = cells.get(botOrder[i]);
@@ -321,9 +323,14 @@ const loop = () => {
 
 		renderer.setViewport(x, y, cellW, cellH);
 		renderer.setScissor(x, y, cellW, cellH);
+		renderer.clear(true, true, true); // clear color+depth+stencil per cell
 		cell.viewer.camera.aspect = cellW / cellH;
 		cell.viewer.camera.updateProjectionMatrix();
-		renderer.render(cell.viewer.scene, cell.viewer.camera);
+		try {
+			renderer.render(cell.viewer.scene, cell.viewer.camera);
+		} catch (_) {
+			// Entity mesh errors must not kill the render loop
+		}
 	}
 
 	renderer.setScissorTest(false);

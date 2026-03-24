@@ -37,13 +37,37 @@ type RawVanillaRecipe = {
 /** Load item tags (e.g., #minecraft:oak_logs → [oak_log, oak_wood, ...]) */
 const loadItemTags = (): ReadonlyMap<string, readonly string[]> => {
 	const tagsDir = join(DATA_DIR, "tags/item");
-	const tags = new Map<string, readonly string[]>();
-	if (!existsSync(tagsDir)) return tags;
+	if (!existsSync(tagsDir)) return new Map();
+
+	// Pass 1: Load all tag files (may contain #tag references)
+	const raw = new Map<string, string[]>();
 	for (const file of readdirSync(tagsDir)) {
 		if (!file.endsWith(".json")) continue;
 		const name = file.replace(".json", "");
 		const data = JSON.parse(readFileSync(join(tagsDir, file), "utf8")) as { values: string[] };
-		tags.set(name, data.values.map((v) => v.replace("minecraft:", "")));
+		raw.set(name, data.values.map((v) => v.replace("minecraft:", "")));
+	}
+
+	// Pass 2: Recursively resolve nested #tag references
+	const resolve = (name: string, seen = new Set<string>()): string[] => {
+		if (seen.has(name)) return [];
+		seen.add(name);
+		const values = raw.get(name);
+		if (!values) return [];
+		const resolved: string[] = [];
+		for (const v of values) {
+			if (v.startsWith("#")) {
+				resolved.push(...resolve(v.slice(1), seen));
+			} else {
+				resolved.push(v);
+			}
+		}
+		return resolved;
+	};
+
+	const tags = new Map<string, readonly string[]>();
+	for (const name of raw.keys()) {
+		tags.set(name, resolve(name));
 	}
 	return tags;
 };

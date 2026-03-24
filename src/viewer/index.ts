@@ -5,6 +5,7 @@ export {
 	type BlockModelFace,
 	type BlockModelVariant,
 	type BlockStateDefinition,
+	computeUvMap,
 	createTextureAtlas,
 	loadAssets,
 	type McAssets,

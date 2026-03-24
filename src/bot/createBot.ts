@@ -290,6 +290,11 @@ export const createBot = (options: BotOptions): Bot => {
 		bot.emit("kicked", packet.reason as string, false);
 	});
 
+	// Global packet sniffer — every packet goes to debug events for SQLite capture
+	client.on("packet", (_data: unknown, meta: { name: string }) => {
+		bot.emit("debug", "packet_rx", { name: meta.name });
+	});
+
 	// Initialize all subsystems
 	initGame(bot, options);
 	initEntities(bot, options);

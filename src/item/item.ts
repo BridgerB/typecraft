@@ -6,7 +6,8 @@
 import { equalNbt, nbtInt, nbtList, nbtShort, nbtString } from "../nbt/nbt.ts";
 import type { NbtCompound, NbtTag } from "../nbt/types.ts";
 import type { Registry } from "../registry/types.ts";
-import type { Enchant, Item, NotchItem, NotchItemBlockId } from "./types.ts";
+import { hashComponents } from "./component-hash.ts";
+import type { Enchant, Item, ItemComponent, NotchItem, NotchItemBlockId } from "./types.ts";
 
 // ── Construction ──
 
@@ -17,6 +18,8 @@ export const createItem = (
 	count: number,
 	metadata?: number,
 	nbt?: NbtCompound | null,
+	components?: readonly ItemComponent[],
+	removedComponents?: readonly string[],
 ): Item => {
 	const def = registry.itemsById.get(type);
 	return {
@@ -28,6 +31,8 @@ export const createItem = (
 		displayName: def?.displayName ?? "Unknown",
 		stackSize: def?.stackSize ?? 1,
 		maxDurability: def?.maxDurability ?? null,
+		components: components ?? [],
+		removedComponents: removedComponents ?? [],
 	};
 };
 
@@ -320,9 +325,25 @@ export const itemsEqual = (
 	if (a.type !== b.type || a.metadata !== b.metadata) return false;
 	if (matchCount && a.count !== b.count) return false;
 	if (matchNbt) {
-		if (a.nbt === null && b.nbt === null) return true;
-		if (a.nbt === null || b.nbt === null) return false;
-		return equalNbt(a.nbt, b.nbt);
+		// Compare 1.21+ components by type+hash
+		if (a.components.length !== b.components.length) return false;
+		for (let i = 0; i < a.components.length; i++) {
+			if (
+				a.components[i]!.type !== b.components[i]!.type ||
+				a.components[i]!.hash !== b.components[i]!.hash
+			)
+				return false;
+		}
+		if (a.removedComponents.length !== b.removedComponents.length)
+			return false;
+		for (let i = 0; i < a.removedComponents.length; i++) {
+			if (a.removedComponents[i] !== b.removedComponents[i]) return false;
+		}
+		// Legacy NBT comparison
+		if (a.nbt !== null || b.nbt !== null) {
+			if (a.nbt === null || b.nbt === null) return false;
+			return equalNbt(a.nbt, b.nbt);
+		}
 	}
 	return true;
 };
@@ -331,14 +352,17 @@ export const itemsEqual = (
 
 /** Convert an item to network (Notch) format. */
 export const toNotch = (registry: Registry, item: Item | null): NotchItem => {
-	// 1.21+ HashedSlot format: { itemId, itemCount, components, removeComponents }
+	// 1.21+ HashedSlot format: { itemId, itemCount, components (type+hash), removeComponents }
 	if (!registry.supportFeature("itemSerializationUsesBlockId")) {
-		if (!item) return { itemCount: 0, itemId: 0, components: [], removeComponents: [] } as unknown as NotchItem;
+		if (!item) return null as unknown as NotchItem;
 		return {
 			itemId: item.type,
 			itemCount: item.count,
-			components: [],
-			removeComponents: [],
+			components: item.components.map((c) => ({
+				type: c.type,
+				hash: c.hash,
+			})),
+			removeComponents: item.removedComponents.map((type) => ({ type })),
 		} as unknown as NotchItem;
 	}
 
@@ -361,13 +385,31 @@ export const fromNotch = (
 	if (!networkItem) return null;
 	const ni = networkItem as Record<string, unknown>;
 
-	// 1.21+ format: { itemCount, itemId, addedComponentCount, ... }
+	// 1.21+ format: { itemCount, itemId, components, removeComponents }
 	// itemCount=0 means empty slot
 	if ("itemCount" in ni) {
 		const count = ni.itemCount as number;
 		if (count === 0) return null;
 		const id = ni.itemId as number;
-		return createItem(registry, id, count, 0, null);
+
+		const rawComponents = (ni.components ?? []) as {
+			type: string;
+			data: unknown;
+		}[];
+		const rawRemoved = (ni.removeComponents ?? []) as { type: string }[];
+
+		const components = hashComponents(rawComponents);
+		const removedComponents = rawRemoved.map((r) => r.type);
+
+		return createItem(
+			registry,
+			id,
+			count,
+			0,
+			null,
+			components,
+			removedComponents,
+		);
 	}
 
 	// Legacy format with "present" field

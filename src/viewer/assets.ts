@@ -111,22 +111,18 @@ const tintToGl = (color: number): readonly [number, number, number] => {
 
 // ── Texture atlas ──
 
-export const createTextureAtlas = (
+/** Compute UV map without a canvas — pure math, works on server. */
+export const computeUvMap = (
 	textureFiles: readonly string[],
-	loadImage: (name: string) => ImageBitmap | HTMLImageElement,
-): TextureAtlas => {
+): { uvMap: Record<string, TextureUV>; tileSize: number; atlasSize: number; texSize: number } => {
 	const tileSize = 16;
 	const texSize = nextPowerOfTwo(Math.ceil(Math.sqrt(textureFiles.length)));
 	const atlasSize = texSize * tileSize;
-
-	const canvas = new OffscreenCanvas(atlasSize, atlasSize);
-	const ctx = canvas.getContext("2d")!;
 	const uvMap: Record<string, TextureUV> = {};
 
 	for (let i = 0; i < textureFiles.length; i++) {
 		const x = (i % texSize) * tileSize;
 		const y = Math.floor(i / texSize) * tileSize;
-
 		const name = textureFiles[i]!.replace(".png", "");
 		uvMap[name] = {
 			u: x / atlasSize,
@@ -134,7 +130,23 @@ export const createTextureAtlas = (
 			su: tileSize / atlasSize,
 			sv: tileSize / atlasSize,
 		};
+	}
 
+	return { uvMap, tileSize, atlasSize, texSize };
+};
+
+export const createTextureAtlas = (
+	textureFiles: readonly string[],
+	loadImage: (name: string) => ImageBitmap | HTMLImageElement,
+): TextureAtlas => {
+	const { uvMap, tileSize, atlasSize, texSize } = computeUvMap(textureFiles);
+
+	const canvas = new OffscreenCanvas(atlasSize, atlasSize);
+	const ctx = canvas.getContext("2d")!;
+
+	for (let i = 0; i < textureFiles.length; i++) {
+		const x = (i % texSize) * tileSize;
+		const y = Math.floor(i / texSize) * tileSize;
 		const img = loadImage(textureFiles[i]!);
 		ctx.drawImage(img, 0, 0, 16, 16, x, y, 16, 16);
 	}

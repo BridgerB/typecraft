@@ -306,8 +306,8 @@ describe("toNotch / fromNotch", () => {
 
 	it("handles null item", () => {
 		const notch = toNotch(reg120, null);
-		expect((notch as { itemCount: number }).itemCount).toBe(0);
-		expect(fromNotch(reg120, notch)).toBeNull();
+		// 1.21+ returns null for empty items (option HashedSlot absent)
+		expect(notch).toBeNull();
 	});
 
 	it("round-trips item with NBT (components preserved)", () => {

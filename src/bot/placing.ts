@@ -34,12 +34,11 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 			dz = options.delta.z;
 		}
 
-		// Look at the placement point
+		// Look at the placement point and lock for duration
+		const lookTarget = vec3(block.x + dx, block.y + dy, block.z + dz);
 		if (options.forceLook !== "ignore") {
-			await bot.lookAt(
-				vec3(block.x + dx, block.y + dy, block.z + dz),
-				options.forceLook === true,
-			);
+			bot.lockLook(lookTarget);
+			await bot.lookAt(lookTarget, options.forceLook === true);
 		}
 
 		// Swing arm
@@ -113,40 +112,53 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		const block = referenceBlock as { position: Vec3 };
 		if (!block.position) return;
 
-		await _genericPlace(block.position, faceVector, {
-			forceLook: true,
-			...options,
-		});
-
-		// Wait for block update confirmation
 		const dest = vec3(
 			block.position.x + faceVector.x,
 			block.position.y + faceVector.y,
 			block.position.z + faceVector.z,
 		);
 
-		await new Promise<void>((resolve, reject) => {
-			const timeout = setTimeout(() => {
-				bot.removeListener("blockUpdate", onUpdate);
-				reject(new Error("Place block timeout"));
-			}, 5000);
-
-			// blockUpdate emits (pos: Vec3, oldStateId: number, newStateId: number)
-			const onUpdate = (pos: unknown, oldStateId: unknown, newStateId: unknown) => {
-				const p = pos as Vec3;
-				if (!p || typeof p.x !== "number") return;
-				if (p.x === dest.x && p.y === dest.y && p.z === dest.z) {
-					if (oldStateId !== newStateId) {
-						clearTimeout(timeout);
-						bot.removeListener("blockUpdate", onUpdate);
-						bot.emit("blockPlaced", pos, pos);
-						resolve();
-					}
-				}
-			};
-
-			bot.on("blockUpdate", onUpdate);
+		bot.emit("debug", "place", {
+			event: "start",
+			ref: { x: block.position.x, y: block.position.y, z: block.position.z },
+			dest: { x: dest.x, y: dest.y, z: dest.z },
+			face: { x: faceVector.x, y: faceVector.y, z: faceVector.z },
+			held: bot.heldItem?.name ?? null,
 		});
+
+		await _genericPlace(block.position, faceVector, {
+			forceLook: true,
+			...options,
+		});
+
+		// Wait for block update confirmation — accept ANY block change at dest
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const timeout = setTimeout(() => {
+					bot.removeListener("blockUpdate", onUpdate);
+					bot.emit("debug", "place", { event: "timeout", dest: { x: dest.x, y: dest.y, z: dest.z } });
+					reject(new Error("Place block timeout"));
+				}, 5000);
+
+				const onUpdate = (pos: unknown, oldStateId: unknown, newStateId: unknown) => {
+					const p = pos as Vec3;
+					if (!p || typeof p.x !== "number") return;
+					if (p.x === dest.x && p.y === dest.y && p.z === dest.z) {
+						if (oldStateId !== newStateId) {
+							clearTimeout(timeout);
+							bot.removeListener("blockUpdate", onUpdate);
+							bot.emit("debug", "place", { event: "confirmed", dest: { x: dest.x, y: dest.y, z: dest.z }, newStateId });
+							bot.emit("blockPlaced", pos, pos);
+							resolve();
+						}
+					}
+				};
+
+				bot.on("blockUpdate", onUpdate);
+			});
+		} finally {
+			bot.unlockLook();
+		}
 	};
 
 	bot.placeBlock = async (

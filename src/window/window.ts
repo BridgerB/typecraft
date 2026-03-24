@@ -13,7 +13,7 @@ import type { Click, Window } from "./types.ts";
 // ── Helper: create an item with a different count ──
 
 const withCount = (registry: Registry, item: Item, count: number): Item =>
-	createItem(registry, item.type, count, item.metadata, item.nbt);
+	createItem(registry, item.type, count, item.metadata, item.nbt, item.components, item.removedComponents);
 
 // ── Construction ──
 

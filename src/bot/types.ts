@@ -446,6 +446,8 @@ export type Bot = EventEmitter & {
 	clearControlStates: () => void;
 	look: (yaw: number, pitch: number, force?: boolean) => Promise<void>;
 	lookAt: (point: Vec3, force?: boolean) => Promise<void>;
+	lockLook: (pos: Vec3) => void;
+	unlockLook: () => void;
 	elytraFly: () => Promise<void>;
 	waitForTicks: (ticks: number) => Promise<void>;
 
@@ -531,6 +533,7 @@ export type Bot = EventEmitter & {
 	stopDigging: () => void;
 	canDigBlock: (block: unknown) => boolean;
 	digTime: (block: unknown) => number;
+	collectDrops: (range?: number, timeout?: number, navigate?: (pos: Vec3) => Promise<void>) => Promise<number>;
 
 	// ── Methods: Placing ──
 	placeBlock: (referenceBlock: unknown, faceVector: Vec3) => Promise<void>;

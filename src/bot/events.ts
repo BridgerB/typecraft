@@ -176,6 +176,9 @@ export type BotEventMap = {
 	bossBarDeleted: [bossBar: BossBar];
 	bossBarUpdated: [bossBar: BossBar];
 
+	// ── Debug ──
+	debug: [category: string, detail: Record<string, unknown>];
+
 	// ── Other ──
 	resourcePack: [
 		url: string,

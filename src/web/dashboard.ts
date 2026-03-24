@@ -14,6 +14,7 @@ import { type WebSocket, WebSocketServer } from "ws";
 import { dirname, join as pathJoin } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Bot } from "../bot/types.ts";
+import { dumpChunkColumn } from "../chunk/index.ts";
 import type { Entity } from "../entity/types.ts";
 import { loadMcAssets } from "./serve.ts";
 
@@ -55,7 +56,7 @@ const MIME: Record<string, string> = {
 /** Create a multi-bot dashboard. Add bots with addBotToDashboard(). */
 export const createDashboard = (options?: DashboardOptions): Dashboard => {
 	const port = options?.port ?? 3000;
-	const viewDistance = options?.viewDistance ?? 4;
+	const viewDistance = options?.viewDistance ?? 2;
 	const distDir = resolve(import.meta.dirname, "../../dist");
 	const threeDir = resolve(import.meta.dirname, "../../node_modules/three/build");
 
@@ -445,6 +446,14 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		};
 
 		bot.on("move", onMove);
+		bot.on("forcedMove", onMove);
+
+		// Position heartbeat — poll bot position every 500ms regardless of events.
+		// Events (move/forcedMove) may not fire for spectator bots or between tp's.
+		const positionHeartbeat = setInterval(() => {
+			if (bot.entity) onMove();
+		}, 500);
+
 		bot.on("entitySpawn", onEntitySpawn);
 		bot.on("entityMoved", onEntityMoved);
 		bot.on("entityGone", onEntityGone);
@@ -453,8 +462,20 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		bot.client.on("forget_level_chunk", onUnloadChunk);
 		bot.client.on("block_update", onBlockChange);
 
+		// Pre-populate chunkCache from chunks already in bot.world
+		if (bot.world) {
+			for (const [key, column] of bot.world.columns) {
+				if (!chunkCache.has(key)) {
+					const [cx, cz] = key.split(",").map(Number) as [number, number];
+					chunkCache.set(chunkKey(cx, cz), dumpChunkColumn(column, true));
+				}
+			}
+		}
+
 		cleanups.push(() => {
+			clearInterval(positionHeartbeat);
 			bot.removeListener("move", onMove);
+			bot.removeListener("forcedMove", onMove);
 			bot.removeListener("entitySpawn", onEntitySpawn);
 			bot.removeListener("entityMoved", onEntityMoved);
 			bot.removeListener("entityGone", onEntityGone);

@@ -4,6 +4,7 @@ export {
 	createGoalBreakBlock,
 	createGoalCompositeAll,
 	createGoalCompositeAny,
+	createGoalExactXZ,
 	createGoalFollow,
 	createGoalGetToBlock,
 	createGoalInvert,

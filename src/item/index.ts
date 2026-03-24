@@ -23,6 +23,7 @@ export {
 export type {
 	Enchant,
 	Item,
+	ItemComponent,
 	NotchItem,
 	NotchItemBlockId,
 	NotchItemPresent,

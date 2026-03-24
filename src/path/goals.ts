@@ -262,6 +262,29 @@ export const createGoalLookAtBlock = (
 	};
 };
 
+/** Goal: within sub-block XZ range of an exact position (for item pickup).
+ * A* gets the bot to the right block, isEnd checks actual bot position. */
+export const createGoalExactXZ = (
+	targetX: number,
+	targetZ: number,
+	range = 1.0,
+): Goal => {
+	const gx = Math.floor(targetX);
+	const gz = Math.floor(targetZ);
+	const rangeSq = range * range;
+	return {
+		heuristic: (node) => octileHeuristic(gx - node.x, 0, gz - node.z),
+		isEnd: (node) => {
+			// A* uses block grid, so check if this block is close enough
+			// that the bot could be within range (node center = node.x+0.5, node.z+0.5)
+			const dx = targetX - (node.x + 0.5);
+			const dz = targetZ - (node.z + 0.5);
+			return dx * dx + dz * dz <= rangeSq + 1.0; // allow slight overshoot for A* to find the right block
+		},
+		// Sub-block precision is handled by the caller after pathfinding via lookAt + forward
+	};
+};
+
 /** Goal: position where a block can be broken (alias for GoalLookAtBlock). */
 export const createGoalBreakBlock = (
 	x: number,
