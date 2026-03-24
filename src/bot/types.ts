@@ -256,6 +256,8 @@ export type FindBlockOptions = {
 		| ((name: string, stateId: number) => boolean);
 	readonly maxDistance?: number;
 	readonly count?: number;
+	/** Only return blocks with at least one transparent neighbor AND line-of-sight from bot eye. Default: true */
+	readonly exposed?: boolean;
 };
 
 // ── Command block ──

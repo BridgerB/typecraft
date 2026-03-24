@@ -228,9 +228,22 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 	bot.findBlocks = (options: FindBlockOptions): Vec3[] => {
 		if (!bot.world || !bot.registry) return [];
 
-		const { matching, maxDistance = 64, count = 1, point } = options;
+		const { matching, maxDistance = 64, count = 1, point, exposed } = options;
 		const origin = point ?? bot.entity.position;
 		const results: Vec3[] = [];
+		const useExposed = exposed !== false;
+
+		// Check if a block has at least one transparent neighbor (air, water, glass, etc.)
+		const isExposed = (p: Vec3): boolean => {
+			const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const;
+			for (const [ox, oy, oz] of offsets) {
+				const sid = worldGetBlockStateId(bot.world!, vec3(p.x + ox, p.y + oy, p.z + oz));
+				if (sid == null || sid === 0) return true; // unloaded or air = exposed
+				const def = bot.registry!.blocksByStateId.get(sid);
+				if (def?.transparent) return true;
+			}
+			return false;
+		};
 
 		const matchFn =
 			typeof matching === "function"
@@ -245,31 +258,48 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 							return def ? (matching as number[]).includes(def.id) : false;
 						};
 
-		// Simple scan around origin
+		// Scan expanding sphere around origin — closest blocks first
 		const r = Math.ceil(maxDistance);
-		for (let dx = -r; dx <= r; dx++) {
-			for (let dy = -r; dy <= r; dy++) {
-				for (let dz = -r; dz <= r; dz++) {
-					if (dx * dx + dy * dy + dz * dz > maxDistance * maxDistance) continue;
+		let blocksChecked = 0;
+		let chunksNull = 0;
+		for (let dist = 0; dist <= r; dist++) {
+			for (let dx = -dist; dx <= dist; dx++) {
+				for (let dy = -dist; dy <= dist; dy++) {
+					for (let dz = -dist; dz <= dist; dz++) {
+						// Only check the shell at this distance
+						if (Math.abs(dx) !== dist && Math.abs(dy) !== dist && Math.abs(dz) !== dist) continue;
+						if (dx * dx + dy * dy + dz * dz > maxDistance * maxDistance) continue;
 
-					const pos = vec3(
-						Math.floor(origin.x) + dx,
-						Math.floor(origin.y) + dy,
-						Math.floor(origin.z) + dz,
-					);
+						const pos = vec3(
+							Math.floor(origin.x) + dx,
+							Math.floor(origin.y) + dy,
+							Math.floor(origin.z) + dz,
+						);
 
-					const stateId = worldGetBlockStateId(bot.world!, pos);
-					if (stateId == null || stateId === 0) continue;
+						const stateId = worldGetBlockStateId(bot.world!, pos);
+						if (stateId == null) { chunksNull++; continue; }
+						if (stateId === 0) continue;
 
-					const block = stateIdToBlock(bot.registry!, stateId);
-					if (matchFn(block.name, stateId)) {
-						results.push(pos);
-						if (results.length >= count) return results;
+						blocksChecked++;
+						const block = stateIdToBlock(bot.registry!, stateId);
+						if (matchFn(block.name, stateId)) {
+							// Filter: exposed (has transparent neighbor) + line-of-sight from bot eye
+							if (useExposed) {
+								if (!isExposed(pos)) continue;
+								if (!bot.canSeeBlock(pos)) continue;
+							}
+							results.push(pos);
+							if (results.length >= count) {
+								bot.emit("debug", "findBlocks", { results: results.length, blocksChecked, chunksNull, maxDistance, exposed: useExposed });
+								return results;
+							}
+						}
 					}
 				}
 			}
 		}
 
+		bot.emit("debug", "findBlocks", { results: results.length, blocksChecked, chunksNull, maxDistance, exposed: useExposed, loadedChunks: bot.world!.columns.size });
 		return results;
 	};
 
