@@ -79,6 +79,45 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 			setColumn(bot.world!, x, z, column);
 			bot.emit("chunkColumnLoad", vec3(x * 16, 0, z * 16));
+
+			// Emit blockSeen for exposed blocks in the newly loaded chunk
+			// Only blocks with at least one transparent neighbor — no X-ray
+			// watchBlocks can contain specific names or "*" for all blocks
+			if (bot.registry && bot.watchBlocks.size > 0 && bot.listenerCount("blockSeen") > 0) {
+				const watchAll = bot.watchBlocks.has("*");
+				const minY = bot.game.minY;
+				const sections = column.sections;
+				for (let si = 0; si < sections.length; si++) {
+					const section = sections[si];
+					if (!section) continue;
+					const sectionY = minY + si * 16;
+					for (let bx = 0; bx < 16; bx++) {
+						for (let by = 0; by < 16; by++) {
+							for (let bz = 0; bz < 16; bz++) {
+								const wx = x * 16 + bx;
+								const wy = sectionY + by;
+								const wz = z * 16 + bz;
+								const sid = worldGetBlockStateId(bot.world!, vec3(wx, wy, wz));
+								if (sid == null || sid === 0) continue;
+								const def = bot.registry.blocksByStateId.get(sid);
+								if (!def) continue;
+								if (!watchAll && !bot.watchBlocks.has(def.name)) continue;
+								// Exposed check — at least one transparent neighbor
+								let exposed = false;
+								for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const) {
+									const nsid = worldGetBlockStateId(bot.world!, vec3(wx + ox, wy + oy, wz + oz));
+									if (nsid == null || nsid === 0) { exposed = true; break; }
+									const ndef = bot.registry.blocksByStateId.get(nsid);
+									if (ndef?.transparent) { exposed = true; break; }
+								}
+								if (exposed) {
+									bot.emit("blockSeen", def.name, vec3(wx, wy, wz));
+								}
+							}
+						}
+					}
+				}
+			}
 		} catch (err) {
 			bot.emit("error", err as Error);
 		}
@@ -114,6 +153,21 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		const stateId = packet.type as number;
 
 		worldSetBlockStateId(bot.world, pos, stateId);
+
+		// When a block changes (e.g., stone mined → air), check if any
+		// neighbors just became exposed
+		if (bot.registry && bot.watchBlocks.size > 0 && bot.listenerCount("blockSeen") > 0) {
+			const watchAll = bot.watchBlocks.has("*");
+			for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const) {
+				const npos = vec3(loc.x + ox, loc.y + oy, loc.z + oz);
+				const nsid = worldGetBlockStateId(bot.world, npos);
+				if (nsid == null || nsid === 0) continue;
+				const ndef = bot.registry.blocksByStateId.get(nsid);
+				if (ndef && (watchAll || bot.watchBlocks.has(ndef.name))) {
+					bot.emit("blockSeen", ndef.name, npos);
+				}
+			}
+		}
 	});
 
 	// ── Multi block change ──

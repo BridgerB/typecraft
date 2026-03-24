@@ -176,6 +176,9 @@ export type BotEventMap = {
 	bossBarDeleted: [bossBar: BossBar];
 	bossBarUpdated: [bossBar: BossBar];
 
+	// ── Block vision ──
+	blockSeen: [name: string, pos: Vec3];
+
 	// ── Debug ──
 	debug: [category: string, detail: Record<string, unknown>];
 

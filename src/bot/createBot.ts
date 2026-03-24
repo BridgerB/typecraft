@@ -114,6 +114,9 @@ export const createBot = (options: BotOptions): Bot => {
 		// World
 		world: null,
 
+		// Block vision
+		watchBlocks: new Set(),
+
 		// Physics
 		physics: null,
 		physicsEnabled: options.physicsEnabled ?? true,

@@ -401,6 +401,10 @@ export type Bot = EventEmitter & {
 	// ── World ──
 	world: World | null;
 
+	// ── Block vision ──
+	/** Block names to watch. Exposed instances emit "blockSeen" on chunk load and block_update. */
+	watchBlocks: Set<string>;
+
 	// ── Physics ──
 	physics: PhysicsEngine | null;
 	physicsEnabled: boolean;
