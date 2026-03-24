@@ -79,6 +79,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	let digging = false;
 	let digTask: Task<void> | null = null;
 	let swingInterval: ReturnType<typeof setInterval> | null = null;
+	let digGeneration = 0; // increments each dig — stale timeouts are ignored
 
 	bot.dig = async (
 		block: unknown,
@@ -205,6 +206,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 		digging = true;
 		bot.targetDigBlock = block as never;
+		const thisGen = ++digGeneration;
 
 		// Lock look at block center for the entire dig
 		bot.lockLook(vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5));
@@ -231,12 +233,13 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 		// Primary: send status=2 after calculated dig time
 		const digTimeout = setTimeout(() => {
-			if (digging) finishDig(pos, face);
+			if (digging && digGeneration === thisGen) finishDig(pos, face);
 		}, time);
 
 		// Bonus: if blockUpdate fires (e.g., another player broke it, or server
 		// sends it to the digger in some versions), complete early
 		const onBlockUpdate = (updatePos: unknown, _oldStateId: unknown, newStateId: unknown) => {
+			if (digGeneration !== thisGen) return;
 			const p = updatePos as Vec3;
 			if (!p || p.x !== pos.x || p.y !== pos.y || p.z !== pos.z) return;
 			if ((newStateId as number) === 0 && digging) {
