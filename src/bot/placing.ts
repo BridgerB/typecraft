@@ -97,6 +97,15 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		direction?: Vec3,
 		cursorPos?: Vec3,
 	): Promise<void> => {
+		// Validate distance — server ignores interactions beyond ~4.5 blocks
+		const dx = bot.entity.position.x - (block.x + 0.5);
+		const dy = bot.entity.position.y - (block.y + 0.5);
+		const dz = bot.entity.position.z - (block.z + 0.5);
+		const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		if (dist > 6) {
+			throw new Error(`Too far to interact with block (dist=${dist.toFixed(1)}, max=6)`);
+		}
+
 		const faceVector = direction ?? vec3(0, 1, 0);
 		await _genericPlace(block, faceVector, {
 			delta: cursorPos,

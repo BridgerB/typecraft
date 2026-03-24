@@ -64,6 +64,8 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 							windowCraftingTable = bot.currentWindow;
 						} else {
 							const block = craftingTable as { position: Vec3 };
+							// Look at the table before activating
+							await bot.lookAt(vec3(block.position.x + 0.5, block.position.y + 0.5, block.position.z + 0.5), true);
 							await bot.activateBlock(block.position);
 							const [win] = await once<[Window]>(bot, "windowOpen", 5000);
 							windowCraftingTable = win;
