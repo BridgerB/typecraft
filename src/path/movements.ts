@@ -207,7 +207,7 @@ export const createMovements = (
 				[1, 0],
 				[-1, 0],
 			]) {
-				if (queryBlock(x + dx, y, z + dz).liquid) return -1;
+				if (queryBlock(x + dx!, y, z + dz!).liquid) return -1;
 			}
 			if (queryBlock(x, y + 1, z).liquid) return -1;
 		}

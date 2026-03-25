@@ -27,15 +27,15 @@ export const mcServerHash = (
 
 /** Format a SHA1 digest as Minecraft's signed hex string. */
 const mcHexDigest = (digest: Buffer): string => {
-	const negative = (digest[0] & 0x80) !== 0;
+	const negative = (digest[0]! & 0x80) !== 0;
 	if (negative) {
 		// Two's complement: invert all bits, add 1
 		let carry = true;
 		for (let i = digest.length - 1; i >= 0; i--) {
-			digest[i] = ~digest[i] & 0xff;
+			digest[i] = ~digest[i]! & 0xff;
 			if (carry) {
 				carry = digest[i] === 0xff;
-				digest[i] = (digest[i] + 1) & 0xff;
+				digest[i] = (digest[i]! + 1) & 0xff;
 			}
 		}
 		return `-${digest.toString("hex").replace(/^0+/, "")}`;

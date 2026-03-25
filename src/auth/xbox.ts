@@ -165,8 +165,8 @@ const getXstsToken = async (
 
 	return {
 		XSTSToken: data.Token as string,
-		userHash: claims[0].uhs,
-		userXUID: claims[0].xid,
+		userHash: claims[0]!.uhs,
+		userXUID: claims[0]!.xid,
 		expiresOn: data.NotAfter as string,
 	};
 };

@@ -24,7 +24,7 @@ export const resolveServer = async (
 	try {
 		const records = await resolveSrv(`_minecraft._tcp.${host}`);
 		if (records.length > 0) {
-			return { host: records[0].name, port: records[0].port };
+			return { host: records[0]!.name, port: records[0]!.port };
 		}
 	} catch {
 		// SRV lookup failed — fall back to direct connection

@@ -85,7 +85,7 @@ const updateLabels = () => {
 	const cellH = canvas.clientHeight / rows;
 
 	for (let i = 0; i < botOrder.length; i++) {
-		const name = botOrder[i];
+		const name = botOrder[i]!;
 		const col = i % cols;
 		const row = Math.floor(i / cols);
 		const label = document.createElement("div");
@@ -379,7 +379,7 @@ const loop = () => {
 	renderer.autoClear = false;
 
 	for (let i = 0; i < botOrder.length; i++) {
-		const cell = cells.get(botOrder[i]);
+		const cell = cells.get(botOrder[i]!);
 		if (!cell || !cell.assetsReady) continue;
 
 		const col = i % cols;

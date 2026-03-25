@@ -435,7 +435,7 @@ export const createPathfinder = (
 			const materialSpeeds = bot.registry.materials[blockDef.material];
 			if (materialSpeeds?.[item.type]) {
 				// This tool has a speed for this material
-				const toolSpeed = materialSpeeds[item.type];
+				const toolSpeed = materialSpeeds[item.type]!;
 				// Rough estimate: faster tool = lower time
 				if (toolSpeed > 1) {
 					bestTool = item;

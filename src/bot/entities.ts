@@ -934,7 +934,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		filter: string | RegExp | ((player: Player) => boolean),
 	): Entity | null => {
 		const results = bot.findPlayers(filter);
-		return results.length > 0 ? results[0] : null;
+		return results[0] ?? null;
 	};
 
 	// Emit bot's entitySpawn when first spawn happens

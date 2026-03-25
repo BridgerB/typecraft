@@ -129,7 +129,7 @@ export const equalNbt = (a: NbtTag, b: NbtTag): boolean => {
 			const aEntries = Object.entries(a.value);
 			if (aEntries.length !== Object.keys(bValue).length) return false;
 			return aEntries.every(
-				([key, val]) => key in bValue && equalNbt(val, bValue[key]),
+				([key, val]) => key in bValue && equalNbt(val, bValue[key]!),
 			);
 		}
 		case "list": {
@@ -159,7 +159,7 @@ export const equalNbt = (a: NbtTag, b: NbtTag): boolean => {
 			const bLongs = (b as NbtLongArray).value;
 			if (a.value.length !== bLongs.length) return false;
 			return a.value.every(
-				(v, i) => v[0] === bLongs[i][0] && v[1] === bLongs[i][1],
+				(v, i) => v[0] === bLongs[i]![0] && v[1] === bLongs[i]![1],
 			);
 		}
 		default:

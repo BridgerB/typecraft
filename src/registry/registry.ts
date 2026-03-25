@@ -86,7 +86,7 @@ const resolveIngredient = (
 		const tagName = ref.slice("#minecraft:".length);
 		const tagItems = tags.get(tagName);
 		if (!tagItems || tagItems.length === 0) return null;
-		const item = itemsByName.get(tagItems[0]);
+		const item = itemsByName.get(tagItems[0]!);
 		return item?.id ?? null;
 	}
 	const name = ref.replace("minecraft:", "");
@@ -138,7 +138,7 @@ const loadRecipes = (
 				}
 				const recipe: RawRecipe = { inShape, result };
 				if (!byResultId[result.id]) byResultId[result.id] = [];
-				byResultId[result.id].push(recipe);
+				byResultId[result.id]!.push(recipe);
 			} else if (
 				raw.type === "minecraft:crafting_shapeless" &&
 				raw.ingredients
@@ -153,7 +153,7 @@ const loadRecipes = (
 				}
 				const recipe: RawRecipe = { ingredients, result };
 				if (!byResultId[result.id]) byResultId[result.id] = [];
-				byResultId[result.id].push(recipe);
+				byResultId[result.id]!.push(recipe);
 			}
 			// Skip smelting, stonecutting, smithing — not used by bot.craft()
 		} catch {
@@ -187,9 +187,9 @@ export const createRegistry = (version: string): Registry => {
 			.filter((f) => f.endsWith(".json"))
 			.sort();
 		for (let i = 0; i < files.length; i++) {
-			const name = files[i].replace(".json", "");
+			const name = files[i]!.replace(".json", "");
 			const raw = JSON.parse(
-				readFileSync(join(biomesRawDir, files[i]), "utf8"),
+				readFileSync(join(biomesRawDir, files[i]!), "utf8"),
 			) as {
 				temperature?: number;
 				downfall?: number;

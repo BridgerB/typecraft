@@ -407,7 +407,7 @@ const buildBitfield = (
 			// Read as big-endian bigint
 			let raw = 0n;
 			for (let i = 0; i < byteSize; i++) {
-				raw = (raw << 8n) | BigInt(b[o + i]);
+				raw = (raw << 8n) | BigInt(b[o + i]!);
 			}
 			const result: Record<string, number> = {};
 			let bitOffset = BigInt(totalBits);
@@ -429,7 +429,7 @@ const buildBitfield = (
 			for (const field of fields) {
 				bitOffset -= BigInt(field.size);
 				const mask = (1n << BigInt(field.size)) - 1n;
-				let val = BigInt(obj[field.name]) & mask;
+				let val = BigInt(obj[field.name]!) & mask;
 				if (val < 0n) val = (1n << BigInt(field.size)) + val;
 				raw |= (val & mask) << bitOffset;
 			}
@@ -456,7 +456,7 @@ const buildBitflags = (
 			const bits = r.value as number;
 			const result: Record<string, boolean> = {};
 			for (let i = 0; i < flags.length; i++) {
-				if (flags[i]) result[flags[i]] = !!(bits & (1 << (i + shift)));
+				if (flags[i]) result[flags[i]!] = !!(bits & (1 << (i + shift)));
 			}
 			return { value: result, size: r.size };
 		},
@@ -464,7 +464,7 @@ const buildBitflags = (
 			const obj = v as Record<string, boolean>;
 			let bits = 0;
 			for (let i = 0; i < flags.length; i++) {
-				if (flags[i] && obj[flags[i]]) bits |= 1 << (i + shift);
+				if (flags[i] && obj[flags[i]!]) bits |= 1 << (i + shift);
 			}
 			return innerType.write(bits, b, o, ctx);
 		},
@@ -536,10 +536,10 @@ const lpVec3Sanitize = (v: number): number =>
 
 const LP_VEC3_TYPE: TypeDef = {
 	read: (b, o) => {
-		const a = b[o];
+		const a = b[o]!;
 		if (a === 0) return { value: { x: 0, y: 0, z: 0 }, size: 1 };
 
-		const byte1 = b[o + 1];
+		const byte1 = b[o + 1]!;
 		const dword = b.readUInt32LE(o + 2);
 		const packed = dword * 65536 + (byte1 << 8) + a;
 
@@ -660,8 +660,8 @@ const buildTopBitSetArray = (
 			const arr: unknown[] = [];
 			let totalSize = 0;
 			while (true) {
-				const hasMore = !!(b[o + totalSize] & 0x80);
-				b[o + totalSize] &= 0x7f; // Clear top bit for reading
+				const hasMore = !!(b[o + totalSize]! & 0x80);
+				b[o + totalSize]! &= 0x7f; // Clear top bit for reading
 				const r = innerType.read(b, o + totalSize, ctx);
 				arr.push(r.value);
 				totalSize += r.size;
@@ -674,7 +674,7 @@ const buildTopBitSetArray = (
 			for (let i = 0; i < arr.length; i++) {
 				const startO = o;
 				o = innerType.write(arr[i], b, o, ctx);
-				if (i < arr.length - 1) b[startO] |= 0x80; // Set top bit for continuation
+				if (i < arr.length - 1) b[startO]! |= 0x80; // Set top bit for continuation
 			}
 			return o;
 		},
@@ -871,7 +871,6 @@ export const createTypeRegistry = (
 			continue;
 		}
 		// Lazy: don't resolve yet, just store the schema
-		const _cacheKey = `named:${name}`;
 		Object.defineProperty(types, `get_${name}`, {
 			get: () => resolveSchema(schema),
 		});

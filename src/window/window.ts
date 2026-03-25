@@ -59,7 +59,7 @@ export const updateSlot = (
 	slot: number,
 	newItem: Item | null,
 ): void => {
-	const oldItem = window.slots[slot];
+	const oldItem = window.slots[slot] ?? null;
 	window.slots[slot] = newItem;
 	window.onSlotUpdate?.(slot, oldItem, newItem);
 };
@@ -172,7 +172,7 @@ export const dumpItem = (
 		? lastEmptySlotRange(window, start, end)
 		: firstEmptySlotRange(window, start, end);
 	if (emptySlot !== null && emptySlot !== window.craftingResultSlot) {
-		const item = window.slots[sourceSlot];
+		const item = window.slots[sourceSlot] ?? null;
 		updateSlot(window, emptySlot, item);
 		updateSlot(window, sourceSlot, null);
 	}
@@ -198,7 +198,7 @@ export const splitSlot = (
 
 /** Swap a slot's item with the cursor item. */
 export const swapSelectedItem = (window: Window, slot: number): void => {
-	const item = window.slots[slot];
+	const item = window.slots[slot] ?? null;
 	updateSlot(window, slot, window.selectedItem);
 	window.selectedItem = item;
 };
@@ -380,9 +380,9 @@ export const numberClick = (
 ): void => {
 	if (window.selectedItem) return;
 
-	const item = window.slots[click.slot];
+	const item = window.slots[click.slot] ?? null;
 	const hotbarSlot = window.hotbarStart + click.mouseButton;
-	const itemAtHotbar = window.slots[hotbarSlot];
+	const itemAtHotbar = window.slots[hotbarSlot] ?? null;
 
 	// Same slot click does nothing
 	if (
@@ -485,7 +485,7 @@ export const dropClick = (
 	click: Click,
 ): number[] => {
 	const item = window.slots[click.slot];
-	if (window.selectedItem || item === null) return [];
+	if (window.selectedItem || item == null) return [];
 
 	if (click.mouseButton === 0) {
 		// Drop one

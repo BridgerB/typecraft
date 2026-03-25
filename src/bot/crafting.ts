@@ -115,9 +115,9 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 					const unusedSlots: number[] = [];
 					if (recipe.inShape) {
 						for (let y = 0; y < recipe.inShape.length; y++) {
-							const row = recipe.inShape[y];
+							const row = recipe.inShape[y]!;
 							for (let x = 0; x < row.length; x++) {
-								if (row[x].id === -1) unusedSlots.push(slot(x, y));
+								if (row[x]!.id === -1) unusedSlots.push(slot(x, y));
 							}
 							for (let x = row.length; x < w; x++) {
 								unusedSlots.push(slot(x, y));
@@ -147,9 +147,9 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 					});
 					if (recipe.inShape) {
 						for (let y = 0; y < recipe.inShape.length; y++) {
-							const row = recipe.inShape[y];
+							const row = recipe.inShape[y]!;
 							for (let x = 0; x < row.length; x++) {
-								const ingredient = row[x];
+								const ingredient = row[x]!;
 								if (ingredient.id === -1) continue;
 
 								if (
@@ -248,9 +248,9 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 					// Handle outShape leftovers (e.g. buckets from cake recipe)
 					if (recipe.outShape) {
 						for (let y = 0; y < recipe.outShape.length; y++) {
-							const row = recipe.outShape[y];
+							const row = recipe.outShape[y]!;
 							for (let x = 0; x < row.length; x++) {
-								if (row[x].id !== -1) {
+								if (row[x]!.id !== -1) {
 									await bot.putAway(slot(x, y));
 								}
 							}

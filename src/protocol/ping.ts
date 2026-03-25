@@ -68,15 +68,15 @@ export const ping = (options: PingOptions = {}): Promise<PingResponse> => {
 			Record<string, unknown>
 		>;
 
-		const handshakeTypes = handshakeData[Direction.TO_SERVER].types as Record<
+		const handshakeTypes = handshakeData[Direction.TO_SERVER]!.types as Record<
 			string,
 			unknown
 		>;
-		const statusWriteTypes = statusData[Direction.TO_SERVER].types as Record<
+		const statusWriteTypes = statusData[Direction.TO_SERVER]!.types as Record<
 			string,
 			unknown
 		>;
-		const statusReadTypes = statusData[Direction.TO_CLIENT].types as Record<
+		const statusReadTypes = statusData[Direction.TO_CLIENT]!.types as Record<
 			string,
 			unknown
 		>;

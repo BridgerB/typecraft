@@ -78,7 +78,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 		for (const [key, entry] of Object.entries(_patterns)) {
 			if (!entry) continue;
 			const { position: pos, patterns } = entry;
-			if (pos < patterns.length && patterns[pos].test(text)) {
+			if (pos < patterns.length && patterns[pos]!.test(text)) {
 				entry.matches.push(text);
 				entry.messages.push(jsonMsg);
 				entry.position++;
@@ -87,7 +87,7 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 					// All patterns matched
 					if (entry.parse) {
 						const parsed = entry.patterns.map((p, i) => {
-							const m = entry.matches[i].match(p);
+							const m = entry.matches[i]!.match(p);
 							return m ? m.slice(1) : [];
 						});
 						bot.emit(`chat:${entry.name}` as never, parsed);

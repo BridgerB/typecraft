@@ -14,3 +14,5 @@ datagen/mod/run/
 # Dev files
 debug.ts
 bench/
+.direnv/
+.pre-commit-config.yaml

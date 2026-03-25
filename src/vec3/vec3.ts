@@ -17,9 +17,9 @@ export const vec3FromString = (str: string): Vec3 => {
 	const match = str.match(parsePattern);
 	if (!match) throw new Error(`vec3: cannot parse: ${str}`);
 	return vec3(
-		Number.parseFloat(match[1]),
-		Number.parseFloat(match[2]),
-		Number.parseFloat(match[3]),
+		Number.parseFloat(match[1]!),
+		Number.parseFloat(match[2]!),
+		Number.parseFloat(match[3]!),
 	);
 };
 
@@ -146,7 +146,7 @@ export const equals = (a: Vec3, b: Vec3, tolerance = 0): boolean =>
 	Math.abs(a.z - b.z) <= tolerance;
 
 export const component = (v: Vec3, index: number): number =>
-	[v.x, v.y, v.z][index];
+	[v.x, v.y, v.z][index]!;
 
 // ─── Conversions ─────────────────────────────────────────────────────────────
 

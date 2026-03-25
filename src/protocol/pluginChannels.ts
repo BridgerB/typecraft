@@ -37,7 +37,7 @@ export const stringDeserializer: ChannelDeserializer = (
 	data: Buffer,
 ): unknown => {
 	if (data.length === 0) return "";
-	const len = data[0];
+	const len = data[0]!;
 	return data.subarray(1, 1 + len).toString("utf8");
 };
 

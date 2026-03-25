@@ -108,7 +108,7 @@ const readVarint = (buf: Buffer, offset: number): ReadResult<number> => {
 	let size = 0;
 	let byte: number;
 	do {
-		byte = buf[offset + size];
+		byte = buf[offset + size]!;
 		value |= (byte & 0x7f) << (7 * size);
 		size++;
 	} while (byte & 0x80);
@@ -129,7 +129,7 @@ const readZigZag64 = (
 	let shift = 0n;
 	let byte: number;
 	do {
-		byte = buf[offset + size];
+		byte = buf[offset + size]!;
 		value |= BigInt(byte & 0x7f) << shift;
 		shift += 7n;
 		size++;

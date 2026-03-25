@@ -97,7 +97,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 					// Find an empty slot in main inventory (9-44) to move to
 					for (let dest = 9; dest < 45; dest++) {
 						if (!window.slots[dest]) {
-							updateSlot(window, dest, window.slots[s]);
+							updateSlot(window, dest, window.slots[s]!);
 							updateSlot(window, s, null);
 							break;
 						}
@@ -227,7 +227,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 					containerSlot < w.slots.length &&
 					playerSlot < bot.inventory.slots.length
 				) {
-					bot.inventory.slots[playerSlot] = w.slots[containerSlot];
+					bot.inventory.slots[playerSlot] = w.slots[containerSlot]!;
 				}
 			}
 			bot.currentWindow = null;
@@ -338,7 +338,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 					containerSlot < window.slots.length &&
 					playerSlot < bot.inventory.slots.length
 				) {
-					bot.inventory.slots[playerSlot] = window.slots[containerSlot];
+					bot.inventory.slots[playerSlot] = window.slots[containerSlot]!;
 				}
 			}
 			bot.currentWindow = null;
@@ -452,7 +452,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			// Try to place into destination range
 			for (let j = destStart; j < destEnd; j++) {
 				const destItem = win.slots[j];
-				if (destItem === null) {
+				if (destItem == null) {
 					// Empty slot — drop all
 					await bot.clickWindow(j, 0, 0);
 					break;

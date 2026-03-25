@@ -61,7 +61,7 @@ const stripCodes = (text: string): string => text.replace(STYLE_CODE_RE, "");
 
 const uuidFromIntArray = (arr: number[]): string => {
 	const buf = Buffer.alloc(16);
-	for (let i = 0; i < arr.length; i++) buf.writeInt32BE(arr[i], i * 4);
+	for (let i = 0; i < arr.length; i++) buf.writeInt32BE(arr[i]!, i * 4);
 	return buf.toString("hex");
 };
 
@@ -368,16 +368,16 @@ export const chatToAnsi = (
 
 	// Replace known § codes with ANSI
 	for (const k in codes) {
-		message = message.replaceAll(k, codes[k]);
+		message = message.replaceAll(k, codes[k]!);
 	}
 
 	// Replace hex color codes with ANSI RGB
 	const hexRegex = /§#?([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 	while (hexRegex.test(message)) {
 		const match = hexRegex.exec(message)!;
-		const r = Number.parseInt(match[1], 16);
-		const g = Number.parseInt(match[2], 16);
-		const b = Number.parseInt(match[3], 16);
+		const r = Number.parseInt(match[1]!, 16);
+		const g = Number.parseInt(match[2]!, 16);
+		const b = Number.parseInt(match[3]!, 16);
 		message = message.replace(hexRegex, `\u001b[38;2;${r};${g};${b}m`);
 	}
 
@@ -484,10 +484,10 @@ export const chatGetText = (
 	if (typeof idx !== "number") return chatToString(msg, lang);
 	if (msg.text !== undefined && idx === 0) return stripCodes(String(msg.text));
 	if (msg.with && msg.with.length > idx)
-		return chatToString(msg.with[idx], lang);
+		return chatToString(msg.with[idx]!, lang);
 	const offset = msg.text !== undefined ? 1 : (msg.with?.length ?? 0);
 	if (msg.extra && msg.extra.length + offset > idx) {
-		return chatToString(msg.extra[idx - offset], lang);
+		return chatToString(msg.extra[idx - offset]!, lang);
 	}
 	return "";
 };

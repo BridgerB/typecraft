@@ -11,7 +11,7 @@ export const readVarInt = (
 	let size = 0;
 	let byte: number;
 	do {
-		byte = buffer[offset + size];
+		byte = buffer[offset + size]!;
 		value |= (byte & 0x7f) << (size * 7);
 		size++;
 		if (size > 5) throw new Error("VarInt too big");
@@ -55,7 +55,7 @@ export const readVarLong = (
 	let size = 0;
 	let byte: number;
 	do {
-		byte = buffer[offset + size];
+		byte = buffer[offset + size]!;
 		value |= BigInt(byte & 0x7f) << BigInt(size * 7);
 		size++;
 		if (size > 10) throw new Error("VarLong too big");

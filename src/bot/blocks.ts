@@ -165,7 +165,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 	bot.client.on("block_update", (packet: Record<string, unknown>) => {
 		if (!bot.world) return;
 
-		const loc = packet.location as Record<string, number>;
+		const loc = packet.location as { x: number; y: number; z: number };
 		if (!loc) return;
 
 		const pos = vec3(loc.x, loc.y, loc.z);
@@ -207,10 +207,11 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 		if (bot.supportFeature("usesMultiblockSingleLong")) {
 			// 1.19.2+ — records are packed longs
-			const chunkCoordinates = packet.chunkCoordinates as Record<
-				string,
-				number
-			>;
+			const chunkCoordinates = packet.chunkCoordinates as {
+				x: number;
+				y: number;
+				z: number;
+			};
 			const records = packet.records as Array<bigint | number>;
 			if (!chunkCoordinates || !records) return;
 
@@ -233,7 +234,11 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 			}
 		} else {
 			// Legacy — individual records
-			const records = packet.records as Array<Record<string, number>>;
+			const records = packet.records as Array<{
+				horizontalPos: number;
+				y: number;
+				blockId: number;
+			}>;
 			if (!records) return;
 
 			for (const record of records) {
@@ -256,7 +261,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		const y = packet.y as number;
 		const z = packet.z as number;
 		const affectedBlockOffsets = packet.affectedBlockOffsets as
-			| Array<Record<string, number>>
+			| Array<{ x: number; y: number; z: number }>
 			| undefined;
 
 		if (affectedBlockOffsets) {
@@ -464,10 +469,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		return new Promise<void>((resolve) => {
 			const check = () => {
 				try {
-					const _stateId = worldGetBlockStateId(
-						bot.world!,
-						vec3(cx * 16, 0, cz * 16),
-					);
+					worldGetBlockStateId(bot.world!, vec3(cx * 16, 0, cz * 16));
 					// If we can read the block, chunk is loaded
 					resolve();
 				} catch {

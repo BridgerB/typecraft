@@ -248,9 +248,9 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 				await new Promise<void>((resolve) => {
 					const check = () => {
 						if (
-							table.enchantments[0].level >= 0 &&
-							table.enchantments[1].level >= 0 &&
-							table.enchantments[2].level >= 0
+							table.enchantments[0]!.level >= 0 &&
+							table.enchantments[1]!.level >= 0 &&
+							table.enchantments[2]!.level >= 0
 						) {
 							resolve();
 						} else {
@@ -306,20 +306,20 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			const value = packet.value as number;
 
 			if (prop < 3) {
-				table.enchantments[prop].level = value;
+				table.enchantments[prop]!.level = value;
 			} else if (prop === 3) {
 				table.xpseed = value;
 			} else if (prop < 7) {
-				table.enchantments[prop - 4].expected.enchant = value;
+				table.enchantments[prop - 4]!.expected.enchant = value;
 			} else if (prop < 10) {
-				table.enchantments[prop - 7].expected.level = value;
+				table.enchantments[prop - 7]!.expected.level = value;
 			}
 
 			if (
 				!ready &&
-				table.enchantments[0].level >= 0 &&
-				table.enchantments[1].level >= 0 &&
-				table.enchantments[2].level >= 0
+				table.enchantments[0]!.level >= 0 &&
+				table.enchantments[1]!.level >= 0 &&
+				table.enchantments[2]!.level >= 0
 			) {
 				ready = true;
 			}

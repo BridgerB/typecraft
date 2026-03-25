@@ -344,7 +344,7 @@ export const dumpChunkLight = (col: ChunkColumn) => {
 
 	for (let i = 0; i < col.skyLightSections.length; i++) {
 		const section = col.skyLightSections[i];
-		if (section !== null && getBitValue(col.skyLightMask, i)) {
+		if (section != null && getBitValue(col.skyLightMask, i)) {
 			const buf = Buffer.alloc(section.data.length * 4);
 			writeBitArrayData(section, buf, 0);
 			skyLight.push(new Uint8Array(buf));
@@ -353,7 +353,7 @@ export const dumpChunkLight = (col: ChunkColumn) => {
 
 	for (let i = 0; i < col.blockLightSections.length; i++) {
 		const section = col.blockLightSections[i];
-		if (section !== null && getBitValue(col.blockLightMask, i)) {
+		if (section != null && getBitValue(col.blockLightMask, i)) {
 			const buf = Buffer.alloc(section.data.length * 4);
 			writeBitArrayData(section, buf, 0);
 			blockLight.push(new Uint8Array(buf));

@@ -69,7 +69,7 @@ export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 		(packet: Record<string, unknown>) => {
 			const loc = packet.location as Record<string, number>;
 			if (loc) {
-				bot.spawnPoint = vec3(loc.x, loc.y, loc.z);
+				bot.spawnPoint = vec3(loc.x!, loc.y!, loc.z!);
 				bot.emit("spawnReset");
 			}
 		},

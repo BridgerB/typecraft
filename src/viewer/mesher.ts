@@ -160,7 +160,8 @@ const matmulmat3 = (a: Mat3, b: Mat3): Mat3 => {
 	];
 	for (let i = 0; i < 3; i++) {
 		for (let j = 0; j < 3; j++) {
-			r[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
+			r[i]![j] =
+				a[i]![0] * b[0][j]! + a[i]![1] * b[1][j]! + a[i]![2] * b[2][j]!;
 		}
 	}
 	return r;
@@ -180,11 +181,11 @@ const buildRotationMatrix = (axis: string, degree: number): Mat3 => {
 		[0, 0, 0],
 		[0, 0, 0],
 	];
-	matrix[axis0][axis0] = 1;
-	matrix[axis1][axis1] = cos;
-	matrix[axis1][axis2] = -sin;
-	matrix[axis2][axis1] = sin;
-	matrix[axis2][axis2] = cos;
+	matrix[axis0]![axis0] = 1;
+	matrix[axis1]![axis1] = cos;
+	matrix[axis1]![axis2] = -sin;
+	matrix[axis2]![axis1] = sin;
+	matrix[axis2]![axis2] = cos;
 
 	return matrix;
 };
