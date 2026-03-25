@@ -70,4 +70,3 @@ export const joinServer = async (
 		throw new Error(`Session server join failed (${response.status}): ${text}`);
 	}
 };
-

@@ -8,7 +8,13 @@ import type { Bot } from "../bot/types.ts";
 import { createPhysicsWorld } from "../physics/adapter.ts";
 import type { PhysicsWorld } from "../physics/types.ts";
 import type { Registry } from "../registry/types.ts";
-import type { BlockQuery, Move, Movements, MovementsConfig, PlaceAction } from "./types.ts";
+import type {
+	BlockQuery,
+	Move,
+	Movements,
+	MovementsConfig,
+	PlaceAction,
+} from "./types.ts";
 import { defaultMovementsConfig, posHash } from "./types.ts";
 
 // Cardinal directions (NESW)
@@ -158,13 +164,24 @@ export const createMovements = (
 
 	/** Push a move into the neighbors buffer. */
 	const pushNeighbor = (
-		x: number, y: number, z: number, cost: number,
-		toBreak: readonly { readonly x: number; readonly y: number; readonly z: number }[] = [],
+		x: number,
+		y: number,
+		z: number,
+		cost: number,
+		toBreak: readonly {
+			readonly x: number;
+			readonly y: number;
+			readonly z: number;
+		}[] = [],
 		toPlace: readonly PlaceAction[] = [],
 		parkour = false,
 	): void => {
 		neighbors[neighborCount++] = {
-			x, y, z, cost, hash: posHash(x, y, z),
+			x,
+			y,
+			z,
+			cost,
+			hash: posHash(x, y, z),
 			remainingBlocks: 0,
 			toBreak,
 			toPlace,
@@ -174,7 +191,9 @@ export const createMovements = (
 
 	/** Check if block is safe, or can be broken. Returns cost addition (0 if safe, digCost if breakable, -1 if impassable). */
 	const safeOrBreak = (
-		x: number, y: number, z: number,
+		x: number,
+		y: number,
+		z: number,
 		toBreak: { readonly x: number; readonly y: number; readonly z: number }[],
 	): number => {
 		const block = queryBlock(x, y, z);
@@ -184,14 +203,20 @@ export const createMovements = (
 
 		// Don't break blocks that would cause flow
 		if (cfg.dontCreateFlow) {
-			for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+			for (const [dx, dz] of [
+				[0, 1],
+				[0, -1],
+				[1, 0],
+				[-1, 0],
+			]) {
 				if (queryBlock(x + dx, y, z + dz).liquid) return -1;
 			}
 			if (queryBlock(x, y + 1, z).liquid) return -1;
 		}
 
 		// Don't mine under falling blocks
-		if (cfg.dontMineUnderFallingBlock && queryBlock(x, y + 1, z).canFall) return -1;
+		if (cfg.dontMineUnderFallingBlock && queryBlock(x, y + 1, z).canFall)
+			return -1;
 
 		toBreak.push({ x, y, z });
 		return cfg.digCost;
@@ -205,7 +230,11 @@ export const createMovements = (
 		const floor = queryBlock(nx, node.y - 1, nz);
 		if (!floor.physical && !floor.liquid) return;
 
-		const toBreak: { readonly x: number; readonly y: number; readonly z: number }[] = [];
+		const toBreak: {
+			readonly x: number;
+			readonly y: number;
+			readonly z: number;
+		}[] = [];
 		let cost = 1;
 
 		if (floor.liquid) cost *= cfg.liquidCost;
@@ -228,7 +257,11 @@ export const createMovements = (
 		const nz = node.z + dz;
 		const ny = node.y + 1;
 
-		const toBreak: { readonly x: number; readonly y: number; readonly z: number }[] = [];
+		const toBreak: {
+			readonly x: number;
+			readonly y: number;
+			readonly z: number;
+		}[] = [];
 		let cost = 2;
 
 		// Need clear head space above current position
@@ -261,7 +294,9 @@ export const createMovements = (
 		if (!queryBlock(nx, node.y, nz).safe) return;
 		if (queryBlock(nx, node.y - 1, nz).physical) return; // has floor = forward move
 
-		const maxDrop = cfg.infiniteLiquidDropdownDistance ? 256 : cfg.maxDropDown + 1;
+		const maxDrop = cfg.infiniteLiquidDropdownDistance
+			? 256
+			: cfg.maxDropDown + 1;
 		for (let dy = -2; dy >= -maxDrop; dy--) {
 			const landing = queryBlock(nx, node.y + dy, nz);
 			if (landing.physical) {
@@ -276,7 +311,8 @@ export const createMovements = (
 				return;
 			}
 			if (!landing.safe) return;
-			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1)) return;
+			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1))
+				return;
 		}
 	};
 
@@ -305,10 +341,12 @@ export const createMovements = (
 		}
 
 		// Diagonal jump up (+1Y) — destination block is physical (step onto it)
-		if (queryBlock(nx, node.y, nz).physical &&
+		if (
+			queryBlock(nx, node.y, nz).physical &&
 			queryBlock(nx, node.y + 1, nz).safe &&
 			queryBlock(nx, node.y + 2, nz).safe &&
-			queryBlock(node.x, node.y + 2, node.z).safe) {
+			queryBlock(node.x, node.y + 2, node.z).safe
+		) {
 			pushNeighbor(nx, node.y + 1, nz, Math.SQRT2 + 1);
 		}
 
@@ -322,7 +360,12 @@ export const createMovements = (
 					return;
 				}
 				if (landing.liquid) {
-					pushNeighbor(nx, node.y + dy, nz, Math.SQRT2 + (node.y - (node.y + dy)) * 0.3);
+					pushNeighbor(
+						nx,
+						node.y + dy,
+						nz,
+						Math.SQRT2 + (node.y - (node.y + dy)) * 0.3,
+					);
 					return;
 				}
 				if (!landing.safe) return;
@@ -352,27 +395,40 @@ export const createMovements = (
 			const nz = node.z + dz * dist;
 
 			// Check ceiling along the arc
-			if (!queryBlock(node.x + dx * (dist - 1), node.y + 2, node.z + dz * (dist - 1)).safe) break;
+			if (
+				!queryBlock(
+					node.x + dx * (dist - 1),
+					node.y + 2,
+					node.z + dz * (dist - 1),
+				).safe
+			)
+				break;
 
 			// Same-level landing
-			if (queryBlock(nx, node.y - 1, nz).physical &&
+			if (
+				queryBlock(nx, node.y - 1, nz).physical &&
 				queryBlock(nx, node.y, nz).safe &&
-				queryBlock(nx, node.y + 1, nz).safe) {
+				queryBlock(nx, node.y + 1, nz).safe
+			) {
 				pushNeighbor(nx, node.y, nz, dist + 1, [], [], true);
 			}
 
 			// Landing one block up
-			if (dist <= 2 &&
+			if (
+				dist <= 2 &&
 				queryBlock(nx, node.y, nz).physical &&
 				queryBlock(nx, node.y + 1, nz).safe &&
-				queryBlock(nx, node.y + 2, nz).safe) {
+				queryBlock(nx, node.y + 2, nz).safe
+			) {
 				pushNeighbor(nx, node.y + 1, nz, dist + 2, [], [], true);
 			}
 
 			// Landing one block down
-			if (queryBlock(nx, node.y - 2, nz).physical &&
+			if (
+				queryBlock(nx, node.y - 2, nz).physical &&
 				queryBlock(nx, node.y - 1, nz).safe &&
-				queryBlock(nx, node.y, nz).safe) {
+				queryBlock(nx, node.y, nz).safe
+			) {
 				pushNeighbor(nx, node.y - 1, nz, dist + 0.5, [], [], true);
 			}
 		}
@@ -390,7 +446,9 @@ export const createMovements = (
 		if (!current.safe && !current.replaceable) return;
 
 		pushNeighbor(
-			node.x, node.y + 1, node.z,
+			node.x,
+			node.y + 1,
+			node.z,
 			1 + cfg.placeCost,
 			[],
 			[{ x: node.x, y: node.y, z: node.z, dx: 0, dy: -1, dz: 0, jump: true }],
@@ -402,7 +460,9 @@ export const createMovements = (
 		// Already on solid ground — can't drop
 		if (queryBlock(node.x, node.y - 1, node.z).physical) return;
 
-		const maxDrop = cfg.infiniteLiquidDropdownDistance ? 256 : cfg.maxDropDown + 1;
+		const maxDrop = cfg.infiniteLiquidDropdownDistance
+			? 256
+			: cfg.maxDropDown + 1;
 		for (let dy = -1; dy >= -maxDrop; dy--) {
 			const landing = queryBlock(node.x, node.y + dy, node.z);
 			if (landing.physical) {
@@ -411,11 +471,17 @@ export const createMovements = (
 				return;
 			}
 			if (landing.liquid) {
-				pushNeighbor(node.x, node.y + dy, node.z, 1 + (node.y - (node.y + dy)) * 0.3);
+				pushNeighbor(
+					node.x,
+					node.y + dy,
+					node.z,
+					1 + (node.y - (node.y + dy)) * 0.3,
+				);
 				return;
 			}
 			if (!landing.safe) return;
-			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1)) return;
+			if (!cfg.infiniteLiquidDropdownDistance && dy < -(cfg.maxDropDown + 1))
+				return;
 		}
 	};
 

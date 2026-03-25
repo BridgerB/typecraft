@@ -306,12 +306,7 @@ export const dumpChunkColumn = (
 	let offset = 0;
 
 	for (let i = 0; i < col.numSections; i++) {
-		offset = writeChunkSection(
-			col.sections[i]!,
-			buffer,
-			offset,
-			noArrayLength,
-		);
+		offset = writeChunkSection(col.sections[i]!, buffer, offset, noArrayLength);
 		offset = writeBiomeSection(col.biomes[i]!, buffer, offset, noArrayLength);
 	}
 

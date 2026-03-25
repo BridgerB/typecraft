@@ -15,6 +15,8 @@
 		"build": "tsc",
 		"build:web": "tsx scripts/build-web.ts",
 		"test": "vitest run",
+		"format": "biome format --write",
+		"lint": "biome lint",
 		"check": "biome check"
 	},
 	"license": "Unlicense",

@@ -11,11 +11,7 @@ import type { World } from "../world/index.ts";
 import type { Goal, Move } from "./types.ts";
 
 /** Octile distance on XZ + manhattan on Y. Admissible heuristic for A*. */
-const octileHeuristic = (
-	dx: number,
-	dy: number,
-	dz: number,
-): number => {
+const octileHeuristic = (dx: number, dy: number, dz: number): number => {
 	const adx = Math.abs(dx);
 	const adz = Math.abs(dz);
 	return Math.abs(adx - adz) + Math.min(adx, adz) * Math.SQRT2 + Math.abs(dy);
@@ -239,9 +235,7 @@ export const createGoalLookAtBlock = (
 				const rayDx = faceCenter.x - eyeX;
 				const rayDy = faceCenter.y - eyeY;
 				const rayDz = faceCenter.z - eyeZ;
-				const rayLen = Math.sqrt(
-					rayDx * rayDx + rayDy * rayDy + rayDz * rayDz,
-				);
+				const rayLen = Math.sqrt(rayDx * rayDx + rayDy * rayDy + rayDz * rayDz);
 				if (rayLen === 0) continue;
 
 				const dir = vec3(rayDx / rayLen, rayDy / rayLen, rayDz / rayLen);
@@ -365,12 +359,7 @@ export const createGoalPlaceBlock = (
 					const rayLen = Math.sqrt(dx * dx + dy * dy + dz * dz);
 					if (rayLen === 0) continue;
 					const dir = vec3(dx / rayLen, dy / rayLen, dz / rayLen);
-					const hit = raycast(
-						world,
-						vec3(eyeX, eyeY, eyeZ),
-						dir,
-						reach,
-					);
+					const hit = raycast(world, vec3(eyeX, eyeY, eyeZ), dir, reach);
 					if (
 						hit &&
 						hit.position.x === refX &&

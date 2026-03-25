@@ -33,7 +33,11 @@ const pollDeviceCode = async (
 	deviceCode: string,
 	interval: number,
 	expiresIn: number,
-): Promise<{ access_token: string; refresh_token: string; expires_in: number }> => {
+): Promise<{
+	access_token: string;
+	refresh_token: string;
+	expires_in: number;
+}> => {
 	const deadline = Date.now() + expiresIn * 1000 - 100;
 
 	while (Date.now() < deadline) {
@@ -55,7 +59,11 @@ const pollDeviceCode = async (
 			throw new Error(`Auth failed: ${data.error} — ${data.error_description}`);
 		}
 
-		return data as { access_token: string; refresh_token: string; expires_in: number };
+		return data as {
+			access_token: string;
+			refresh_token: string;
+			expires_in: number;
+		};
 	}
 
 	throw new Error("Device code authentication timed out");
@@ -64,7 +72,11 @@ const pollDeviceCode = async (
 /** Refresh an existing MSA token using the refresh_token. */
 const refreshMsaToken = async (
 	refreshToken: string,
-): Promise<{ access_token: string; refresh_token: string; expires_in: number }> => {
+): Promise<{
+	access_token: string;
+	refresh_token: string;
+	expires_in: number;
+}> => {
 	const res = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -76,7 +88,11 @@ const refreshMsaToken = async (
 		}).toString(),
 	});
 	if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
-	return (await res.json()) as { access_token: string; refresh_token: string; expires_in: number };
+	return (await res.json()) as {
+		access_token: string;
+		refresh_token: string;
+		expires_in: number;
+	};
 };
 
 /**
@@ -86,7 +102,10 @@ const refreshMsaToken = async (
 export const getMsaToken = async (
 	cacheDir: string,
 	username: string,
-	onDeviceCode?: (data: { user_code: string; verification_uri: string }) => void,
+	onDeviceCode?: (data: {
+		user_code: string;
+		verification_uri: string;
+	}) => void,
 ): Promise<string> => {
 	const cache = loadCache(cacheDir, username, "live");
 	const cached = cache.token as MsaToken | undefined;

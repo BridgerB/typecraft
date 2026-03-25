@@ -56,8 +56,12 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 	let lockedLookTarget: Vec3 | null = null;
 
-	bot.lockLook = (pos: Vec3) => { lockedLookTarget = pos; };
-	bot.unlockLook = () => { lockedLookTarget = null; };
+	bot.lockLook = (pos: Vec3) => {
+		lockedLookTarget = pos;
+	};
+	bot.unlockLook = () => {
+		lockedLookTarget = null;
+	};
 
 	bot.look = async (yaw: number, pitch: number, force?: boolean) => {
 		if (force) {
@@ -83,7 +87,11 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.lookAt = async (point: Vec3, force?: boolean) => {
-		const eyePos = vec3(bot.entity.position.x, bot.entity.position.y + 1.62, bot.entity.position.z);
+		const eyePos = vec3(
+			bot.entity.position.x,
+			bot.entity.position.y + 1.62,
+			bot.entity.position.z,
+		);
 		const delta = subtract(point, eyePos);
 		const yaw = Math.atan2(-delta.x, -delta.z);
 		const groundDist = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
@@ -205,7 +213,11 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 		// Apply locked look target (dig/place hold)
 		if (lockedLookTarget) {
-			const eyePos = vec3(bot.entity.position.x, bot.entity.position.y + 1.62, bot.entity.position.z);
+			const eyePos = vec3(
+				bot.entity.position.x,
+				bot.entity.position.y + 1.62,
+				bot.entity.position.z,
+			);
 			const delta = subtract(lockedLookTarget, eyePos);
 			bot.entity.yaw = Math.atan2(-delta.x, -delta.z);
 			const groundDist = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
@@ -253,7 +265,11 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 
 		// 1.21.2+ uses MovementFlags bitfield instead of plain onGround boolean
 		const movementFlags = {
-			flags: { onGround: onGround ? 1 : 0, horizontalCollision: 0, _padding: 0 },
+			flags: {
+				onGround: onGround ? 1 : 0,
+				horizontalCollision: 0,
+				_padding: 0,
+			},
 		};
 
 		const posChanged =
@@ -298,7 +314,12 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 			return;
 		}
 
-		bot.emit("debug", "packet_tx", { name: packetType, x: pos.x.toFixed(1), y: pos.y.toFixed(1), z: pos.z.toFixed(1) });
+		bot.emit("debug", "packet_tx", {
+			name: packetType,
+			x: pos.x.toFixed(1),
+			y: pos.y.toFixed(1),
+			z: pos.z.toFixed(1),
+		});
 
 		positionUpdateTimer = 0;
 		lastSentPos = { ...pos };

@@ -15,7 +15,11 @@ export type Move = {
 	readonly cost: number;
 	readonly hash: number;
 	readonly remainingBlocks: number;
-	readonly toBreak: readonly { readonly x: number; readonly y: number; readonly z: number }[];
+	readonly toBreak: readonly {
+		readonly x: number;
+		readonly y: number;
+		readonly z: number;
+	}[];
 	readonly toPlace: readonly PlaceAction[];
 	readonly parkour: boolean;
 };
@@ -66,9 +70,21 @@ export type MovementsConfig = {
 	readonly blocksCantBreak: ReadonlySet<number>;
 	readonly blocksToAvoid: ReadonlySet<number>;
 	readonly scaffoldingBlocks: readonly number[];
-	readonly exclusionAreasStep: readonly ((x: number, y: number, z: number) => number)[];
-	readonly exclusionAreasBreak: readonly ((x: number, y: number, z: number) => number)[];
-	readonly exclusionAreasPlace: readonly ((x: number, y: number, z: number) => number)[];
+	readonly exclusionAreasStep: readonly ((
+		x: number,
+		y: number,
+		z: number,
+	) => number)[];
+	readonly exclusionAreasBreak: readonly ((
+		x: number,
+		y: number,
+		z: number,
+	) => number)[];
+	readonly exclusionAreasPlace: readonly ((
+		x: number,
+		y: number,
+		z: number,
+	) => number)[];
 };
 
 /** Create default movement configuration. */
@@ -124,7 +140,11 @@ export type PlaceAction = {
 	readonly dy: number;
 	readonly dz: number;
 	readonly jump?: boolean;
-	readonly returnPos?: { readonly x: number; readonly y: number; readonly z: number };
+	readonly returnPos?: {
+		readonly x: number;
+		readonly y: number;
+		readonly z: number;
+	};
 };
 
 /** Simplified block query result for movement decisions. */

@@ -23,11 +23,7 @@ import {
 	createPhysics,
 	createPlayerState,
 } from "./physics.ts";
-import type {
-	PhysicsBlock,
-	PhysicsWorld,
-	PlayerControls,
-} from "./types.ts";
+import type { PhysicsBlock, PhysicsWorld, PlayerControls } from "./types.ts";
 import { createRegistry } from "../registry/registry.ts";
 
 const registry = createRegistry("1.20.4");

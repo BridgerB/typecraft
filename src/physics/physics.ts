@@ -1045,9 +1045,10 @@ export const createPhysics = (registry: Registry): PhysicsEngine => {
 			(Number(state.control.forward) - Number(state.control.back)) * 0.98;
 
 		if (state.control.sneak) {
-			const sneakMult = state.swiftSneak > 0
-				? Math.min(0.3 + state.swiftSneak * 0.15, 1.0)
-				: config.sneakSpeed;
+			const sneakMult =
+				state.swiftSneak > 0
+					? Math.min(0.3 + state.swiftSneak * 0.15, 1.0)
+					: config.sneakSpeed;
 			strafe *= sneakMult;
 			forward *= sneakMult;
 		}

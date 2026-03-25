@@ -4,52 +4,163 @@
 
 import { getEnchants } from "../item/index.ts";
 import { length, subtract, type Vec3, vec3 } from "../vec3/index.ts";
-import {
-	PLAYER_EYE_HEIGHT,
-	raycast,
-} from "../world/index.ts";
+import { PLAYER_EYE_HEIGHT, raycast } from "../world/index.ts";
 import type { Block, Bot, BotOptions, Task } from "./types.ts";
 import { createTask, nextSequence } from "./utils.ts";
 
 // ── Tool speed lookup (fallback when registry.materials is empty) ──
 
 const TOOL_TIERS: Record<string, number> = {
-	wooden: 2.0, stone: 4.0, iron: 6.0, golden: 12.0, diamond: 8.0, netherite: 9.0,
+	wooden: 2.0,
+	stone: 4.0,
+	iron: 6.0,
+	golden: 12.0,
+	diamond: 8.0,
+	netherite: 9.0,
 };
 
 const PICKAXE_BLOCKS = new Set([
-	"stone", "cobblestone", "deepslate", "cobbled_deepslate", "andesite", "diorite", "granite",
-	"netherrack", "basalt", "blackstone", "end_stone", "sandstone", "red_sandstone",
-	"obsidian", "crying_obsidian", "coal_ore", "iron_ore", "gold_ore", "diamond_ore",
-	"emerald_ore", "lapis_ore", "redstone_ore", "copper_ore", "nether_gold_ore",
-	"nether_quartz_ore", "ancient_debris", "deepslate_coal_ore", "deepslate_iron_ore",
-	"deepslate_gold_ore", "deepslate_diamond_ore", "deepslate_emerald_ore",
-	"deepslate_lapis_ore", "deepslate_redstone_ore", "deepslate_copper_ore",
-	"tuff", "calcite", "dripstone_block", "pointed_dripstone", "amethyst_block",
-	"budding_amethyst", "smooth_stone", "bricks", "mossy_cobblestone", "stone_bricks",
-	"mossy_stone_bricks", "prismarine", "dark_prismarine", "purpur_block", "purpur_pillar",
-	"terracotta", "ice", "packed_ice", "blue_ice", "iron_block", "gold_block",
-	"diamond_block", "emerald_block", "lapis_block", "redstone_block", "copper_block",
-	"raw_iron_block", "raw_gold_block", "raw_copper_block", "netherite_block",
-	"furnace", "blast_furnace", "smoker", "stonecutter", "grindstone", "brewing_stand",
-	"cauldron", "hopper", "anvil", "chipped_anvil", "damaged_anvil", "chain",
-	"lantern", "soul_lantern", "rail", "powered_rail", "detector_rail", "activator_rail",
+	"stone",
+	"cobblestone",
+	"deepslate",
+	"cobbled_deepslate",
+	"andesite",
+	"diorite",
+	"granite",
+	"netherrack",
+	"basalt",
+	"blackstone",
+	"end_stone",
+	"sandstone",
+	"red_sandstone",
+	"obsidian",
+	"crying_obsidian",
+	"coal_ore",
+	"iron_ore",
+	"gold_ore",
+	"diamond_ore",
+	"emerald_ore",
+	"lapis_ore",
+	"redstone_ore",
+	"copper_ore",
+	"nether_gold_ore",
+	"nether_quartz_ore",
+	"ancient_debris",
+	"deepslate_coal_ore",
+	"deepslate_iron_ore",
+	"deepslate_gold_ore",
+	"deepslate_diamond_ore",
+	"deepslate_emerald_ore",
+	"deepslate_lapis_ore",
+	"deepslate_redstone_ore",
+	"deepslate_copper_ore",
+	"tuff",
+	"calcite",
+	"dripstone_block",
+	"pointed_dripstone",
+	"amethyst_block",
+	"budding_amethyst",
+	"smooth_stone",
+	"bricks",
+	"mossy_cobblestone",
+	"stone_bricks",
+	"mossy_stone_bricks",
+	"prismarine",
+	"dark_prismarine",
+	"purpur_block",
+	"purpur_pillar",
+	"terracotta",
+	"ice",
+	"packed_ice",
+	"blue_ice",
+	"iron_block",
+	"gold_block",
+	"diamond_block",
+	"emerald_block",
+	"lapis_block",
+	"redstone_block",
+	"copper_block",
+	"raw_iron_block",
+	"raw_gold_block",
+	"raw_copper_block",
+	"netherite_block",
+	"furnace",
+	"blast_furnace",
+	"smoker",
+	"stonecutter",
+	"grindstone",
+	"brewing_stand",
+	"cauldron",
+	"hopper",
+	"anvil",
+	"chipped_anvil",
+	"damaged_anvil",
+	"chain",
+	"lantern",
+	"soul_lantern",
+	"rail",
+	"powered_rail",
+	"detector_rail",
+	"activator_rail",
 ]);
 
 const AXE_BLOCKS = new Set([
-	"oak_log", "spruce_log", "birch_log", "jungle_log", "acacia_log", "dark_oak_log",
-	"mangrove_log", "cherry_log", "pale_oak_log", "crimson_stem", "warped_stem",
-	"oak_planks", "spruce_planks", "birch_planks", "jungle_planks", "acacia_planks",
-	"dark_oak_planks", "mangrove_planks", "cherry_planks", "pale_oak_planks",
-	"crimson_planks", "warped_planks", "bamboo_planks", "crafting_table", "chest",
-	"trapped_chest", "barrel", "bookshelf", "note_block", "jukebox", "fence",
-	"oak_fence", "spruce_fence", "birch_fence", "jungle_fence", "ladder", "scaffolding",
+	"oak_log",
+	"spruce_log",
+	"birch_log",
+	"jungle_log",
+	"acacia_log",
+	"dark_oak_log",
+	"mangrove_log",
+	"cherry_log",
+	"pale_oak_log",
+	"crimson_stem",
+	"warped_stem",
+	"oak_planks",
+	"spruce_planks",
+	"birch_planks",
+	"jungle_planks",
+	"acacia_planks",
+	"dark_oak_planks",
+	"mangrove_planks",
+	"cherry_planks",
+	"pale_oak_planks",
+	"crimson_planks",
+	"warped_planks",
+	"bamboo_planks",
+	"crafting_table",
+	"chest",
+	"trapped_chest",
+	"barrel",
+	"bookshelf",
+	"note_block",
+	"jukebox",
+	"fence",
+	"oak_fence",
+	"spruce_fence",
+	"birch_fence",
+	"jungle_fence",
+	"ladder",
+	"scaffolding",
 ]);
 
 const SHOVEL_BLOCKS = new Set([
-	"dirt", "grass_block", "sand", "red_sand", "gravel", "clay",
-	"soul_sand", "soul_soil", "mycelium", "podzol", "farmland",
-	"dirt_path", "snow", "snow_block", "mud", "muddy_mangrove_roots",
+	"dirt",
+	"grass_block",
+	"sand",
+	"red_sand",
+	"gravel",
+	"clay",
+	"soul_sand",
+	"soul_soil",
+	"mycelium",
+	"podzol",
+	"farmland",
+	"dirt_path",
+	"snow",
+	"snow_block",
+	"mud",
+	"muddy_mangrove_roots",
 ]);
 
 const getToolSpeed = (toolName: string, blockName?: string): number => {
@@ -65,12 +176,43 @@ const getToolSpeed = (toolName: string, blockName?: string): number => {
 
 	// Check if tool type matches block
 	const cleanBlock = blockName.replace("stripped_", "").replace("waxed_", "");
-	if (toolType === "pickaxe" && (PICKAXE_BLOCKS.has(cleanBlock) || cleanBlock.includes("ore") || cleanBlock.includes("stone") || cleanBlock.includes("brick"))) return tierSpeed;
-	if (toolType === "axe" && (AXE_BLOCKS.has(cleanBlock) || cleanBlock.includes("log") || cleanBlock.includes("planks") || cleanBlock.includes("wood"))) return tierSpeed;
-	if (toolType === "shovel" && (SHOVEL_BLOCKS.has(cleanBlock) || cleanBlock.includes("dirt") || cleanBlock.includes("sand"))) return tierSpeed;
-	if (toolType === "hoe" && (cleanBlock.includes("leaves") || cleanBlock === "hay_block" || cleanBlock === "sponge" || cleanBlock === "wet_sponge")) return tierSpeed;
+	if (
+		toolType === "pickaxe" &&
+		(PICKAXE_BLOCKS.has(cleanBlock) ||
+			cleanBlock.includes("ore") ||
+			cleanBlock.includes("stone") ||
+			cleanBlock.includes("brick"))
+	)
+		return tierSpeed;
+	if (
+		toolType === "axe" &&
+		(AXE_BLOCKS.has(cleanBlock) ||
+			cleanBlock.includes("log") ||
+			cleanBlock.includes("planks") ||
+			cleanBlock.includes("wood"))
+	)
+		return tierSpeed;
+	if (
+		toolType === "shovel" &&
+		(SHOVEL_BLOCKS.has(cleanBlock) ||
+			cleanBlock.includes("dirt") ||
+			cleanBlock.includes("sand"))
+	)
+		return tierSpeed;
+	if (
+		toolType === "hoe" &&
+		(cleanBlock.includes("leaves") ||
+			cleanBlock === "hay_block" ||
+			cleanBlock === "sponge" ||
+			cleanBlock === "wet_sponge")
+	)
+		return tierSpeed;
 	if (toolType === "sword" && cleanBlock === "cobweb") return 15.0;
-	if (toolType === "shears" && (cleanBlock.includes("wool") || cleanBlock.includes("leaves"))) return 5.0;
+	if (
+		toolType === "shears" &&
+		(cleanBlock.includes("wool") || cleanBlock.includes("leaves"))
+	)
+		return 5.0;
 
 	return 1.0;
 };
@@ -105,8 +247,10 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			if (faceVec && typeof faceVec === "object" && "x" in faceVec) {
 				// Explicit Vec3 face direction
 				const v = faceVec as Vec3;
-				if (v.x) face = v.x > 0 ? 5 : 4; // EAST : WEST
-				else if (v.y) face = v.y > 0 ? 1 : 0; // TOP : BOTTOM
+				if (v.x)
+					face = v.x > 0 ? 5 : 4; // EAST : WEST
+				else if (v.y)
+					face = v.y > 0 ? 1 : 0; // TOP : BOTTOM
 				else if (v.z) face = v.z > 0 ? 3 : 2; // SOUTH : NORTH
 
 				await bot.lookAt(
@@ -125,8 +269,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 					bot.entity.position.z,
 				);
 				const dx = bot.entity.position.x - (pos.x + 0.5);
-				const dy =
-					bot.entity.position.y + PLAYER_EYE_HEIGHT - (pos.y + 0.5);
+				const dy = bot.entity.position.y + PLAYER_EYE_HEIGHT - (pos.y + 0.5);
 				const dz = bot.entity.position.z - (pos.z + 0.5);
 
 				// Check visible faces based on player position relative to block
@@ -155,9 +298,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 						targetPos.z - eyePos.z,
 					);
 					const rayLen = Math.sqrt(
-						rayDir.x * rayDir.x +
-							rayDir.y * rayDir.y +
-							rayDir.z * rayDir.z,
+						rayDir.x * rayDir.x + rayDir.y * rayDir.y + rayDir.z * rayDir.z,
 					);
 					if (rayLen === 0) continue;
 
@@ -212,7 +353,15 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		bot.lockLook(vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5));
 
 		const seq = nextSequence();
-		bot.emit("debug", "dig", { event: "start", pos: { x: pos.x, y: pos.y, z: pos.z }, face, seq, time, held: bot.heldItem?.name ?? null, quickBar: bot.quickBarSlot });
+		bot.emit("debug", "dig", {
+			event: "start",
+			pos: { x: pos.x, y: pos.y, z: pos.z },
+			face,
+			seq,
+			time,
+			held: bot.heldItem?.name ?? null,
+			quickBar: bot.quickBarSlot,
+		});
 
 		bot.client.write("player_action", {
 			status: 0,
@@ -238,7 +387,11 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 		// Bonus: if blockUpdate fires (e.g., another player broke it, or server
 		// sends it to the digger in some versions), complete early
-		const onBlockUpdate = (updatePos: unknown, _oldStateId: unknown, newStateId: unknown) => {
+		const onBlockUpdate = (
+			updatePos: unknown,
+			_oldStateId: unknown,
+			newStateId: unknown,
+		) => {
 			if (digGeneration !== thisGen) return;
 			const p = updatePos as Vec3;
 			if (!p || p.x !== pos.x || p.y !== pos.y || p.z !== pos.z) return;
@@ -273,7 +426,12 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		}
 
 		const finishSeq = nextSequence();
-		bot.emit("debug", "dig", { event: "finish", pos: { x: pos.x, y: pos.y, z: pos.z }, face, seq: finishSeq });
+		bot.emit("debug", "dig", {
+			event: "finish",
+			pos: { x: pos.x, y: pos.y, z: pos.z },
+			face,
+			seq: finishSeq,
+		});
 
 		bot.client.write("player_action", {
 			status: 2,
@@ -299,7 +457,10 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 	bot.stopDigging = () => {
 		if (!digging) return;
-		bot.emit("debug", "dig", { event: "stop", stack: new Error().stack?.split("\n").slice(1, 4).join(" ← ") });
+		bot.emit("debug", "dig", {
+			event: "stop",
+			stack: new Error().stack?.split("\n").slice(1, 4).join(" ← "),
+		});
 		digging = false;
 		bot.unlockLook();
 
@@ -330,7 +491,11 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 	bot.canDigBlock = (block: unknown): boolean => {
 		if (!block) return false;
-		const blockObj = block as { position: Vec3; diggable?: boolean; name?: string };
+		const blockObj = block as {
+			position: Vec3;
+			diggable?: boolean;
+			name?: string;
+		};
 		if (blockObj.diggable === false) return false;
 		if (!blockObj.position) return false;
 
@@ -347,12 +512,19 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	bot.digTime = (block: unknown): number => {
 		if (bot.game.gameMode === "creative") return 0;
 
-		const blockObj = block as { hardness?: number; name?: string; stateId?: number };
+		const blockObj = block as {
+			hardness?: number;
+			name?: string;
+			stateId?: number;
+		};
 		const registry = bot.registry;
 
 		// Get hardness from block object, or look up from registry
 		let hardness: number | undefined = blockObj.hardness;
-		const blockDef = blockObj.name && registry ? registry.blocksByName.get(blockObj.name) : null;
+		const blockDef =
+			blockObj.name && registry
+				? registry.blocksByName.get(blockObj.name)
+				: null;
 		if (hardness == null && blockDef?.hardness != null) {
 			hardness = blockDef.hardness;
 		}
@@ -391,7 +563,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		// Efficiency enchantment
 		if (heldItem && registry) {
 			const enchants = getEnchants(registry, heldItem);
-			const efficiency = enchants.find(e => e.name === "efficiency");
+			const efficiency = enchants.find((e) => e.name === "efficiency");
 			if (efficiency) {
 				speed += efficiency.level * efficiency.level + 1;
 			}
@@ -416,7 +588,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			const helmet = bot.inventory?.slots[5];
 			if (helmet && registry) {
 				const enchants = getEnchants(registry, helmet);
-				hasAquaAffinity = enchants.some(e => e.name === "aqua_affinity");
+				hasAquaAffinity = enchants.some((e) => e.name === "aqua_affinity");
 			}
 			if (!hasAquaAffinity) {
 				speed *= 0.2;
@@ -441,7 +613,11 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Item collection ──
 
-	bot.collectDrops = async (range = 6, timeout = 5000, navigate?: (pos: Vec3) => Promise<void>): Promise<number> => {
+	bot.collectDrops = async (
+		range = 6,
+		timeout = 5000,
+		navigate?: (pos: Vec3) => Promise<void>,
+	): Promise<number> => {
 		const startTime = Date.now();
 		let collected = 0;
 		const itemEntityType = bot.registry?.entitiesByName.get("item")?.id;
@@ -452,7 +628,8 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			let nearestDist = Infinity;
 			for (const entity of Object.values(bot.entities)) {
 				if (entity.id === bot.entity?.id) continue;
-				if (itemEntityType != null && entity.entityType !== itemEntityType) continue;
+				if (itemEntityType != null && entity.entityType !== itemEntityType)
+					continue;
 				const dx = entity.position.x - bot.entity.position.x;
 				const dy = entity.position.y - bot.entity.position.y;
 				const dz = entity.position.z - bot.entity.position.z;
@@ -465,15 +642,27 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			}
 
 			if (!nearest) {
-				bot.emit("debug", "collect", { event: "no_items", entityCount: Object.keys(bot.entities).length, itemType: itemEntityType });
+				bot.emit("debug", "collect", {
+					event: "no_items",
+					entityCount: Object.keys(bot.entities).length,
+					itemType: itemEntityType,
+				});
 				break;
 			}
 
 			bot.emit("debug", "collect", {
 				event: "found",
 				itemId: nearest.id,
-				itemPos: { x: nearest.pos.x.toFixed(1), y: nearest.pos.y.toFixed(1), z: nearest.pos.z.toFixed(1) },
-				botPos: { x: bot.entity.position.x.toFixed(1), y: bot.entity.position.y.toFixed(1), z: bot.entity.position.z.toFixed(1) },
+				itemPos: {
+					x: nearest.pos.x.toFixed(1),
+					y: nearest.pos.y.toFixed(1),
+					z: nearest.pos.z.toFixed(1),
+				},
+				botPos: {
+					x: bot.entity.position.x.toFixed(1),
+					y: bot.entity.position.y.toFixed(1),
+					z: bot.entity.position.z.toFixed(1),
+				},
 				dist: nearestDist.toFixed(1),
 				hasNavigate: !!navigate,
 			});
@@ -489,10 +678,14 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 				if (navigate) {
 					await Promise.race([
 						navigate(targetBlock),
-						new Promise<void>((_, reject) => setTimeout(() => reject(new Error("navigate timeout")), 5000)),
+						new Promise<void>((_, reject) =>
+							setTimeout(() => reject(new Error("navigate timeout")), 5000),
+						),
 					]);
 				} else {
-					await bot.lookAt(vec3(nearest.pos.x, bot.entity.position.y + 1.6, nearest.pos.z));
+					await bot.lookAt(
+						vec3(nearest.pos.x, bot.entity.position.y + 1.6, nearest.pos.z),
+					);
 					bot.setControlState("forward", true);
 					await new Promise((r) => setTimeout(r, 1500));
 					bot.setControlState("forward", false);
@@ -505,7 +698,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			const dy = bot.entity.position.y - nearest.pos.y;
 			const dxz = Math.sqrt(
 				(bot.entity.position.x - nearest.pos.x) ** 2 +
-				(bot.entity.position.z - nearest.pos.z) ** 2,
+					(bot.entity.position.z - nearest.pos.z) ** 2,
 			);
 			if (dy > 0.5 && dxz < 1.5) {
 				// Bot is above item — walk toward the item's XZ to fall into the hole
@@ -521,11 +714,17 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 
 			// Wait for server to process pickup
 			await new Promise((r) => setTimeout(r, 300));
-			if (!bot.entities[nearest.id]) { collected++; continue; }
+			if (!bot.entities[nearest.id]) {
+				collected++;
+				continue;
+			}
 
 			// Still there — try waiting a bit more
 			await new Promise((r) => setTimeout(r, 500));
-			if (!bot.entities[nearest.id]) { collected++; continue; }
+			if (!bot.entities[nearest.id]) {
+				collected++;
+				continue;
+			}
 		}
 
 		bot.setControlState("forward", false);

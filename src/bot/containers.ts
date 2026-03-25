@@ -7,7 +7,15 @@ import type { Entity } from "../entity/index.ts";
 import { fromNotch, type Item } from "../item/index.ts";
 import type { Vec3 } from "../vec3/index.ts";
 import type { Window } from "../window/index.ts";
-import type { AnvilWindow, Bot, BotOptions, EnchantmentTableWindow, FurnaceWindow, VillagerTrade, VillagerWindow } from "./types.ts";
+import type {
+	AnvilWindow,
+	Bot,
+	BotOptions,
+	EnchantmentTableWindow,
+	FurnaceWindow,
+	VillagerTrade,
+	VillagerWindow,
+} from "./types.ts";
 
 /** Writable version of Vec3 for entity position mutation. */
 type MutableVec3 = { x: number; y: number; z: number };
@@ -26,8 +34,14 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		const block = furnaceBlock as { position: Vec3 };
 		const window = await bot.openBlock(block.position);
 
-		const allowedTypes = ["minecraft:furnace", "minecraft:blast_furnace", "minecraft:smoker"];
-		const isMatch = allowedTypes.some(t => window.type.toString().startsWith(t));
+		const allowedTypes = [
+			"minecraft:furnace",
+			"minecraft:blast_furnace",
+			"minecraft:smoker",
+		];
+		const isMatch = allowedTypes.some((t) =>
+			window.type.toString().startsWith(t),
+		);
 		if (!isMatch) throw new Error("Not a furnace-like window: " + window.type);
 
 		const furnace = window as unknown as FurnaceWindow;
@@ -44,23 +58,47 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		furnace.fuelItem = () => furnace.slots[1] ?? null;
 		furnace.outputItem = () => furnace.slots[2] ?? null;
 
-		furnace.takeInput = async () => { if (furnace.slots[0]) await bot.putAway(0); };
-		furnace.takeFuel = async () => { if (furnace.slots[1]) await bot.putAway(1); };
-		furnace.takeOutput = async () => { if (furnace.slots[2]) await bot.putAway(2); };
+		furnace.takeInput = async () => {
+			if (furnace.slots[0]) await bot.putAway(0);
+		};
+		furnace.takeFuel = async () => {
+			if (furnace.slots[1]) await bot.putAway(1);
+		};
+		furnace.takeOutput = async () => {
+			if (furnace.slots[2]) await bot.putAway(2);
+		};
 
-		furnace.putInput = async (itemType: number, metadata: number | null, count: number) => {
+		furnace.putInput = async (
+			itemType: number,
+			metadata: number | null,
+			count: number,
+		) => {
 			await bot.transfer({
-				window: furnace, itemType, metadata, count,
-				sourceStart: furnace.inventoryStart, sourceEnd: furnace.inventoryEnd,
-				destStart: 0, destEnd: 1,
+				window: furnace,
+				itemType,
+				metadata,
+				count,
+				sourceStart: furnace.inventoryStart,
+				sourceEnd: furnace.inventoryEnd,
+				destStart: 0,
+				destEnd: 1,
 			});
 		};
 
-		furnace.putFuel = async (itemType: number, metadata: number | null, count: number) => {
+		furnace.putFuel = async (
+			itemType: number,
+			metadata: number | null,
+			count: number,
+		) => {
 			await bot.transfer({
-				window: furnace, itemType, metadata, count,
-				sourceStart: furnace.inventoryStart, sourceEnd: furnace.inventoryEnd,
-				destStart: 1, destEnd: 2,
+				window: furnace,
+				itemType,
+				metadata,
+				count,
+				sourceStart: furnace.inventoryStart,
+				sourceEnd: furnace.inventoryEnd,
+				destStart: 1,
+				destEnd: 2,
 			});
 		};
 
@@ -72,16 +110,21 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			switch (prop) {
 				case 0: // Current fuel tick
 					furnace.fuel = furnace.totalFuel ? value / furnace.totalFuel : 0;
-					furnace.fuelSeconds = furnace.totalFuelSeconds ? furnace.fuel * furnace.totalFuelSeconds : 0;
+					furnace.fuelSeconds = furnace.totalFuelSeconds
+						? furnace.fuel * furnace.totalFuelSeconds
+						: 0;
 					break;
 				case 1: // Total fuel ticks
 					furnace.totalFuel = value;
 					furnace.totalFuelSeconds = value * 0.05;
 					break;
 				case 2: // Current progress
-					furnace.progress = furnace.totalProgress ? value / furnace.totalProgress : 0;
+					furnace.progress = furnace.totalProgress
+						? value / furnace.totalProgress
+						: 0;
 					furnace.progressSeconds = furnace.totalProgressSeconds
-						? furnace.totalProgressSeconds - furnace.progress * furnace.totalProgressSeconds
+						? furnace.totalProgressSeconds -
+							furnace.progress * furnace.totalProgressSeconds
 						: 0;
 					break;
 				case 3: // Total progress
@@ -121,19 +164,33 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			if (!name) return;
 			for (let i = 1; i <= name.length; i++) {
 				sendItemName(name.substring(0, i));
-				await new Promise(r => setTimeout(r, 50));
+				await new Promise((r) => setTimeout(r, 50));
 			}
 		};
 
-		const putSomething = async (destSlot: number, itemType: number, metadata: number | null, count: number) => {
+		const putSomething = async (
+			destSlot: number,
+			itemType: number,
+			metadata: number | null,
+			count: number,
+		) => {
 			await bot.transfer({
-				window: anvil, itemType, metadata, count,
-				sourceStart: anvil.inventoryStart, sourceEnd: anvil.inventoryEnd,
-				destStart: destSlot, destEnd: destSlot + 1,
+				window: anvil,
+				itemType,
+				metadata,
+				count,
+				sourceStart: anvil.inventoryStart,
+				sourceEnd: anvil.inventoryEnd,
+				destStart: destSlot,
+				destEnd: destSlot + 1,
 			});
 		};
 
-		anvil.combine = async (itemOne: Item, itemTwo: Item, name?: string): Promise<void> => {
+		anvil.combine = async (
+			itemOne: Item,
+			itemTwo: Item,
+			name?: string,
+		): Promise<void> => {
 			if (name && name.length > 35) throw new Error("Name is too long");
 
 			// Place items in slots
@@ -164,7 +221,9 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		return anvil;
 	};
 
-	bot.openEnchantmentTable = async (tableBlock: unknown): Promise<EnchantmentTableWindow> => {
+	bot.openEnchantmentTable = async (
+		tableBlock: unknown,
+	): Promise<EnchantmentTableWindow> => {
 		const block = tableBlock as { position: Vec3 };
 		const window = await bot.openBlock(block.position);
 
@@ -186,11 +245,13 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 
 		table.enchant = async (choice: number): Promise<Item | null> => {
 			if (!ready) {
-				await new Promise<void>(resolve => {
+				await new Promise<void>((resolve) => {
 					const check = () => {
-						if (table.enchantments[0].level >= 0 &&
+						if (
+							table.enchantments[0].level >= 0 &&
 							table.enchantments[1].level >= 0 &&
-							table.enchantments[2].level >= 0) {
+							table.enchantments[2].level >= 0
+						) {
 							resolve();
 						} else {
 							setTimeout(check, 50);
@@ -206,8 +267,12 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			});
 
 			// Wait for the item to update in slot 0
-			await new Promise<void>(resolve => {
-				const onSlot = (slot: number, _old: Item | null, _newItem: Item | null) => {
+			await new Promise<void>((resolve) => {
+				const onSlot = (
+					slot: number,
+					_old: Item | null,
+					_newItem: Item | null,
+				) => {
 					if (slot === 0) {
 						table.onSlotUpdate = prevOnSlot;
 						resolve();
@@ -250,10 +315,12 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 				table.enchantments[prop - 7].expected.level = value;
 			}
 
-			if (!ready &&
+			if (
+				!ready &&
 				table.enchantments[0].level >= 0 &&
 				table.enchantments[1].level >= 0 &&
-				table.enchantments[2].level >= 0) {
+				table.enchantments[2].level >= 0
+			) {
 				ready = true;
 			}
 		};
@@ -268,13 +335,17 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		return table;
 	};
 
-	bot.openVillager = async (villagerEntity: Entity): Promise<VillagerWindow> => {
+	bot.openVillager = async (
+		villagerEntity: Entity,
+	): Promise<VillagerWindow> => {
 		const villagerPromise = bot.openEntity(villagerEntity);
 
 		// Set up trade list listener before awaiting
 		let tradesReady = false;
 		let resolveReady: (() => void) | null = null;
-		const readyPromise = new Promise<void>(r => { resolveReady = r; });
+		const readyPromise = new Promise<void>((r) => {
+			resolveReady = r;
+		});
 
 		let villager: VillagerWindow;
 
@@ -285,11 +356,13 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 			const trades = packet.trades as Array<Record<string, unknown>>;
 			if (!trades || !bot.registry) return;
 
-			villager.trades = trades.map(trade => {
+			villager.trades = trades.map((trade) => {
 				const inputItem1 = fromNotch(bot.registry!, trade.inputItem1 as never);
 				const outputItem = fromNotch(bot.registry!, trade.outputItem as never);
 				const inputItem2Raw = trade.inputItem2;
-				const inputItem2 = inputItem2Raw ? fromNotch(bot.registry!, inputItem2Raw as never) : null;
+				const inputItem2 = inputItem2Raw
+					? fromNotch(bot.registry!, inputItem2Raw as never)
+					: null;
 				const hasItem2 = !!(inputItem2 && inputItem2.type && inputItem2.count);
 
 				const demand = (trade.demand as number) ?? 0;
@@ -301,8 +374,15 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 				const tradeDisabled = (trade.tradeDisabled as boolean) ?? false;
 
 				let realPrice = inputItem1?.count ?? 1;
-				if (trade.demand !== undefined && trade.specialPrice !== undefined && inputItem1) {
-					const demandDiff = Math.max(0, Math.floor(inputItem1.count * demand * priceMultiplier));
+				if (
+					trade.demand !== undefined &&
+					trade.specialPrice !== undefined &&
+					inputItem1
+				) {
+					const demandDiff = Math.max(
+						0,
+						Math.floor(inputItem1.count * demand * priceMultiplier),
+					);
 					realPrice = Math.min(
 						Math.max(inputItem1.count + specialPrice + demandDiff, 1),
 						inputItem1.stackSize,
@@ -357,15 +437,20 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Trading ──
 
-	bot.trade = async (villagerWindow: Window, index: number, count?: number): Promise<void> => {
+	bot.trade = async (
+		villagerWindow: Window,
+		index: number,
+		count?: number,
+	): Promise<void> => {
 		const villager = villagerWindow as unknown as VillagerWindow;
 		if (!villager.trades) throw new Error("No trades available");
 
 		const trade = villager.trades[index];
 		if (!trade) throw new Error("Invalid trade index");
 
-		const times = count ?? (trade.maximumNbTradeUses - trade.nbTradeUses);
-		if (trade.maximumNbTradeUses - trade.nbTradeUses <= 0) throw new Error("Trade blocked");
+		const times = count ?? trade.maximumNbTradeUses - trade.nbTradeUses;
+		if (trade.maximumNbTradeUses - trade.nbTradeUses <= 0)
+			throw new Error("Trade blocked");
 
 		// Select the trade
 		bot.client.write("select_trade", { slot: index });
@@ -379,10 +464,14 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 
 			if (input1Needed > 0) {
 				await bot.transfer({
-					window: villager, itemType: trade.inputItem1.type,
-					metadata: trade.inputItem1.metadata, count: input1Needed,
-					sourceStart: villager.inventoryStart, sourceEnd: villager.inventoryEnd,
-					destStart: 0, destEnd: 1,
+					window: villager,
+					itemType: trade.inputItem1.type,
+					metadata: trade.inputItem1.metadata,
+					count: input1Needed,
+					sourceStart: villager.inventoryStart,
+					sourceEnd: villager.inventoryEnd,
+					destStart: 0,
+					destEnd: 1,
 				});
 			}
 
@@ -394,10 +483,14 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 
 				if (input2Needed > 0) {
 					await bot.transfer({
-						window: villager, itemType: trade.inputItem2.type,
-						metadata: trade.inputItem2.metadata, count: input2Needed,
-						sourceStart: villager.inventoryStart, sourceEnd: villager.inventoryEnd,
-						destStart: 1, destEnd: 2,
+						window: villager,
+						itemType: trade.inputItem2.type,
+						metadata: trade.inputItem2.metadata,
+						count: input2Needed,
+						sourceStart: villager.inventoryStart,
+						sourceEnd: villager.inventoryEnd,
+						destStart: 1,
+						destEnd: 2,
 					});
 				}
 			}

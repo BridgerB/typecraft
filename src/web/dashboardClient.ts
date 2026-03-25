@@ -16,7 +16,11 @@ import {
 	createTextureAtlas,
 	prepareBlockStates,
 } from "../viewer/assets.ts";
-import { type EntityModelDef, setEntityModels, updateEntityEquipment } from "../viewer/entityRenderer.ts";
+import {
+	type EntityModelDef,
+	setEntityModels,
+	updateEntityEquipment,
+} from "../viewer/entityRenderer.ts";
 import {
 	addViewerColumn,
 	addViewerEntity,
@@ -108,10 +112,14 @@ const decodeTextures = async (
 				const b64 = textureData[name];
 				if (!b64) return null;
 				try {
-					const blob = await fetch(`data:image/png;base64,${b64}`).then((r) => r.blob());
+					const blob = await fetch(`data:image/png;base64,${b64}`).then((r) =>
+						r.blob(),
+					);
 					const bmp = await createImageBitmap(blob);
 					return { name, bmp };
-				} catch { return null; }
+				} catch {
+					return null;
+				}
 			}),
 		);
 		for (const r of results) if (r) images.set(r.name, r.bmp);
@@ -139,10 +147,13 @@ const objToMap = (obj: Record<string, readonly [number, number, number]>) => {
 };
 
 const deserializeTints = (raw: SerializedTints): BiomeTints => ({
-	grass: objToMap(raw.grass), foliage: objToMap(raw.foliage),
-	water: objToMap(raw.water), redstone: objToMap(raw.redstone),
+	grass: objToMap(raw.grass),
+	foliage: objToMap(raw.foliage),
+	water: objToMap(raw.water),
+	redstone: objToMap(raw.redstone),
 	constant: objToMap(raw.constant),
-	grassDefault: raw.grassDefault, foliageDefault: raw.foliageDefault,
+	grassDefault: raw.grassDefault,
+	foliageDefault: raw.foliageDefault,
 	waterDefault: raw.waterDefault,
 });
 
@@ -153,7 +164,9 @@ const getOrCreateCell = (botId: string): BotCell => {
 	if (cell) return cell;
 
 	// Create a scene that shares the single renderer
-	const viewer = createViewerScene(renderer, { workerUrl: "/web/clientWorker.js" });
+	const viewer = createViewerScene(renderer, {
+		workerUrl: "/web/clientWorker.js",
+	});
 
 	cell = {
 		name: botId,
@@ -182,10 +195,15 @@ const applyAssets = (cell: BotCell) => {
 	if (!sharedAtlas || !sharedBlockStates || !sharedTints) return;
 	setViewerAssets(cell.viewer, sharedAtlas, sharedBlockStates, sharedTints);
 	for (const worker of cell.viewer.worldRenderer.workers) {
-		worker.postMessage({ type: "registryData", blocks: sharedBlocks, biomes: sharedBiomes });
+		worker.postMessage({
+			type: "registryData",
+			blocks: sharedBlocks,
+			biomes: sharedBiomes,
+		});
 	}
 	cell.assetsReady = true;
-	for (const msg of cell.pending) processMessage(msg as Record<string, unknown>);
+	for (const msg of cell.pending)
+		processMessage(msg as Record<string, unknown>);
 	cell.pending.length = 0;
 };
 
@@ -201,28 +219,68 @@ const processMessage = (msg: Record<string, unknown>) => {
 	const { viewer } = cell;
 
 	if (type === "position") {
-		setViewerCamera(viewer, vec3(msg.x as number, msg.y as number, msg.z as number), msg.yaw as number, msg.pitch as number);
+		setViewerCamera(
+			viewer,
+			vec3(msg.x as number, msg.y as number, msg.z as number),
+			msg.yaw as number,
+			msg.pitch as number,
+		);
 	} else if (type === "chunk") {
 		const col = createChunkColumn({
-			minY: cell.minY, worldHeight: cell.worldHeight,
-			maxBitsPerBlock: GLOBAL_BITS_PER_BLOCK, maxBitsPerBiome: GLOBAL_BITS_PER_BIOME,
+			minY: cell.minY,
+			worldHeight: cell.worldHeight,
+			maxBitsPerBlock: GLOBAL_BITS_PER_BLOCK,
+			maxBitsPerBiome: GLOBAL_BITS_PER_BIOME,
 		});
 		loadChunkColumn(col, Buffer.from(msg.buf as string, "base64"), true);
-		addViewerColumn(viewer, msg.x as number, msg.z as number, col, cell.minY, cell.worldHeight);
+		addViewerColumn(
+			viewer,
+			msg.x as number,
+			msg.z as number,
+			col,
+			cell.minY,
+			cell.worldHeight,
+		);
 	} else if (type === "unloadChunk") {
 		removeViewerColumn(viewer, msg.x as number, msg.z as number);
 	} else if (type === "blockUpdate") {
-		setViewerBlockStateId(viewer, vec3(msg.x as number, msg.y as number, msg.z as number), msg.stateId as number);
+		setViewerBlockStateId(
+			viewer,
+			vec3(msg.x as number, msg.y as number, msg.z as number),
+			msg.stateId as number,
+		);
 	} else if (type === "time") {
 		setViewerTime(viewer, msg.time as number);
 	} else if (type === "entitySpawn") {
-		addViewerEntity(viewer, msg.id as number, (msg.entityName as string) ?? "player", msg.username as string | null, msg.x as number, msg.y as number, msg.z as number, msg.yaw as number, msg.skinUrl as string | undefined);
+		addViewerEntity(
+			viewer,
+			msg.id as number,
+			(msg.entityName as string) ?? "player",
+			msg.username as string | null,
+			msg.x as number,
+			msg.y as number,
+			msg.z as number,
+			msg.yaw as number,
+			msg.skinUrl as string | undefined,
+		);
 	} else if (type === "entityMove") {
-		updateViewerEntity(viewer, msg.id as number, msg.x as number, msg.y as number, msg.z as number, msg.yaw as number);
+		updateViewerEntity(
+			viewer,
+			msg.id as number,
+			msg.x as number,
+			msg.y as number,
+			msg.z as number,
+			msg.yaw as number,
+		);
 	} else if (type === "entityGone") {
 		removeViewerEntity(viewer, msg.id as number);
 	} else if (type === "entityEquip") {
-		updateEntityEquipment(viewer.entityRenderer, msg.id as number, msg.slot as number, msg.itemName as string | null);
+		updateEntityEquipment(
+			viewer.entityRenderer,
+			msg.id as number,
+			msg.slot as number,
+			msg.itemName as string | null,
+		);
 	}
 };
 
@@ -232,7 +290,9 @@ const connect = () => {
 	const protocol = location.protocol === "https:" ? "wss:" : "ws:";
 	const ws = new WebSocket(`${protocol}//${location.host}`);
 
-	ws.onopen = () => { statusEl.textContent = "Connected"; };
+	ws.onopen = () => {
+		statusEl.textContent = "Connected";
+	};
 
 	ws.onmessage = async (event) => {
 		const msg = JSON.parse(event.data as string) as Record<string, unknown>;
@@ -258,7 +318,10 @@ const connect = () => {
 			const textureData = msg.textureData as Record<string, string>;
 
 			const images = await decodeTextures(textureNames, textureData);
-			sharedAtlas = createTextureAtlas(textureNames, (name) => images.get(name.replace(".png", ""))!);
+			sharedAtlas = createTextureAtlas(
+				textureNames,
+				(name) => images.get(name.replace(".png", ""))!,
+			);
 			sharedBlockStates = prepareBlockStates(
 				msg.blockStates as Record<string, unknown>,
 				msg.blockModels as Parameters<typeof prepareBlockStates>[1],
@@ -280,8 +343,11 @@ const connect = () => {
 			if (!botId) return;
 			const cell = cells.get(botId);
 			if (!cell) return;
-			if (!cell.assetsReady) { cell.pending.push(msg); }
-			else { processMessage(msg); }
+			if (!cell.assetsReady) {
+				cell.pending.push(msg);
+			} else {
+				processMessage(msg);
+			}
 		}
 	};
 

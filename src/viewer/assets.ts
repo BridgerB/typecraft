@@ -114,7 +114,12 @@ const tintToGl = (color: number): readonly [number, number, number] => {
 /** Compute UV map without a canvas — pure math, works on server. */
 export const computeUvMap = (
 	textureFiles: readonly string[],
-): { uvMap: Record<string, TextureUV>; tileSize: number; atlasSize: number; texSize: number } => {
+): {
+	uvMap: Record<string, TextureUV>;
+	tileSize: number;
+	atlasSize: number;
+	texSize: number;
+} => {
 	const tileSize = 16;
 	const texSize = nextPowerOfTwo(Math.ceil(Math.sqrt(textureFiles.length)));
 	const atlasSize = texSize * tileSize;

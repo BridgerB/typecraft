@@ -103,7 +103,9 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 		const dz = bot.entity.position.z - (block.z + 0.5);
 		const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 		if (dist > 6) {
-			throw new Error(`Too far to interact with block (dist=${dist.toFixed(1)}, max=6)`);
+			throw new Error(
+				`Too far to interact with block (dist=${dist.toFixed(1)}, max=6)`,
+			);
 		}
 
 		const faceVector = direction ?? vec3(0, 1, 0);
@@ -145,18 +147,29 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 			await new Promise<void>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					bot.removeListener("blockUpdate", onUpdate);
-					bot.emit("debug", "place", { event: "timeout", dest: { x: dest.x, y: dest.y, z: dest.z } });
+					bot.emit("debug", "place", {
+						event: "timeout",
+						dest: { x: dest.x, y: dest.y, z: dest.z },
+					});
 					reject(new Error("Place block timeout"));
 				}, 5000);
 
-				const onUpdate = (pos: unknown, oldStateId: unknown, newStateId: unknown) => {
+				const onUpdate = (
+					pos: unknown,
+					oldStateId: unknown,
+					newStateId: unknown,
+				) => {
 					const p = pos as Vec3;
 					if (!p || typeof p.x !== "number") return;
 					if (p.x === dest.x && p.y === dest.y && p.z === dest.z) {
 						if (oldStateId !== newStateId) {
 							clearTimeout(timeout);
 							bot.removeListener("blockUpdate", onUpdate);
-							bot.emit("debug", "place", { event: "confirmed", dest: { x: dest.x, y: dest.y, z: dest.z }, newStateId });
+							bot.emit("debug", "place", {
+								event: "confirmed",
+								dest: { x: dest.x, y: dest.y, z: dest.z },
+								newStateId,
+							});
 							bot.emit("blockPlaced", pos, pos);
 							resolve();
 						}

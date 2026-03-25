@@ -48,7 +48,10 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 	// ── Window items (bulk slot update) ──
 
 	bot.client.on("container_set_content", (packet: Record<string, unknown>) => {
-		if (!bot.registry) { bot.emit("debug", "inventory", { event: "set_content_no_registry" }); return; }
+		if (!bot.registry) {
+			bot.emit("debug", "inventory", { event: "set_content_no_registry" });
+			return;
+		}
 		const windowId = packet.windowId as number;
 		const items = packet.items as unknown[];
 
@@ -58,7 +61,13 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				: bot.currentWindow?.id === windowId
 					? bot.currentWindow
 					: null;
-		if (!window) { bot.emit("debug", "inventory", { event: "set_content_no_window", windowId }); return; }
+		if (!window) {
+			bot.emit("debug", "inventory", {
+				event: "set_content_no_window",
+				windowId,
+			});
+			return;
+		}
 
 		let nonEmpty = 0;
 		for (let i = 0; i < items.length; i++) {
@@ -72,7 +81,13 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			(window as Record<string, unknown>).stateId = packet.stateId as number;
 		}
 
-		bot.emit("debug", "inventory", { event: "set_content", windowId, totalSlots: items.length, nonEmpty, stateId: packet.stateId ?? null });
+		bot.emit("debug", "inventory", {
+			event: "set_content",
+			windowId,
+			totalSlots: items.length,
+			nonEmpty,
+			stateId: packet.stateId ?? null,
+		});
 
 		// Auto-move items from crafting grid (slots 1-4) to main inventory after resync
 		// Prevents items getting stuck in the grid from server resyncs
@@ -95,7 +110,10 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 	// ── Set slot (single slot update) ──
 
 	bot.client.on("container_set_slot", (packet: Record<string, unknown>) => {
-		if (!bot.registry) { bot.emit("debug", "inventory", { event: "set_slot_no_registry" }); return; }
+		if (!bot.registry) {
+			bot.emit("debug", "inventory", { event: "set_slot_no_registry" });
+			return;
+		}
 		const windowId = packet.windowId as number;
 		const slot = packet.slot as number;
 		const item = fromNotch(bot.registry, packet.item as never);
@@ -123,8 +141,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			updateSlot(window, slot, item);
 			// Track stateId for window_click
 			if (packet.stateId != null) {
-				(window as Record<string, unknown>).stateId =
-					packet.stateId as number;
+				(window as Record<string, unknown>).stateId = packet.stateId as number;
 			}
 		}
 
@@ -136,21 +153,23 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Set player inventory (1.21.11+) ──
 
-	bot.client.on(
-		"set_player_inventory",
-		(packet: Record<string, unknown>) => {
-			if (!bot.registry) return;
-			const slotId = packet.slotId as number;
-			const item = fromNotch(bot.registry, packet.contents as never);
-			updateSlot(bot.inventory, slotId, item);
+	bot.client.on("set_player_inventory", (packet: Record<string, unknown>) => {
+		if (!bot.registry) return;
+		const slotId = packet.slotId as number;
+		const item = fromNotch(bot.registry, packet.contents as never);
+		updateSlot(bot.inventory, slotId, item);
 
-			if (slotId === bot.quickBarSlot + 36) {
-				bot.heldItem = item;
-			}
+		if (slotId === bot.quickBarSlot + 36) {
+			bot.heldItem = item;
+		}
 
-			bot.emit("debug", "inventory", { event: "set_player_inventory", slotId, item: item?.name ?? null, count: item?.count ?? 0 });
-		},
-	);
+		bot.emit("debug", "inventory", {
+			event: "set_player_inventory",
+			slotId,
+			item: item?.name ?? null,
+			count: item?.count ?? 0,
+		});
+	});
 
 	// ── Open window ──
 
@@ -166,10 +185,16 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			info = windowTypes[windowType] ?? null;
 		} else {
 			// Numeric type ID — find by matching .type field
-			info = Object.values(windowTypes).find((w) => w.type === windowType) ?? null;
+			info =
+				Object.values(windowTypes).find((w) => w.type === windowType) ?? null;
 		}
 
-		bot.emit("debug", "window", { event: "open", windowId, windowType, info: info?.key ?? null });
+		bot.emit("debug", "window", {
+			event: "open",
+			windowId,
+			windowType,
+			info: info?.key ?? null,
+		});
 
 		if (info) {
 			bot.currentWindow = createWindow(
@@ -198,7 +223,10 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			for (let i = 0; i < invLen; i++) {
 				const containerSlot = w.inventoryStart + i;
 				const playerSlot = bot.inventory.inventoryStart + i;
-				if (containerSlot < w.slots.length && playerSlot < bot.inventory.slots.length) {
+				if (
+					containerSlot < w.slots.length &&
+					playerSlot < bot.inventory.slots.length
+				) {
 					bot.inventory.slots[playerSlot] = w.slots[containerSlot];
 				}
 			}
@@ -231,9 +259,7 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				((window as Record<string, unknown>).stateId as number) ?? 0;
 
 			// Snapshot old slots, simulate the click client-side, then diff
-			const oldSlots = window.slots.map((s) =>
-				s ? { ...s } : null,
-			);
+			const oldSlots = window.slots.map((s) => (s ? { ...s } : null));
 			acceptClick(window, bot.registry, { slot, mouseButton, mode });
 
 			// Compute changed slots
@@ -247,7 +273,14 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 				}
 			}
 
-			bot.emit("debug", "click", { slot, mouseButton, mode, stateId, changed: changedSlots.length, cursor: window.selectedItem?.name ?? null });
+			bot.emit("debug", "click", {
+				slot,
+				mouseButton,
+				mode,
+				stateId,
+				changed: changedSlots.length,
+				cursor: window.selectedItem?.name ?? null,
+			});
 
 			bot.client.write("container_click", {
 				windowId: window.id,
@@ -301,7 +334,10 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			for (let i = 0; i < invLen; i++) {
 				const containerSlot = window.inventoryStart + i;
 				const playerSlot = bot.inventory.inventoryStart + i;
-				if (containerSlot < window.slots.length && playerSlot < bot.inventory.slots.length) {
+				if (
+					containerSlot < window.slots.length &&
+					playerSlot < bot.inventory.slots.length
+				) {
 					bot.inventory.slots[playerSlot] = window.slots[containerSlot];
 				}
 			}
@@ -386,7 +422,15 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 	// ── Transfer ──
 
 	bot.transfer = async (opts: TransferOptions): Promise<void> => {
-		const { window: win, sourceStart, sourceEnd, destStart, destEnd, itemType, metadata } = opts;
+		const {
+			window: win,
+			sourceStart,
+			sourceEnd,
+			destStart,
+			destEnd,
+			itemType,
+			metadata,
+		} = opts;
 		let remaining = opts.count ?? Number.POSITIVE_INFINITY;
 		let firstSourceSlot: number | null = null;
 

@@ -15,7 +15,11 @@ import {
 	createTextureAtlas,
 	prepareBlockStates,
 } from "../viewer/assets.ts";
-import { type EntityModelDef, setEntityModels, updateEntityEquipment } from "../viewer/entityRenderer.ts";
+import {
+	type EntityModelDef,
+	setEntityModels,
+	updateEntityEquipment,
+} from "../viewer/entityRenderer.ts";
 import {
 	addViewerColumn,
 	addViewerEntity,
@@ -75,7 +79,10 @@ type AssetsMessage = {
 	tints: SerializedTints;
 	blocks: BlockDef[];
 	biomes: BiomeDef[];
-	entityModels: Record<string, { texturewidth: number; textureheight: number; bones: unknown[] }>;
+	entityModels: Record<
+		string,
+		{ texturewidth: number; textureheight: number; bones: unknown[] }
+	>;
 };
 
 type PositionMessage = {
@@ -229,7 +236,9 @@ const decodeTextures = async (
 		);
 	}
 
-	console.log(`[texture] Decoded ${decoded}/${entries.length} textures (${failed} failed)`);
+	console.log(
+		`[texture] Decoded ${decoded}/${entries.length} textures (${failed} failed)`,
+	);
 	return images;
 };
 
@@ -265,7 +274,17 @@ const processMessage = (msg: ServerMessage): void => {
 		setViewerTime(viewer, msg.time);
 	} else if (msg.type === "entitySpawn") {
 		if (!viewer) return;
-		addViewerEntity(viewer, msg.id, msg.entityName ?? "player", msg.username, msg.x, msg.y, msg.z, msg.yaw, msg.skinUrl);
+		addViewerEntity(
+			viewer,
+			msg.id,
+			msg.entityName ?? "player",
+			msg.username,
+			msg.x,
+			msg.y,
+			msg.z,
+			msg.yaw,
+			msg.skinUrl,
+		);
 	} else if (msg.type === "entityMove") {
 		if (!viewer) return;
 		updateViewerEntity(viewer, msg.id, msg.x, msg.y, msg.z, msg.yaw);
@@ -274,7 +293,12 @@ const processMessage = (msg: ServerMessage): void => {
 		removeViewerEntity(viewer, msg.id);
 	} else if (msg.type === "entityEquip") {
 		if (!viewer) return;
-		updateEntityEquipment(viewer.entityRenderer, msg.id, msg.slot, msg.itemName);
+		updateEntityEquipment(
+			viewer.entityRenderer,
+			msg.id,
+			msg.slot,
+			msg.itemName,
+		);
 	}
 };
 
@@ -309,7 +333,9 @@ const connect = () => {
 
 			try {
 				setStatus("Decoding textures...");
-				console.log(`[assets] Received ${msg.textureNames.length} textures, ${Object.keys(msg.blockStates).length} block states`);
+				console.log(
+					`[assets] Received ${msg.textureNames.length} textures, ${Object.keys(msg.blockStates).length} block states`,
+				);
 				const images = await decodeTextures(msg.textureNames, msg.textureData);
 
 				setStatus("Building texture atlas...");
@@ -337,7 +363,12 @@ const connect = () => {
 					});
 				}
 
-				setViewerAssets(viewer, atlas, blockStates, deserializeTints(msg.tints));
+				setViewerAssets(
+					viewer,
+					atlas,
+					blockStates,
+					deserializeTints(msg.tints),
+				);
 				setEntityModels(msg.entityModels as Record<string, EntityModelDef>);
 				assetsReady = true;
 				console.log("[assets] Ready!");

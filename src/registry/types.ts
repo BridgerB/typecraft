@@ -178,7 +178,9 @@ export type Registry = {
 	readonly attributesArray: readonly AttributeDefinition[];
 	readonly blockCollisionShapes: BlockCollisionShapes;
 	readonly recipes: Readonly<Record<number, readonly RawRecipe[]>>;
-	readonly materials: Readonly<Record<string, Readonly<Record<number, number>>>>;
+	readonly materials: Readonly<
+		Record<string, Readonly<Record<number, number>>>
+	>;
 	readonly language: Readonly<Record<string, string>>;
 	readonly isNewerOrEqualTo: (version: string) => boolean;
 	readonly isOlderThan: (version: string) => boolean;

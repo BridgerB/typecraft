@@ -34,10 +34,16 @@ export const loadCache = (
 	username: string,
 	name: string,
 ): Record<string, unknown> => {
-	const filePath = join(cacheDir, `${hashUsername(username)}_${name}-cache.json`);
+	const filePath = join(
+		cacheDir,
+		`${hashUsername(username)}_${name}-cache.json`,
+	);
 	if (!existsSync(filePath)) return {};
 	try {
-		return JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
+		return JSON.parse(readFileSync(filePath, "utf8")) as Record<
+			string,
+			unknown
+		>;
 	} catch {
 		return {};
 	}
@@ -51,7 +57,10 @@ export const saveCache = (
 	data: Record<string, unknown>,
 ): void => {
 	mkdirSync(cacheDir, { recursive: true });
-	const filePath = join(cacheDir, `${hashUsername(username)}_${name}-cache.json`);
+	const filePath = join(
+		cacheDir,
+		`${hashUsername(username)}_${name}-cache.json`,
+	);
 	const existing = loadCache(cacheDir, username, name);
 	writeFileSync(filePath, JSON.stringify({ ...existing, ...data }, null, 2));
 };

@@ -255,7 +255,8 @@ const buildArray = (
 	params: { countType?: string; count?: number | string; type: unknown },
 ): TypeDef => {
 	const elemType = registry.resolve(params.type);
-	const fixedCount = typeof params.count === "number" ? params.count : undefined;
+	const fixedCount =
+		typeof params.count === "number" ? params.count : undefined;
 	const countField = typeof params.count === "string" ? params.count : null;
 	const countType = params.countType
 		? registry.resolve(params.countType)
@@ -529,7 +530,9 @@ const lpVec3Pack = (value: number): number =>
 	Math.round((value * 0.5 + 0.5) * LP_VEC3_MAX_QUANTIZED);
 
 const lpVec3Sanitize = (v: number): number =>
-	Number.isNaN(v) ? 0 : Math.max(-LP_VEC3_ABS_MAX, Math.min(v, LP_VEC3_ABS_MAX));
+	Number.isNaN(v)
+		? 0
+		: Math.max(-LP_VEC3_ABS_MAX, Math.min(v, LP_VEC3_ABS_MAX));
 
 const LP_VEC3_TYPE: TypeDef = {
 	read: (b, o) => {
@@ -724,8 +727,7 @@ const buildRegistryEntryHolder = (
 				return sizeOfVarInt((obj[params.baseName] as number) + 1);
 			}
 			return (
-				sizeOfVarInt(0) +
-				otherwiseType.sizeOf(obj[params.otherwise.name], ctx)
+				sizeOfVarInt(0) + otherwiseType.sizeOf(obj[params.otherwise.name], ctx)
 			);
 		},
 	};
@@ -783,9 +785,7 @@ const buildRegistryEntryHolderSet = (
 		sizeOf: (v, ctx) => {
 			const obj = v as Record<string, unknown>;
 			if (params.base.name in obj) {
-				return (
-					sizeOfVarInt(0) + baseType.sizeOf(obj[params.base.name], ctx)
-				);
+				return sizeOfVarInt(0) + baseType.sizeOf(obj[params.base.name], ctx);
 			}
 			const ids = obj[params.otherwise.name] as unknown[];
 			let size = sizeOfVarInt(ids.length + 1);

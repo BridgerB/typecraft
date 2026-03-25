@@ -117,13 +117,7 @@ describe("createWindowFromType", () => {
 	});
 
 	it("creates fallback window with slotCount", () => {
-		const win = createWindowFromType(
-			reg,
-			1,
-			"minecraft:container",
-			"Test",
-			27,
-		);
+		const win = createWindowFromType(reg, 1, "minecraft:container", "Test", 27);
 		expect(win).not.toBeNull();
 		expect(win!.slots).toHaveLength(63);
 		expect(win!.inventoryStart).toBe(27);

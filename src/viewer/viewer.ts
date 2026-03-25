@@ -80,7 +80,10 @@ export const createViewerScene = (
 		options.numWorkers,
 	);
 
-	const entityRenderer = createEntityRenderer(scene, options.textureUrl ?? "/textures/steve.png");
+	const entityRenderer = createEntityRenderer(
+		scene,
+		options.textureUrl ?? "/textures/steve.png",
+	);
 
 	return { scene, camera, renderer, worldRenderer, entityRenderer };
 };
@@ -152,7 +155,18 @@ export const addViewerEntity = (
 	z: number,
 	yaw: number,
 	skinUrl?: string,
-): void => addEntity(viewer.entityRenderer, id, entityName, username, x, y, z, yaw, skinUrl);
+): void =>
+	addEntity(
+		viewer.entityRenderer,
+		id,
+		entityName,
+		username,
+		x,
+		y,
+		z,
+		yaw,
+		skinUrl,
+	);
 
 export const updateViewerEntity = (
 	viewer: Viewer,
@@ -163,14 +177,11 @@ export const updateViewerEntity = (
 	yaw: number,
 ): void => updateEntity(viewer.entityRenderer, id, x, y, z, yaw);
 
-export const removeViewerEntity = (
-	viewer: Viewer,
-	id: number,
-): void => removeEntity(viewer.entityRenderer, id);
+export const removeViewerEntity = (viewer: Viewer, id: number): void =>
+	removeEntity(viewer.entityRenderer, id);
 
-export const clearViewerEntities = (
-	viewer: Viewer,
-): void => clearEntities(viewer.entityRenderer);
+export const clearViewerEntities = (viewer: Viewer): void =>
+	clearEntities(viewer.entityRenderer);
 
 // ── Camera ──
 
@@ -203,7 +214,7 @@ const NIGHT_SKY = new THREE.Color(0x0c1445);
 /** Set time of day (0–24000 MC ticks). Adjusts ambient light + sky color. */
 export const setViewerTime = (viewer: Viewer, time: number): void => {
 	// Sun angle: 0 at noon (tick 6000), π at midnight (tick 18000)
-	const angle = ((time / 24000 - 0.25) * 2 * Math.PI);
+	const angle = (time / 24000 - 0.25) * 2 * Math.PI;
 	const raw = Math.cos(angle);
 	// Brightness: 1.0 at noon, 0.15 at midnight
 	const brightness = Math.max(0.15, raw * 0.5 + 0.5);

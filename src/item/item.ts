@@ -7,7 +7,13 @@ import { equalNbt, nbtInt, nbtList, nbtShort, nbtString } from "../nbt/nbt.ts";
 import type { NbtCompound, NbtTag } from "../nbt/types.ts";
 import type { Registry } from "../registry/types.ts";
 import { hashComponents } from "./component-hash.ts";
-import type { Enchant, Item, ItemComponent, NotchItem, NotchItemBlockId } from "./types.ts";
+import type {
+	Enchant,
+	Item,
+	ItemComponent,
+	NotchItem,
+	NotchItemBlockId,
+} from "./types.ts";
 
 // ── Construction ──
 
@@ -334,8 +340,7 @@ export const itemsEqual = (
 			)
 				return false;
 		}
-		if (a.removedComponents.length !== b.removedComponents.length)
-			return false;
+		if (a.removedComponents.length !== b.removedComponents.length) return false;
 		for (let i = 0; i < a.removedComponents.length; i++) {
 			if (a.removedComponents[i] !== b.removedComponents[i]) return false;
 		}

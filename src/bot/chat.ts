@@ -369,7 +369,9 @@ export const initChat = (bot: Bot, options: BotOptions): void => {
 		}
 	};
 
-	bot.awaitMessage = (...args: (string | RegExp | number)[]): Promise<string> => {
+	bot.awaitMessage = (
+		...args: (string | RegExp | number)[]
+	): Promise<string> => {
 		const timeout =
 			typeof args[args.length - 1] === "number"
 				? (args.pop() as number)

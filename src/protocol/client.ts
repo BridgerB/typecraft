@@ -60,7 +60,11 @@ export type Client = EventEmitter & {
 	/** Unregister a plugin channel. */
 	readonly unregisterChannel: (name: string, custom?: boolean) => void;
 	/** Hooks for external modules to respond to version detection (e.g. Forge/FML). */
-	autoVersionHooks: ((response: unknown, client: Client, options: ClientOptions) => void)[];
+	autoVersionHooks: ((
+		response: unknown,
+		client: Client,
+		options: ClientOptions,
+	) => void)[];
 	/** Current protocol state. */
 	state: string;
 	/** Player username. */
@@ -157,9 +161,7 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 							try {
 								const { value: id } = readVarInt(decompressed, 0);
 								const pktName = readCodec.packetNames.get(id);
-								const hex = decompressed
-									.subarray(0, 64)
-									.toString("hex");
+								const hex = decompressed.subarray(0, 64).toString("hex");
 								err.message = `[${pktName ?? `0x${id.toString(16)}`}] ${err.message} | len=${decompressed.length} hex=${hex}`;
 							} catch {}
 						}
@@ -193,7 +195,11 @@ export const createProtocolClient = (options: ClientOptions): Client => {
 		version: options.version,
 		protocolVersion,
 		socket: null as Socket | null,
-		autoVersionHooks: [] as ((response: unknown, client: Client, options: ClientOptions) => void)[],
+		autoVersionHooks: [] as ((
+			response: unknown,
+			client: Client,
+			options: ClientOptions,
+		) => void)[],
 
 		setSocket: (socket: Socket) => {
 			currentSocket = socket;

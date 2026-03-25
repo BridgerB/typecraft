@@ -61,10 +61,7 @@ const init = (): void => {
 // ── Public API ──
 
 /** Serialize a component's data to bytes using the protocol codec. */
-export const serializeComponentData = (
-	type: string,
-	data: unknown,
-): Buffer => {
+export const serializeComponentData = (type: string, data: unknown): Buffer => {
 	init();
 	const serializer = componentSerializers!.get(type);
 	if (!serializer) {

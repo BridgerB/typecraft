@@ -3,7 +3,13 @@
  * data from multiple bots to a grid-view browser client.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	writeFileSync,
+} from "node:fs";
 import {
 	createServer,
 	type IncomingMessage,
@@ -18,7 +24,10 @@ import { dumpChunkColumn } from "../chunk/index.ts";
 import type { Entity } from "../entity/types.ts";
 import { loadMcAssets } from "./serve.ts";
 
-const DASHBOARD_DATA_DIR = pathJoin(dirname(fileURLToPath(import.meta.url)), "../data");
+const DASHBOARD_DATA_DIR = pathJoin(
+	dirname(fileURLToPath(import.meta.url)),
+	"../data",
+);
 
 // ── Types ──
 
@@ -58,18 +67,32 @@ export const createDashboard = (options?: DashboardOptions): Dashboard => {
 	const port = options?.port ?? 3000;
 	const viewDistance = options?.viewDistance ?? 2;
 	const distDir = resolve(import.meta.dirname, "../../dist");
-	const threeDir = resolve(import.meta.dirname, "../../node_modules/three/build");
+	const threeDir = resolve(
+		import.meta.dirname,
+		"../../node_modules/three/build",
+	);
 
 	// Offline skin selection — matches Minecraft's built-in skin assignment
-	const BUILTIN_SKINS = ["alex", "ari", "efe", "kai", "makena", "noor", "steve", "sunny", "zuri"];
+	const BUILTIN_SKINS = [
+		"alex",
+		"ari",
+		"efe",
+		"kai",
+		"makena",
+		"noor",
+		"steve",
+		"sunny",
+		"zuri",
+	];
 	const getOfflineSkin = (uuid: string): string => {
 		// Java UUID.hashCode(): (int)(msb ^ (msb >>> 32)) ^ (int)(lsb ^ (lsb >>> 32))
 		const hex = uuid.replace(/-/g, "");
 		const msb = BigInt(`0x${hex.slice(0, 16)}`);
 		const lsb = BigInt(`0x${hex.slice(16)}`);
 		const toInt = (x: bigint): number => Number(BigInt.asIntN(32, x));
-		const hash = toInt(BigInt.asIntN(64, msb) ^ (BigInt.asIntN(64, msb) >> 32n))
-			^ toInt(BigInt.asIntN(64, lsb) ^ (BigInt.asIntN(64, lsb) >> 32n));
+		const hash =
+			toInt(BigInt.asIntN(64, msb) ^ (BigInt.asIntN(64, msb) >> 32n)) ^
+			toInt(BigInt.asIntN(64, lsb) ^ (BigInt.asIntN(64, lsb) >> 32n));
 		return BUILTIN_SKINS[Math.abs(hash) % BUILTIN_SKINS.length]!;
 	};
 
@@ -173,7 +196,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		// Serve Steve skin texture
 		if (req.url === "/textures/steve.png") {
-			const stevePath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/entity/player/wide/steve.png");
+			const stevePath = pathJoin(
+				DASHBOARD_DATA_DIR,
+				"assets/textures/entity/player/wide/steve.png",
+			);
 			if (existsSync(stevePath)) {
 				res.writeHead(200, { "Content-Type": "image/png" });
 				res.end(readFileSync(stevePath));
@@ -187,7 +213,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		// Serve player skins (proxy from Mojang to avoid CORS)
 		if (req.url?.startsWith("/skins/") && req.url.endsWith(".png")) {
 			const uuid = req.url.slice("/skins/".length, -".png".length);
-			const skinHeaders = { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" };
+			const skinHeaders = {
+				"Content-Type": "image/png",
+				"Cache-Control": "public, max-age=3600",
+			};
 
 			const cached = getSkinCache(uuid);
 			if (cached) {
@@ -201,7 +230,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				try {
 					const serveFallback = () => {
 						const skinName = getOfflineSkin(uuid);
-						const fallbackPath = pathJoin(DASHBOARD_DATA_DIR, `assets/textures/entity/player/wide/${skinName}.png`);
+						const fallbackPath = pathJoin(
+							DASHBOARD_DATA_DIR,
+							`assets/textures/entity/player/wide/${skinName}.png`,
+						);
 						if (existsSync(fallbackPath)) {
 							const buf = readFileSync(fallbackPath);
 							setSkinCache(uuid, buf);
@@ -213,17 +245,37 @@ canvas { display: block; width: 100vw; height: 100vh; }
 						}
 					};
 
-					const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`);
-					if (!profileRes.ok) { serveFallback(); return; }
-					const profile = await profileRes.json() as { properties: { name: string; value: string }[] };
-					const texProp = profile.properties.find((p: { name: string }) => p.name === "textures");
-					if (!texProp) { serveFallback(); return; }
-					const decoded = JSON.parse(Buffer.from(texProp.value, "base64").toString("utf8"));
+					const profileRes = await fetch(
+						`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`,
+					);
+					if (!profileRes.ok) {
+						serveFallback();
+						return;
+					}
+					const profile = (await profileRes.json()) as {
+						properties: { name: string; value: string }[];
+					};
+					const texProp = profile.properties.find(
+						(p: { name: string }) => p.name === "textures",
+					);
+					if (!texProp) {
+						serveFallback();
+						return;
+					}
+					const decoded = JSON.parse(
+						Buffer.from(texProp.value, "base64").toString("utf8"),
+					);
 					const skinUrl = decoded?.textures?.SKIN?.url;
-					if (!skinUrl) { serveFallback(); return; }
+					if (!skinUrl) {
+						serveFallback();
+						return;
+					}
 
 					const skinRes = await fetch(skinUrl);
-					if (!skinRes.ok) { serveFallback(); return; }
+					if (!skinRes.ok) {
+						serveFallback();
+						return;
+					}
 					const buf = Buffer.from(await skinRes.arrayBuffer());
 					setSkinCache(uuid, buf);
 					res.writeHead(200, skinHeaders);
@@ -231,7 +283,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				} catch {
 					// Fallback to offline skin selection
 					const skinName = getOfflineSkin(uuid);
-					const fallbackPath = pathJoin(DASHBOARD_DATA_DIR, `assets/textures/entity/player/wide/${skinName}.png`);
+					const fallbackPath = pathJoin(
+						DASHBOARD_DATA_DIR,
+						`assets/textures/entity/player/wide/${skinName}.png`,
+					);
 					if (existsSync(fallbackPath)) {
 						res.writeHead(200, skinHeaders);
 						res.end(readFileSync(fallbackPath));
@@ -247,9 +302,16 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		// Serve item textures
 		if (req.url?.startsWith("/textures/item/") && req.url.endsWith(".png")) {
 			const itemName = req.url.slice("/textures/item/".length, -".png".length);
-			const itemPath = pathJoin(DASHBOARD_DATA_DIR, "assets/textures/item", `${itemName}.png`);
+			const itemPath = pathJoin(
+				DASHBOARD_DATA_DIR,
+				"assets/textures/item",
+				`${itemName}.png`,
+			);
 			if (existsSync(itemPath)) {
-				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+				res.writeHead(200, {
+					"Content-Type": "image/png",
+					"Cache-Control": "public, max-age=86400",
+				});
 				res.end(readFileSync(itemPath));
 				return;
 			}
@@ -279,7 +341,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		}
 
 		const ext = extname(filePath);
-		res.writeHead(200, { "Content-Type": MIME[ext] ?? "application/octet-stream" });
+		res.writeHead(200, {
+			"Content-Type": MIME[ext] ?? "application/octet-stream",
+		});
 		res.end(readFileSync(filePath));
 	});
 
@@ -336,8 +400,17 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			const botCz = botPos ? Math.floor(botPos.z / 16) : 0;
 			for (const [key, buf] of entry.chunkCache) {
 				const [x, z] = key.split(",").map(Number) as [number, number];
-				if (Math.abs(x - botCx) <= viewDistance && Math.abs(z - botCz) <= viewDistance) {
-					sendTo(ws, { type: "chunk", botId: name, x, z, buf: buf.toString("base64") });
+				if (
+					Math.abs(x - botCx) <= viewDistance &&
+					Math.abs(z - botCz) <= viewDistance
+				) {
+					sendTo(ws, {
+						type: "chunk",
+						botId: name,
+						x,
+						z,
+						buf: buf.toString("base64"),
+					});
 				}
 			}
 		}
@@ -371,8 +444,17 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			const botPos = bot.entity?.position;
 			const botCx = botPos ? Math.floor(botPos.x / 16) : 0;
 			const botCz = botPos ? Math.floor(botPos.z / 16) : 0;
-			if (Math.abs(x - botCx) <= viewDistance && Math.abs(z - botCz) <= viewDistance) {
-				broadcast({ type: "chunk", botId: name, x, z, buf: chunkData.toString("base64") });
+			if (
+				Math.abs(x - botCx) <= viewDistance &&
+				Math.abs(z - botCz) <= viewDistance
+			) {
+				broadcast({
+					type: "chunk",
+					botId: name,
+					x,
+					z,
+					buf: chunkData.toString("base64"),
+				});
 			}
 		};
 
@@ -398,8 +480,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		const onEntitySpawn = (entity: Entity) => {
 			if (entity.id === bot.entity?.id) return;
-			const skinUrl = entity.type === "player" && entity.uuid
-				? `/skins/${entity.uuid}.png` : undefined;
+			const skinUrl =
+				entity.type === "player" && entity.uuid
+					? `/skins/${entity.uuid}.png`
+					: undefined;
 			broadcast({
 				type: "entitySpawn",
 				botId: name,
@@ -433,9 +517,8 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 		const onEntityEquip = (entity: Entity) => {
 			if (entity.id === bot.entity?.id) return;
-			const equipment = (entity as unknown as Record<string, unknown>).equipment as
-				| Array<{ name?: string } | null>
-				| undefined;
+			const equipment = (entity as unknown as Record<string, unknown>)
+				.equipment as Array<{ name?: string } | null> | undefined;
 			broadcast({
 				type: "entityEquip",
 				botId: name,
@@ -572,7 +655,10 @@ export const addBotToDashboard = (
 	bot: Bot,
 	name: string,
 ): void => {
-	(dashboard as unknown as { addBot: (b: Bot, n: string) => void }).addBot(bot, name);
+	(dashboard as unknown as { addBot: (b: Bot, n: string) => void }).addBot(
+		bot,
+		name,
+	);
 };
 
 /** Remove a bot from the dashboard. */

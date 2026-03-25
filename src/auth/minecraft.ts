@@ -35,9 +35,7 @@ const loginWithXbox = async (
 };
 
 /** Fetch the Minecraft profile (UUID, username, skins). */
-const fetchProfile = async (
-	accessToken: string,
-): Promise<MinecraftProfile> => {
+const fetchProfile = async (accessToken: string): Promise<MinecraftProfile> => {
 	const res = await fetch(PROFILE_URL, {
 		headers: {
 			...MC_HEADERS,

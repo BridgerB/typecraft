@@ -42,7 +42,12 @@ export const initBlockActions = (bot: Bot, _options: BotOptions): void => {
 				pitch = Math.floor((meta % 50) / 2);
 			}
 
-			bot.emit("noteHeard", block, { id: instrumentId, name: String(instrumentId) }, pitch);
+			bot.emit(
+				"noteHeard",
+				block,
+				{ id: instrumentId, name: String(instrumentId) },
+				pitch,
+			);
 		} else if (blockName === "sticky_piston" || blockName === "piston") {
 			bot.emit("pistonMove", block, byte1, byte2);
 		} else if (

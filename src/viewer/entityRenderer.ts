@@ -41,18 +41,90 @@ const getEntityModel = (name: string): EntityModelDef | null =>
 const PLAYER_BONES: readonly Bone[] = [
 	{ name: "root", pivot: [0, 0, 0] },
 	{ name: "waist", parent: "root", pivot: [0, 12, 0] },
-	{ name: "body", parent: "waist", pivot: [0, 24, 0], cubes: [{ origin: [-4, 12, -2], size: [8, 12, 4], uv: [16, 16] }] },
-	{ name: "head", parent: "body", pivot: [0, 24, 0], cubes: [{ origin: [-4, 24, -4], size: [8, 8, 8], uv: [0, 0] }] },
-	{ name: "hat", parent: "head", pivot: [0, 24, 0], cubes: [{ origin: [-4, 24, -4], size: [8, 8, 8], uv: [32, 0], inflate: 0.5 }] },
-	{ name: "leftArm", parent: "body", pivot: [5, 22, 0], cubes: [{ origin: [4, 12, -2], size: [4, 12, 4], uv: [32, 48] }] },
-	{ name: "leftSleeve", parent: "leftArm", pivot: [5, 22, 0], cubes: [{ origin: [4, 12, -2], size: [4, 12, 4], uv: [48, 48], inflate: 0.25 }] },
-	{ name: "rightArm", parent: "body", pivot: [-5, 22, 0], cubes: [{ origin: [-8, 12, -2], size: [4, 12, 4], uv: [40, 16] }] },
-	{ name: "rightSleeve", parent: "rightArm", pivot: [-5, 22, 0], cubes: [{ origin: [-8, 12, -2], size: [4, 12, 4], uv: [40, 32], inflate: 0.25 }] },
-	{ name: "leftLeg", parent: "root", pivot: [1.9, 12, 0], cubes: [{ origin: [-0.1, 0, -2], size: [4, 12, 4], uv: [16, 48] }] },
-	{ name: "leftPants", parent: "leftLeg", pivot: [1.9, 12, 0], cubes: [{ origin: [-0.1, 0, -2], size: [4, 12, 4], uv: [0, 48], inflate: 0.25 }] },
-	{ name: "rightLeg", parent: "root", pivot: [-1.9, 12, 0], cubes: [{ origin: [-3.9, 0, -2], size: [4, 12, 4], uv: [0, 16] }] },
-	{ name: "rightPants", parent: "rightLeg", pivot: [-1.9, 12, 0], cubes: [{ origin: [-3.9, 0, -2], size: [4, 12, 4], uv: [0, 32], inflate: 0.25 }] },
-	{ name: "jacket", parent: "body", pivot: [0, 24, 0], cubes: [{ origin: [-4, 12, -2], size: [8, 12, 4], uv: [16, 32], inflate: 0.25 }] },
+	{
+		name: "body",
+		parent: "waist",
+		pivot: [0, 24, 0],
+		cubes: [{ origin: [-4, 12, -2], size: [8, 12, 4], uv: [16, 16] }],
+	},
+	{
+		name: "head",
+		parent: "body",
+		pivot: [0, 24, 0],
+		cubes: [{ origin: [-4, 24, -4], size: [8, 8, 8], uv: [0, 0] }],
+	},
+	{
+		name: "hat",
+		parent: "head",
+		pivot: [0, 24, 0],
+		cubes: [
+			{ origin: [-4, 24, -4], size: [8, 8, 8], uv: [32, 0], inflate: 0.5 },
+		],
+	},
+	{
+		name: "leftArm",
+		parent: "body",
+		pivot: [5, 22, 0],
+		cubes: [{ origin: [4, 12, -2], size: [4, 12, 4], uv: [32, 48] }],
+	},
+	{
+		name: "leftSleeve",
+		parent: "leftArm",
+		pivot: [5, 22, 0],
+		cubes: [
+			{ origin: [4, 12, -2], size: [4, 12, 4], uv: [48, 48], inflate: 0.25 },
+		],
+	},
+	{
+		name: "rightArm",
+		parent: "body",
+		pivot: [-5, 22, 0],
+		cubes: [{ origin: [-8, 12, -2], size: [4, 12, 4], uv: [40, 16] }],
+	},
+	{
+		name: "rightSleeve",
+		parent: "rightArm",
+		pivot: [-5, 22, 0],
+		cubes: [
+			{ origin: [-8, 12, -2], size: [4, 12, 4], uv: [40, 32], inflate: 0.25 },
+		],
+	},
+	{
+		name: "leftLeg",
+		parent: "root",
+		pivot: [1.9, 12, 0],
+		cubes: [{ origin: [-0.1, 0, -2], size: [4, 12, 4], uv: [16, 48] }],
+	},
+	{
+		name: "leftPants",
+		parent: "leftLeg",
+		pivot: [1.9, 12, 0],
+		cubes: [
+			{ origin: [-0.1, 0, -2], size: [4, 12, 4], uv: [0, 48], inflate: 0.25 },
+		],
+	},
+	{
+		name: "rightLeg",
+		parent: "root",
+		pivot: [-1.9, 12, 0],
+		cubes: [{ origin: [-3.9, 0, -2], size: [4, 12, 4], uv: [0, 16] }],
+	},
+	{
+		name: "rightPants",
+		parent: "rightLeg",
+		pivot: [-1.9, 12, 0],
+		cubes: [
+			{ origin: [-3.9, 0, -2], size: [4, 12, 4], uv: [0, 32], inflate: 0.25 },
+		],
+	},
+	{
+		name: "jacket",
+		parent: "body",
+		pivot: [0, 24, 0],
+		cubes: [
+			{ origin: [-4, 12, -2], size: [8, 12, 4], uv: [16, 32], inflate: 0.25 },
+		],
+	},
 ];
 
 const TEX_W = 64;
@@ -61,7 +133,13 @@ const TEX_H = 64;
 // ── Face definitions for box geometry (Bedrock format UV layout) ──
 
 type FaceDef = {
-	readonly corners: readonly (readonly [number, number, number, number, number])[];
+	readonly corners: readonly (readonly [
+		number,
+		number,
+		number,
+		number,
+		number,
+	])[];
 	readonly u0: readonly [number, number, number];
 	readonly v0: readonly [number, number, number];
 	readonly u1: readonly [number, number, number];
@@ -70,16 +148,90 @@ type FaceDef = {
 };
 
 const FACES: readonly FaceDef[] = [
-	{ dir: [0, 1, 0], u0: [0, 0, 1], v0: [0, 0, 0], u1: [1, 0, 1], v1: [0, 0, 1], corners: [[0, 1, 1, 0, 0], [1, 1, 1, 1, 0], [0, 1, 0, 0, 1], [1, 1, 0, 1, 1]] },
-	{ dir: [0, -1, 0], u0: [1, 0, 1], v0: [0, 0, 0], u1: [2, 0, 1], v1: [0, 0, 1], corners: [[1, 0, 1, 0, 0], [0, 0, 1, 1, 0], [1, 0, 0, 0, 1], [0, 0, 0, 1, 1]] },
-	{ dir: [1, 0, 0], u0: [0, 0, 0], v0: [0, 0, 1], u1: [0, 0, 1], v1: [0, 1, 1], corners: [[1, 1, 1, 0, 0], [1, 0, 1, 0, 1], [1, 1, 0, 1, 0], [1, 0, 0, 1, 1]] },
-	{ dir: [-1, 0, 0], u0: [1, 0, 1], v0: [0, 0, 1], u1: [1, 0, 2], v1: [0, 1, 1], corners: [[0, 1, 0, 0, 0], [0, 0, 0, 0, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 1]] },
-	{ dir: [0, 0, -1], u0: [0, 0, 1], v0: [0, 0, 1], u1: [1, 0, 1], v1: [0, 1, 1], corners: [[1, 0, 0, 0, 1], [0, 0, 0, 1, 1], [1, 1, 0, 0, 0], [0, 1, 0, 1, 0]] },
-	{ dir: [0, 0, 1], u0: [1, 0, 2], v0: [0, 0, 1], u1: [2, 0, 2], v1: [0, 1, 1], corners: [[0, 0, 1, 0, 1], [1, 0, 1, 1, 1], [0, 1, 1, 0, 0], [1, 1, 1, 1, 0]] },
+	{
+		dir: [0, 1, 0],
+		u0: [0, 0, 1],
+		v0: [0, 0, 0],
+		u1: [1, 0, 1],
+		v1: [0, 0, 1],
+		corners: [
+			[0, 1, 1, 0, 0],
+			[1, 1, 1, 1, 0],
+			[0, 1, 0, 0, 1],
+			[1, 1, 0, 1, 1],
+		],
+	},
+	{
+		dir: [0, -1, 0],
+		u0: [1, 0, 1],
+		v0: [0, 0, 0],
+		u1: [2, 0, 1],
+		v1: [0, 0, 1],
+		corners: [
+			[1, 0, 1, 0, 0],
+			[0, 0, 1, 1, 0],
+			[1, 0, 0, 0, 1],
+			[0, 0, 0, 1, 1],
+		],
+	},
+	{
+		dir: [1, 0, 0],
+		u0: [0, 0, 0],
+		v0: [0, 0, 1],
+		u1: [0, 0, 1],
+		v1: [0, 1, 1],
+		corners: [
+			[1, 1, 1, 0, 0],
+			[1, 0, 1, 0, 1],
+			[1, 1, 0, 1, 0],
+			[1, 0, 0, 1, 1],
+		],
+	},
+	{
+		dir: [-1, 0, 0],
+		u0: [1, 0, 1],
+		v0: [0, 0, 1],
+		u1: [1, 0, 2],
+		v1: [0, 1, 1],
+		corners: [
+			[0, 1, 0, 0, 0],
+			[0, 0, 0, 0, 1],
+			[0, 1, 1, 1, 0],
+			[0, 0, 1, 1, 1],
+		],
+	},
+	{
+		dir: [0, 0, -1],
+		u0: [0, 0, 1],
+		v0: [0, 0, 1],
+		u1: [1, 0, 1],
+		v1: [0, 1, 1],
+		corners: [
+			[1, 0, 0, 0, 1],
+			[0, 0, 0, 1, 1],
+			[1, 1, 0, 0, 0],
+			[0, 1, 0, 1, 0],
+		],
+	},
+	{
+		dir: [0, 0, 1],
+		u0: [1, 0, 2],
+		v0: [0, 0, 1],
+		u1: [2, 0, 2],
+		v1: [0, 1, 1],
+		corners: [
+			[0, 0, 1, 0, 1],
+			[1, 0, 1, 1, 1],
+			[0, 1, 1, 0, 0],
+			[1, 1, 1, 1, 0],
+		],
+	},
 ];
 
-const dot3 = (a: readonly [number, number, number], b: readonly [number, number, number]): number =>
-	a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const dot3 = (
+	a: readonly [number, number, number],
+	b: readonly [number, number, number],
+): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 // ── Geometry building ──
 
@@ -106,13 +258,21 @@ const addCube = (
 		const inflate = cube.inflate ?? 0;
 
 		for (const corner of face.corners) {
-			const u = (cube.uv[0] + dot3(corner[3] ? face.u1 : face.u0, cube.size)) / texW;
-			const v = (cube.uv[1] + dot3(corner[4] ? face.v1 : face.v0, cube.size)) / texH;
+			const u =
+				(cube.uv[0] + dot3(corner[3] ? face.u1 : face.u0, cube.size)) / texW;
+			const v =
+				(cube.uv[1] + dot3(corner[4] ? face.v1 : face.v0, cube.size)) / texH;
 
 			const p = new THREE.Vector3(
-				cube.origin[0] + corner[0] * cube.size[0] + (corner[0] ? inflate : -inflate),
-				cube.origin[1] + corner[1] * cube.size[1] + (corner[1] ? inflate : -inflate),
-				cube.origin[2] + corner[2] * cube.size[2] + (corner[2] ? inflate : -inflate),
+				cube.origin[0] +
+					corner[0] * cube.size[0] +
+					(corner[0] ? inflate : -inflate),
+				cube.origin[1] +
+					corner[1] * cube.size[1] +
+					(corner[1] ? inflate : -inflate),
+				cube.origin[2] +
+					corner[2] * cube.size[2] +
+					(corner[2] ? inflate : -inflate),
 			);
 
 			// Transform to bone-local space
@@ -129,9 +289,23 @@ const addCube = (
 	}
 };
 
-const buildEntityGeometry = (bones: readonly Bone[], texW: number, texH: number): THREE.BufferGeometry => {
-	const geo: GeoData = { positions: [], normals: [], uvs: [], indices: [], skinIndices: [], skinWeights: [] };
-	const boneMap = new Map<string, { idx: number; pos: THREE.Vector3; rot: THREE.Euler }>();
+const buildEntityGeometry = (
+	bones: readonly Bone[],
+	texW: number,
+	texH: number,
+): THREE.BufferGeometry => {
+	const geo: GeoData = {
+		positions: [],
+		normals: [],
+		uvs: [],
+		indices: [],
+		skinIndices: [],
+		skinWeights: [],
+	};
+	const boneMap = new Map<
+		string,
+		{ idx: number; pos: THREE.Vector3; rot: THREE.Euler }
+	>();
 
 	let idx = 0;
 	for (const bone of bones) {
@@ -150,11 +324,23 @@ const buildEntityGeometry = (bones: readonly Bone[], texW: number, texH: number)
 	}
 
 	const bufGeo = new THREE.BufferGeometry();
-	bufGeo.setAttribute("position", new THREE.Float32BufferAttribute(geo.positions, 3));
-	bufGeo.setAttribute("normal", new THREE.Float32BufferAttribute(geo.normals, 3));
+	bufGeo.setAttribute(
+		"position",
+		new THREE.Float32BufferAttribute(geo.positions, 3),
+	);
+	bufGeo.setAttribute(
+		"normal",
+		new THREE.Float32BufferAttribute(geo.normals, 3),
+	);
 	bufGeo.setAttribute("uv", new THREE.Float32BufferAttribute(geo.uvs, 2));
-	bufGeo.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(geo.skinIndices, 4));
-	bufGeo.setAttribute("skinWeight", new THREE.Float32BufferAttribute(geo.skinWeights, 4));
+	bufGeo.setAttribute(
+		"skinIndex",
+		new THREE.Uint16BufferAttribute(geo.skinIndices, 4),
+	);
+	bufGeo.setAttribute(
+		"skinWeight",
+		new THREE.Float32BufferAttribute(geo.skinWeights, 4),
+	);
 	bufGeo.setIndex(geo.indices);
 	return bufGeo;
 };
@@ -162,7 +348,9 @@ const buildEntityGeometry = (bones: readonly Bone[], texW: number, texH: number)
 const buildPlayerGeometry = (): THREE.BufferGeometry =>
 	buildEntityGeometry(PLAYER_BONES, TEX_W, TEX_H);
 
-const buildEntitySkeleton = (bones: readonly Bone[]): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } => {
+const buildEntitySkeleton = (
+	bones: readonly Bone[],
+): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } => {
 	const boneMap = new Map<string, THREE.Bone>();
 	const pivotMap = new Map<string, THREE.Vector3>();
 	const rootBones: THREE.Bone[] = [];
@@ -193,8 +381,10 @@ const buildEntitySkeleton = (bones: readonly Bone[]): { skeleton: THREE.Skeleton
 	return { skeleton: new THREE.Skeleton([...boneMap.values()]), rootBones };
 };
 
-const buildPlayerSkeleton = (): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } =>
-	buildEntitySkeleton(PLAYER_BONES);
+const buildPlayerSkeleton = (): {
+	skeleton: THREE.Skeleton;
+	rootBones: THREE.Bone[];
+} => buildEntitySkeleton(PLAYER_BONES);
 
 // ── Animation ──
 
@@ -222,9 +412,15 @@ export type EntityRenderer = {
 	readonly material: THREE.MeshLambertMaterial;
 };
 
-export const createEntityRenderer = (scene: THREE.Scene, textureUrl: string): EntityRenderer => {
+export const createEntityRenderer = (
+	scene: THREE.Scene,
+	textureUrl: string,
+): EntityRenderer => {
 	const geometry = buildPlayerGeometry();
-	const material = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.1 });
+	const material = new THREE.MeshLambertMaterial({
+		transparent: true,
+		alphaTest: 0.1,
+	});
 
 	// Load Steve texture
 	new THREE.TextureLoader().load(textureUrl, (tex) => {
@@ -235,10 +431,19 @@ export const createEntityRenderer = (scene: THREE.Scene, textureUrl: string): En
 		material.needsUpdate = true;
 	});
 
-	return { scene, entities: new Map(), animStates: new Map(), geometry, material };
+	return {
+		scene,
+		entities: new Map(),
+		animStates: new Map(),
+		geometry,
+		material,
+	};
 };
 
-const loadSkinTexture = (url: string, material: THREE.MeshLambertMaterial): void => {
+const loadSkinTexture = (
+	url: string,
+	material: THREE.MeshLambertMaterial,
+): void => {
 	const loader = new THREE.TextureLoader();
 	loader.crossOrigin = "anonymous";
 	loader.load(url, (tex) => {
@@ -277,7 +482,11 @@ export const addEntity = (
 	} else {
 		const model = getEntityModel(entityName);
 		if (model) {
-			geometry = buildEntityGeometry(model.bones, model.texturewidth, model.textureheight);
+			geometry = buildEntityGeometry(
+				model.bones,
+				model.texturewidth,
+				model.textureheight,
+			);
 			skeletonResult = buildEntitySkeleton(model.bones);
 			// Bedrock geometry uses 1/16 scale (pixels to blocks)
 			scale = 1 / 16;
@@ -324,7 +533,13 @@ export const addEntity = (
 
 	er.scene.add(group);
 	er.entities.set(id, group);
-	er.animStates.set(id, { skeleton: skeletonResult.skeleton, isPlayer: entityName === "player", lastX: x, lastZ: z, distanceMoved: 0 });
+	er.animStates.set(id, {
+		skeleton: skeletonResult.skeleton,
+		isPlayer: entityName === "player",
+		lastX: x,
+		lastZ: z,
+		distanceMoved: 0,
+	});
 };
 
 export const updateEntity = (
@@ -435,7 +650,11 @@ export const updateEntityEquipment = (
 	if (!tex) {
 		// Texture not loaded yet — retry on next equip update
 		// For now, create a colored placeholder
-		const mat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, side: THREE.DoubleSide });
+		const mat = new THREE.MeshBasicMaterial({
+			color: 0xaaaaaa,
+			transparent: true,
+			side: THREE.DoubleSide,
+		});
 		const mesh = new THREE.Mesh(ITEM_SPRITE_GEO, mat);
 		mesh.userData.heldItem = true;
 		// Position at hand tip: rightArm pivot is [-5, 22, 0], arm is 12px tall
@@ -518,11 +737,17 @@ const createTextSprite = (text: string): THREE.Sprite => {
 	ctx.fillStyle = "#ffffff";
 	ctx.fillText(text, cx, cy);
 
-	const texture = new THREE.CanvasTexture(canvas as unknown as HTMLCanvasElement);
+	const texture = new THREE.CanvasTexture(
+		canvas as unknown as HTMLCanvasElement,
+	);
 	texture.minFilter = THREE.LinearFilter;
 	texture.magFilter = THREE.LinearFilter;
 
-	const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+	const material = new THREE.SpriteMaterial({
+		map: texture,
+		depthTest: false,
+		transparent: true,
+	});
 	const sprite = new THREE.Sprite(material);
 	sprite.scale.set(3, 0.75, 1);
 

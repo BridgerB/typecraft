@@ -44,8 +44,13 @@ const loadItemTags = (): ReadonlyMap<string, readonly string[]> => {
 	for (const file of readdirSync(tagsDir)) {
 		if (!file.endsWith(".json")) continue;
 		const name = file.replace(".json", "");
-		const data = JSON.parse(readFileSync(join(tagsDir, file), "utf8")) as { values: string[] };
-		raw.set(name, data.values.map((v) => v.replace("minecraft:", "")));
+		const data = JSON.parse(readFileSync(join(tagsDir, file), "utf8")) as {
+			values: string[];
+		};
+		raw.set(
+			name,
+			data.values.map((v) => v.replace("minecraft:", "")),
+		);
 	}
 
 	// Pass 2: Recursively resolve nested #tag references
@@ -122,7 +127,10 @@ const loadRecipes = (
 							shapeRow.push(null);
 						} else {
 							const ref = raw.key[ch];
-							if (!ref) { shapeRow.push(null); continue; }
+							if (!ref) {
+								shapeRow.push(null);
+								continue;
+							}
 							const id = resolveIngredient(ref, itemsByName, tags);
 							shapeRow.push(id !== null ? id : null);
 						}
@@ -131,7 +139,10 @@ const loadRecipes = (
 				}
 				const recipe: RawRecipe = { inShape, result };
 				(byResultId[result.id] ??= []).push(recipe);
-			} else if (raw.type === "minecraft:crafting_shapeless" && raw.ingredients) {
+			} else if (
+				raw.type === "minecraft:crafting_shapeless" &&
+				raw.ingredients
+			) {
 				// Shapeless recipe: flat ingredient list
 				const ingredients: RawRecipeItem[] = [];
 				for (const ing of raw.ingredients) {
@@ -163,16 +174,22 @@ export const createRegistry = (version: string): Registry => {
 	const entitiesArray = loadJson<EntityDefinition[]>("entities.json");
 	const effectsArray = loadJson<EffectDefinition[]>("effects.json");
 	const attributesArray = loadJson<AttributeDefinition[]>("attributes.json");
-	const blockCollisionShapes = loadJson<BlockCollisionShapes>("blockCollisionShapes.json");
+	const blockCollisionShapes = loadJson<BlockCollisionShapes>(
+		"blockCollisionShapes.json",
+	);
 
 	// Load biomes from biomes-raw/ (name + temperature/downfall from datagen)
 	const biomesRawDir = join(DATA_DIR, "biomes-raw");
 	const biomesArray: BiomeDefinition[] = [];
 	if (existsSync(biomesRawDir)) {
-		const files = readdirSync(biomesRawDir).filter((f) => f.endsWith(".json")).sort();
+		const files = readdirSync(biomesRawDir)
+			.filter((f) => f.endsWith(".json"))
+			.sort();
 		for (let i = 0; i < files.length; i++) {
 			const name = files[i].replace(".json", "");
-			const raw = JSON.parse(readFileSync(join(biomesRawDir, files[i]), "utf8")) as {
+			const raw = JSON.parse(
+				readFileSync(join(biomesRawDir, files[i]), "utf8"),
+			) as {
 				temperature?: number;
 				downfall?: number;
 				effects?: { water_color?: string };
@@ -269,14 +286,30 @@ export const createRegistry = (version: string): Registry => {
 	// Version comparison (simple numeric comparison on dataVersion)
 	const dataVersion = versionInfo.dataVersion ?? 0;
 	const versionLookup: Record<string, number> = {
-		"1.8": 100, "1.9": 169, "1.10": 510, "1.11": 819, "1.12": 1139,
-		"1.13": 1519, "1.14": 1901, "1.15": 2225, "1.16": 2566, "1.17": 2724,
-		"1.18": 2860, "1.19": 3105, "1.20": 3463, "1.20.4": 3700,
-		"1.20.5": 3837, "1.21": 3953, "1.21.1": 3955, "1.21.11": 4384,
+		"1.8": 100,
+		"1.9": 169,
+		"1.10": 510,
+		"1.11": 819,
+		"1.12": 1139,
+		"1.13": 1519,
+		"1.14": 1901,
+		"1.15": 2225,
+		"1.16": 2566,
+		"1.17": 2724,
+		"1.18": 2860,
+		"1.19": 3105,
+		"1.20": 3463,
+		"1.20.4": 3700,
+		"1.20.5": 3837,
+		"1.21": 3953,
+		"1.21.1": 3955,
+		"1.21.11": 4384,
 	};
 
-	const isNewerOrEqualTo = (v: string) => dataVersion >= (versionLookup[v] ?? 0);
-	const isOlderThan = (v: string) => dataVersion < (versionLookup[v] ?? Infinity);
+	const isNewerOrEqualTo = (v: string) =>
+		dataVersion >= (versionLookup[v] ?? 0);
+	const isOlderThan = (v: string) =>
+		dataVersion < (versionLookup[v] ?? Infinity);
 
 	// Feature flags derived from version — mirrors prismarine-data features.json
 	const featureMap: Record<string, unknown> = {
@@ -289,7 +322,9 @@ export const createRegistry = (version: string): Registry => {
 		nbtNameForEnchant: isNewerOrEqualTo("1.13") ? "Enchantments" : "ench",
 		typeOfValueForEnchantLevel: isNewerOrEqualTo("1.13") ? "string" : "short",
 		booksUseStoredEnchantments: true,
-		whereDurabilityIsSerialized: isNewerOrEqualTo("1.13") ? "Damage" : "metadata",
+		whereDurabilityIsSerialized: isNewerOrEqualTo("1.13")
+			? "Damage"
+			: "metadata",
 		spawnEggsHaveSpawnedEntityInName: isNewerOrEqualTo("1.13"),
 		spawnEggsUseEntityTagInNbt: isOlderThan("1.13"),
 		// Entity / network
@@ -313,7 +348,8 @@ export const createRegistry = (version: string): Registry => {
 		usesBlockStates: isNewerOrEqualTo("1.13"),
 		usesMultiblockSingleLong: isNewerOrEqualTo("1.16"),
 		blockPlaceHasInsideBlock: isNewerOrEqualTo("1.19"),
-		blockPlaceHasHandAndFloatCursor: isNewerOrEqualTo("1.9") && isOlderThan("1.19"),
+		blockPlaceHasHandAndFloatCursor:
+			isNewerOrEqualTo("1.9") && isOlderThan("1.19"),
 		blockPlaceHasHandAndIntCursor: isOlderThan("1.9"),
 		// Chat
 		chatPacketsUseNbtComponents: isNewerOrEqualTo("1.20"),

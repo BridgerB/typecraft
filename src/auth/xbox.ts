@@ -18,13 +18,17 @@ const MC_RELYING_PARTY = "rp://api.minecraftservices.com/";
 
 const XBOX_ERRORS: Record<number, string> = {
 	2148916227: "Your Xbox account was banned.",
-	2148916229: "Your account is restricted by parental controls. Visit https://account.microsoft.com/family/",
-	2148916233: "Your account does not have an Xbox profile. Create one at https://signup.live.com/signup",
+	2148916229:
+		"Your account is restricted by parental controls. Visit https://account.microsoft.com/family/",
+	2148916233:
+		"Your account does not have an Xbox profile. Create one at https://signup.live.com/signup",
 	2148916234: "Your account has not accepted Xbox Terms of Service.",
 	2148916235: "Your account resides in a region where Xbox is not available.",
-	2148916236: "Your account requires proof of age. Visit https://login.live.com/login.srf",
+	2148916236:
+		"Your account requires proof of age. Visit https://login.live.com/login.srf",
 	2148916237: "Your account has reached its playtime limit.",
-	2148916238: "This account is under 18 and must be added to a family by an adult.",
+	2148916238:
+		"This account is under 18 and must be added to a family by an adult.",
 };
 
 const XBL_HEADERS = {

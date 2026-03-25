@@ -58,7 +58,11 @@ export const createPathfinder = (
 		const y = Math.floor(p.y);
 		const z = Math.floor(p.z);
 		return {
-			x, y, z, cost: 0, hash: posHash(x, y, z),
+			x,
+			y,
+			z,
+			cost: 0,
+			hash: posHash(x, y, z),
 			remainingBlocks: 0,
 			toBreak: [],
 			toPlace: [],
@@ -164,14 +168,15 @@ export const createPathfinder = (
 				z: blockPos.z,
 			} as any);
 			if (block && (block as any).name !== "air") {
-				bot.dig(block, true)
+				bot
+					.dig(block, true)
 					.then(() => {
 						digging = false;
 						digProgress++;
 					})
 					.catch(() => {
 						digging = false;
-						digProgress++;  // skip this block
+						digProgress++; // skip this block
 					});
 			} else {
 				digging = false;
@@ -192,7 +197,8 @@ export const createPathfinder = (
 			if (action.jump) {
 				bot.setControlState("jump", true);
 			}
-			bot.placeBlock({ position: refPos } as any, faceVec as any)
+			bot
+				.placeBlock({ position: refPos } as any, faceVec as any)
 				.then(() => {
 					placing = false;
 					if (action.jump) bot.setControlState("jump", false);

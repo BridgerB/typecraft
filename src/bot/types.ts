@@ -350,8 +350,16 @@ export type FurnaceWindow = Window & {
 	takeInput: () => Promise<void>;
 	takeFuel: () => Promise<void>;
 	takeOutput: () => Promise<void>;
-	putInput: (itemType: number, metadata: number | null, count: number) => Promise<void>;
-	putFuel: (itemType: number, metadata: number | null, count: number) => Promise<void>;
+	putInput: (
+		itemType: number,
+		metadata: number | null,
+		count: number,
+	) => Promise<void>;
+	putFuel: (
+		itemType: number,
+		metadata: number | null,
+		count: number,
+	) => Promise<void>;
 };
 
 // ── Enchantment table window ──
@@ -549,7 +557,11 @@ export type Bot = EventEmitter & {
 	stopDigging: () => void;
 	canDigBlock: (block: Block) => boolean;
 	digTime: (block: Block) => number;
-	collectDrops: (range?: number, timeout?: number, navigate?: (pos: Vec3) => Promise<void>) => Promise<number>;
+	collectDrops: (
+		range?: number,
+		timeout?: number,
+		navigate?: (pos: Vec3) => Promise<void>,
+	) => Promise<number>;
 
 	// ── Methods: Placing ──
 	placeBlock: (referenceBlock: Block, faceVector: Vec3) => Promise<void>;
@@ -613,7 +625,12 @@ export type Bot = EventEmitter & {
 	blockAtCursor: (maxDistance?: number) => Block | null;
 	updateSign: (block: Vec3, text: string, back?: boolean) => void;
 	writeBook: (slot: number, pages: string[]) => Promise<void>;
-	signBook: (slot: number, pages: string[], title: string, author: string) => Promise<void>;
+	signBook: (
+		slot: number,
+		pages: string[],
+		title: string,
+		author: string,
+	) => Promise<void>;
 	acceptResourcePack: () => void;
 	denyResourcePack: () => void;
 	setCommandBlock: (

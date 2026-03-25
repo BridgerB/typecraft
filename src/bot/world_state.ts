@@ -64,11 +64,14 @@ export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 
 	// ── Spawn point ──
 
-	bot.client.on("set_default_spawn_position", (packet: Record<string, unknown>) => {
-		const loc = packet.location as Record<string, number>;
-		if (loc) {
-			bot.spawnPoint = vec3(loc.x, loc.y, loc.z);
-			bot.emit("spawnReset");
-		}
-	});
+	bot.client.on(
+		"set_default_spawn_position",
+		(packet: Record<string, unknown>) => {
+			const loc = packet.location as Record<string, number>;
+			if (loc) {
+				bot.spawnPoint = vec3(loc.x, loc.y, loc.z);
+				bot.emit("spawnReset");
+			}
+		},
+	);
 };

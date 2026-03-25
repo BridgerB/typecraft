@@ -13,10 +13,7 @@ import { fileURLToPath } from "node:url";
 import { PACKET_DEFS } from "./packet-defs.ts";
 import { SHARED_TYPES } from "./shared-types.ts";
 
-const DATA_DIR = join(
-	dirname(fileURLToPath(import.meta.url)),
-	"../data",
-);
+const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../data");
 
 type PacketsRaw = Record<
 	string,
@@ -82,10 +79,8 @@ export const buildProtocol = (): ProtocolSchema => {
 				switchFields[name] = `packet_${name}`;
 
 				const defKey = `${state}.${dir}.packet_${name}`;
-				types[`packet_${name}`] =
-					PACKET_DEFS[defKey] ??
-					SHARED_TYPES[`packet_common_${name}`] ??
-					["container", []];
+				types[`packet_${name}`] = PACKET_DEFS[defKey] ??
+					SHARED_TYPES[`packet_common_${name}`] ?? ["container", []];
 			}
 
 			types.packet = [
@@ -114,39 +109,48 @@ export const buildProtocol = (): ProtocolSchema => {
 			toClient: { types: {} },
 			toServer: {
 				types: {
-					packet_intention:
-						PACKET_DEFS["handshaking.toServer.packet_intention"] ??
-						["container", [
+					packet_intention: PACKET_DEFS[
+						"handshaking.toServer.packet_intention"
+					] ?? [
+						"container",
+						[
 							{ name: "protocolVersion", type: "varint" },
 							{ name: "serverHost", type: "string" },
 							{ name: "serverPort", type: "u16" },
 							{ name: "nextState", type: "varint" },
-						]],
-					packet_legacy_server_list_ping:
-						PACKET_DEFS["handshaking.toServer.packet_legacy_server_list_ping"] ??
-						["container", [{ name: "payload", type: "u8" }]],
+						],
+					],
+					packet_legacy_server_list_ping: PACKET_DEFS[
+						"handshaking.toServer.packet_legacy_server_list_ping"
+					] ?? ["container", [{ name: "payload", type: "u8" }]],
 					packet: [
 						"container",
 						[
 							{
 								name: "name",
-								type: ["mapper", {
-									type: "varint",
-									mappings: {
-										"0x00": "intention",
-										"0xfe": "legacy_server_list_ping",
+								type: [
+									"mapper",
+									{
+										type: "varint",
+										mappings: {
+											"0x00": "intention",
+											"0xfe": "legacy_server_list_ping",
+										},
 									},
-								}],
+								],
 							},
 							{
 								name: "params",
-								type: ["switch", {
-									compareTo: "name",
-									fields: {
-										intention: "packet_intention",
-										legacy_server_list_ping: "packet_legacy_server_list_ping",
+								type: [
+									"switch",
+									{
+										compareTo: "name",
+										fields: {
+											intention: "packet_intention",
+											legacy_server_list_ping: "packet_legacy_server_list_ping",
+										},
 									},
-								}],
+								],
 							},
 						],
 					],

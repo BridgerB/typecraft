@@ -83,7 +83,11 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 			// Emit blockSeen for exposed blocks in the newly loaded chunk
 			// Only blocks with at least one transparent neighbor — no X-ray
 			// watchBlocks can contain specific names or "*" for all blocks
-			if (bot.registry && bot.watchBlocks.size > 0 && bot.listenerCount("blockSeen") > 0) {
+			if (
+				bot.registry &&
+				bot.watchBlocks.size > 0 &&
+				bot.listenerCount("blockSeen") > 0
+			) {
 				const watchAll = bot.watchBlocks.has("*");
 				const minY = bot.game.minY;
 				const sections = column.sections;
@@ -104,11 +108,27 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 								if (!watchAll && !bot.watchBlocks.has(def.name)) continue;
 								// Exposed check — at least one transparent neighbor
 								let exposed = false;
-								for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const) {
-									const nsid = worldGetBlockStateId(bot.world!, vec3(wx + ox, wy + oy, wz + oz));
-									if (nsid == null || nsid === 0) { exposed = true; break; }
+								for (const [ox, oy, oz] of [
+									[1, 0, 0],
+									[-1, 0, 0],
+									[0, 1, 0],
+									[0, -1, 0],
+									[0, 0, 1],
+									[0, 0, -1],
+								] as const) {
+									const nsid = worldGetBlockStateId(
+										bot.world!,
+										vec3(wx + ox, wy + oy, wz + oz),
+									);
+									if (nsid == null || nsid === 0) {
+										exposed = true;
+										break;
+									}
 									const ndef = bot.registry.blocksByStateId.get(nsid);
-									if (ndef?.transparent) { exposed = true; break; }
+									if (ndef?.transparent) {
+										exposed = true;
+										break;
+									}
 								}
 								if (exposed) {
 									bot.emit("blockSeen", def.name, vec3(wx, wy, wz));
@@ -156,9 +176,20 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 		// When a block changes (e.g., stone mined → air), check if any
 		// neighbors just became exposed
-		if (bot.registry && bot.watchBlocks.size > 0 && bot.listenerCount("blockSeen") > 0) {
+		if (
+			bot.registry &&
+			bot.watchBlocks.size > 0 &&
+			bot.listenerCount("blockSeen") > 0
+		) {
 			const watchAll = bot.watchBlocks.has("*");
-			for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const) {
+			for (const [ox, oy, oz] of [
+				[1, 0, 0],
+				[-1, 0, 0],
+				[0, 1, 0],
+				[0, -1, 0],
+				[0, 0, 1],
+				[0, 0, -1],
+			] as const) {
 				const npos = vec3(loc.x + ox, loc.y + oy, loc.z + oz);
 				const nsid = worldGetBlockStateId(bot.world, npos);
 				if (nsid == null || nsid === 0) continue;
@@ -276,7 +307,15 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 		const stateId = worldGetBlockStateId(bot.world, point);
 		if (stateId == null || stateId === 0) return null;
 		const block = stateIdToBlock(bot.registry, stateId);
-		return { ...block, position: vec3(Math.floor(point.x), Math.floor(point.y), Math.floor(point.z)), stateId };
+		return {
+			...block,
+			position: vec3(
+				Math.floor(point.x),
+				Math.floor(point.y),
+				Math.floor(point.z),
+			),
+			stateId,
+		};
 	};
 
 	bot.findBlocks = (options: FindBlockOptions): Vec3[] => {
@@ -289,9 +328,19 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 
 		// Check if a block has at least one transparent neighbor (air, water, glass, etc.)
 		const isExposed = (p: Vec3): boolean => {
-			const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]] as const;
+			const offsets = [
+				[1, 0, 0],
+				[-1, 0, 0],
+				[0, 1, 0],
+				[0, -1, 0],
+				[0, 0, 1],
+				[0, 0, -1],
+			] as const;
 			for (const [ox, oy, oz] of offsets) {
-				const sid = worldGetBlockStateId(bot.world!, vec3(p.x + ox, p.y + oy, p.z + oz));
+				const sid = worldGetBlockStateId(
+					bot.world!,
+					vec3(p.x + ox, p.y + oy, p.z + oz),
+				);
 				if (sid == null || sid === 0) return true; // unloaded or air = exposed
 				const def = bot.registry!.blocksByStateId.get(sid);
 				if (def?.transparent) return true;
@@ -321,8 +370,14 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 				for (let dy = -dist; dy <= dist; dy++) {
 					for (let dz = -dist; dz <= dist; dz++) {
 						// Only check the shell at this distance
-						if (Math.abs(dx) !== dist && Math.abs(dy) !== dist && Math.abs(dz) !== dist) continue;
-						if (dx * dx + dy * dy + dz * dz > maxDistance * maxDistance) continue;
+						if (
+							Math.abs(dx) !== dist &&
+							Math.abs(dy) !== dist &&
+							Math.abs(dz) !== dist
+						)
+							continue;
+						if (dx * dx + dy * dy + dz * dz > maxDistance * maxDistance)
+							continue;
 
 						const pos = vec3(
 							Math.floor(origin.x) + dx,
@@ -331,7 +386,10 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 						);
 
 						const stateId = worldGetBlockStateId(bot.world!, pos);
-						if (stateId == null) { chunksNull++; continue; }
+						if (stateId == null) {
+							chunksNull++;
+							continue;
+						}
 						if (stateId === 0) continue;
 
 						blocksChecked++;
@@ -344,7 +402,13 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 							}
 							results.push(pos);
 							if (results.length >= count) {
-								bot.emit("debug", "findBlocks", { results: results.length, blocksChecked, chunksNull, maxDistance, exposed: useExposed });
+								bot.emit("debug", "findBlocks", {
+									results: results.length,
+									blocksChecked,
+									chunksNull,
+									maxDistance,
+									exposed: useExposed,
+								});
 								return results;
 							}
 						}
@@ -353,7 +417,14 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 			}
 		}
 
-		bot.emit("debug", "findBlocks", { results: results.length, blocksChecked, chunksNull, maxDistance, exposed: useExposed, loadedChunks: bot.world!.columns.size });
+		bot.emit("debug", "findBlocks", {
+			results: results.length,
+			blocksChecked,
+			chunksNull,
+			maxDistance,
+			exposed: useExposed,
+			loadedChunks: bot.world!.columns.size,
+		});
 		return results;
 	};
 

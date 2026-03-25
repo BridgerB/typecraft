@@ -22,7 +22,9 @@ type RegisteredChannel = {
  * String channel codec — prefixed-length UTF-8 string.
  * Used for brand, item names, etc.
  */
-export const stringSerializer: ChannelSerializer = (params: unknown): Buffer => {
+export const stringSerializer: ChannelSerializer = (
+	params: unknown,
+): Buffer => {
 	const str = typeof params === "string" ? params : String(params);
 	const bytes = Buffer.from(str, "utf8");
 	const buf = Buffer.alloc(bytes.length + 1);
@@ -31,7 +33,9 @@ export const stringSerializer: ChannelSerializer = (params: unknown): Buffer => 
 	return buf;
 };
 
-export const stringDeserializer: ChannelDeserializer = (data: Buffer): unknown => {
+export const stringDeserializer: ChannelDeserializer = (
+	data: Buffer,
+): unknown => {
 	if (data.length === 0) return "";
 	const len = data[0];
 	return data.subarray(1, 1 + len).toString("utf8");
@@ -43,7 +47,8 @@ export const stringDeserializer: ChannelDeserializer = (data: Buffer): unknown =
 export const rawSerializer: ChannelSerializer = (params: unknown): Buffer =>
 	Buffer.isBuffer(params) ? params : Buffer.from(String(params));
 
-export const rawDeserializer: ChannelDeserializer = (data: Buffer): unknown => data;
+export const rawDeserializer: ChannelDeserializer = (data: Buffer): unknown =>
+	data;
 
 /**
  * Register list codec — newline-separated channel names.
@@ -66,8 +71,12 @@ export const initPluginChannels = (client: Client): void => {
 	let listenerAttached = false;
 
 	const isNewChannelNaming = client.protocolVersion >= 393; // 1.13+
-	const registerChannelName = isNewChannelNaming ? "minecraft:register" : "REGISTER";
-	const unregisterChannelName = isNewChannelNaming ? "minecraft:unregister" : "UNREGISTER";
+	const registerChannelName = isNewChannelNaming
+		? "minecraft:register"
+		: "REGISTER";
+	const unregisterChannelName = isNewChannelNaming
+		? "minecraft:unregister"
+		: "UNREGISTER";
 
 	// Register the system channels for REGISTER/UNREGISTER
 	channels.set(registerChannelName, {
@@ -138,7 +147,9 @@ export const initPluginChannels = (client: Client): void => {
 		const channel = channels.get(name);
 		if (!channel) throw new Error(`Channel not registered: ${name}`);
 
-		const data = channel.serialize ? channel.serialize(params) : Buffer.from([]);
+		const data = channel.serialize
+			? channel.serialize(params)
+			: Buffer.from([]);
 		client.write("custom_payload", { channel: name, data });
 	};
 

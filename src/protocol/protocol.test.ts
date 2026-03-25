@@ -1,18 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildProtocol } from "./build-protocol.ts";
-import {
-	createPacketCodec,
-	createTypeRegistry,
-} from "./codec.ts";
-import {
-	compressPacket,
-	decompressPacket,
-} from "./compression.ts";
-import {
-	createDecryptor,
-	createEncryptor,
-} from "./encryption.ts";
+import { createPacketCodec, createTypeRegistry } from "./codec.ts";
+import { compressPacket, decompressPacket } from "./compression.ts";
+import { createDecryptor, createEncryptor } from "./encryption.ts";
 import { createSplitter, framePacket } from "./framing.ts";
 import { Direction, ProtocolState } from "./states.ts";
 import {

@@ -30,7 +30,10 @@ export {
 	stringDeserializer,
 	stringSerializer,
 } from "./pluginChannels.ts";
-export type { ChannelDeserializer, ChannelSerializer } from "./pluginChannels.ts";
+export type {
+	ChannelDeserializer,
+	ChannelSerializer,
+} from "./pluginChannels.ts";
 export { Direction, ProtocolState } from "./states.ts";
 export {
 	readVarInt,

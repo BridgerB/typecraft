@@ -4,7 +4,13 @@
  * Assets loaded from src/data/assets/ (extracted from client JAR by datagen).
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	writeFileSync,
+} from "node:fs";
 import {
 	createServer,
 	type IncomingMessage,
@@ -90,9 +96,15 @@ const tintToGl = (c: number): readonly [number, number, number] =>
 /** Compute redstone power level → color. */
 const redstoneTint = (power: number): readonly [number, number, number] => {
 	const f = power / 15;
-	return [f * 0.6 + (f > 0 ? 0.4 : 0.3), f * f * 0.7 - 0.5, f * f * 0.6 - 0.7].map(
-		(v) => Math.max(0, Math.min(1, v)),
-	) as unknown as readonly [number, number, number];
+	return [
+		f * 0.6 + (f > 0 ? 0.4 : 0.3),
+		f * f * 0.7 - 0.5,
+		f * f * 0.6 - 0.7,
+	].map((v) => Math.max(0, Math.min(1, v))) as unknown as readonly [
+		number,
+		number,
+		number,
+	];
 };
 
 type BiomeJson = {
@@ -116,7 +128,9 @@ const buildTints = (): BiomeTints => {
 		for (const file of readdirSync(biomesDir)) {
 			if (!file.endsWith(".json")) continue;
 			const biomeName = file.replace(".json", "");
-			const biome = JSON.parse(readFileSync(join(biomesDir, file), "utf8")) as BiomeJson;
+			const biome = JSON.parse(
+				readFileSync(join(biomesDir, file), "utf8"),
+			) as BiomeJson;
 			const effects = biome.effects;
 			if (!effects) continue;
 
@@ -160,7 +174,9 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 		for (const file of readdirSync(blockStatesDir)) {
 			if (!file.endsWith(".json")) continue;
 			const name = file.replace(".json", "");
-			blockStates[name] = JSON.parse(readFileSync(join(blockStatesDir, file), "utf8"));
+			blockStates[name] = JSON.parse(
+				readFileSync(join(blockStatesDir, file), "utf8"),
+			);
 		}
 	}
 
@@ -171,7 +187,9 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 		for (const file of readdirSync(modelsDir)) {
 			if (!file.endsWith(".json")) continue;
 			const name = file.replace(".json", "");
-			blockModels[name] = JSON.parse(readFileSync(join(modelsDir, file), "utf8"));
+			blockModels[name] = JSON.parse(
+				readFileSync(join(modelsDir, file), "utf8"),
+			);
 		}
 	}
 
@@ -214,10 +232,22 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 	// Load entity model geometry from upstream entities.json
 	const entityModels: Record<string, EntityModelDef> = {};
 	try {
-		const entitiesJsonPath = resolve(import.meta.dirname, "../../upstream/prismarine-viewer/viewer/lib/entity/entities.json");
-		const raw = JSON.parse(readFileSync(entitiesJsonPath, "utf8")) as Record<string, {
-			geometry?: { default?: { texturewidth?: number; textureheight?: number; bones?: unknown[] } };
-		}>;
+		const entitiesJsonPath = resolve(
+			import.meta.dirname,
+			"../../upstream/prismarine-viewer/viewer/lib/entity/entities.json",
+		);
+		const raw = JSON.parse(readFileSync(entitiesJsonPath, "utf8")) as Record<
+			string,
+			{
+				geometry?: {
+					default?: {
+						texturewidth?: number;
+						textureheight?: number;
+						bones?: unknown[];
+					};
+				};
+			}
+		>;
 		for (const [name, def] of Object.entries(raw)) {
 			if (def.geometry?.default) {
 				entityModels[name] = {
@@ -227,7 +257,9 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 				};
 			}
 		}
-	} catch { /* entity models unavailable — non-player entities will use fallback box */ }
+	} catch {
+		/* entity models unavailable — non-player entities will use fallback box */
+	}
 
 	return {
 		blockStates,
@@ -366,132 +398,159 @@ canvas { display: block; width: 100vw; height: 100vh; }
 </body>
 </html>`;
 
-	const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-		if (req.url === "/" || req.url === "/index.html") {
-			res.writeHead(200, { "Content-Type": "text/html" });
-			res.end(INDEX_HTML);
-			return;
-		}
-
-		// Serve player skins (proxy from Mojang to avoid CORS)
-		if (req.url?.startsWith("/skins/") && req.url.endsWith(".png")) {
-			const uuid = req.url.slice("/skins/".length, -".png".length);
-			const skinHeaders = { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" };
-
-			// Check disk cache first
-			const cached = getSkinCache(uuid);
-			if (cached) {
-				res.writeHead(200, skinHeaders);
-				res.end(cached);
+	const server = createServer(
+		async (req: IncomingMessage, res: ServerResponse) => {
+			if (req.url === "/" || req.url === "/index.html") {
+				res.writeHead(200, { "Content-Type": "text/html" });
+				res.end(INDEX_HTML);
 				return;
 			}
 
-			// Resolve skin URL: bot.players → Mojang session API
-			let skinUrl: string | undefined;
-			const uname = bot.uuidToUsername[uuid];
-			if (uname) skinUrl = bot.players[uname]?.skinData?.url;
-			if (!skinUrl) {
-				try {
-					const profileRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`);
-					if (profileRes.ok) {
-						const profile = await profileRes.json() as { properties: { name: string; value: string }[] };
-						const texProp = profile.properties.find((p: { name: string }) => p.name === "textures");
-						if (texProp) {
-							const decoded = JSON.parse(Buffer.from(texProp.value, "base64").toString("utf8"));
-							skinUrl = decoded?.textures?.SKIN?.url;
+			// Serve player skins (proxy from Mojang to avoid CORS)
+			if (req.url?.startsWith("/skins/") && req.url.endsWith(".png")) {
+				const uuid = req.url.slice("/skins/".length, -".png".length);
+				const skinHeaders = {
+					"Content-Type": "image/png",
+					"Cache-Control": "public, max-age=3600",
+				};
+
+				// Check disk cache first
+				const cached = getSkinCache(uuid);
+				if (cached) {
+					res.writeHead(200, skinHeaders);
+					res.end(cached);
+					return;
+				}
+
+				// Resolve skin URL: bot.players → Mojang session API
+				let skinUrl: string | undefined;
+				const uname = bot.uuidToUsername[uuid];
+				if (uname) skinUrl = bot.players[uname]?.skinData?.url;
+				if (!skinUrl) {
+					try {
+						const profileRes = await fetch(
+							`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`,
+						);
+						if (profileRes.ok) {
+							const profile = (await profileRes.json()) as {
+								properties: { name: string; value: string }[];
+							};
+							const texProp = profile.properties.find(
+								(p: { name: string }) => p.name === "textures",
+							);
+							if (texProp) {
+								const decoded = JSON.parse(
+									Buffer.from(texProp.value, "base64").toString("utf8"),
+								);
+								skinUrl = decoded?.textures?.SKIN?.url;
+							}
 						}
+					} catch {
+						/* fall through to steve */
 					}
-				} catch { /* fall through to steve */ }
-			}
+				}
 
-			// Fetch skin PNG and cache it
-			if (skinUrl) {
-				try {
-					const skinRes = await fetch(skinUrl);
-					if (skinRes.ok) {
-						const buf = Buffer.from(await skinRes.arrayBuffer());
-						setSkinCache(uuid, buf);
-						res.writeHead(200, skinHeaders);
-						res.end(buf);
-						return;
+				// Fetch skin PNG and cache it
+				if (skinUrl) {
+					try {
+						const skinRes = await fetch(skinUrl);
+						if (skinRes.ok) {
+							const buf = Buffer.from(await skinRes.arrayBuffer());
+							setSkinCache(uuid, buf);
+							res.writeHead(200, skinHeaders);
+							res.end(buf);
+							return;
+						}
+					} catch {
+						/* fall through to steve */
 					}
-				} catch { /* fall through to steve */ }
-			}
+				}
 
-			// Fallback: cache steve under this UUID so we don't re-fetch
-			if (steveTexturePath) {
-				const buf = readFileSync(steveTexturePath);
-				setSkinCache(uuid, buf);
-				res.writeHead(200, skinHeaders);
-				res.end(buf);
-				return;
-			}
-			res.writeHead(404);
-			res.end("Not found");
-			return;
-		}
-
-		// Serve Steve skin texture
-		if (req.url === "/textures/steve.png" && steveTexturePath) {
-			const content = readFileSync(steveTexturePath);
-			res.writeHead(200, { "Content-Type": "image/png" });
-			res.end(content);
-			return;
-		}
-
-		// Serve item textures from extracted assets
-		if (req.url?.startsWith("/textures/item/") && req.url.endsWith(".png")) {
-			const itemName = req.url.slice("/textures/item/".length, -".png".length);
-			const itemPath = join(DATA_DIR, "assets/textures/item", `${itemName}.png`);
-			if (existsSync(itemPath)) {
-				res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
-				res.end(readFileSync(itemPath));
-				return;
-			}
-			res.writeHead(404);
-			res.end("Not found");
-			return;
-		}
-
-		// Serve three.js from node_modules
-		if (req.url?.startsWith("/vendor/")) {
-			const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
-			if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
+				// Fallback: cache steve under this UUID so we don't re-fetch
+				if (steveTexturePath) {
+					const buf = readFileSync(steveTexturePath);
+					setSkinCache(uuid, buf);
+					res.writeHead(200, skinHeaders);
+					res.end(buf);
+					return;
+				}
 				res.writeHead(404);
 				res.end("Not found");
 				return;
 			}
+
+			// Serve Steve skin texture
+			if (req.url === "/textures/steve.png" && steveTexturePath) {
+				const content = readFileSync(steveTexturePath);
+				res.writeHead(200, { "Content-Type": "image/png" });
+				res.end(content);
+				return;
+			}
+
+			// Serve item textures from extracted assets
+			if (req.url?.startsWith("/textures/item/") && req.url.endsWith(".png")) {
+				const itemName = req.url.slice(
+					"/textures/item/".length,
+					-".png".length,
+				);
+				const itemPath = join(
+					DATA_DIR,
+					"assets/textures/item",
+					`${itemName}.png`,
+				);
+				if (existsSync(itemPath)) {
+					res.writeHead(200, {
+						"Content-Type": "image/png",
+						"Cache-Control": "public, max-age=86400",
+					});
+					res.end(readFileSync(itemPath));
+					return;
+				}
+				res.writeHead(404);
+				res.end("Not found");
+				return;
+			}
+
+			// Serve three.js from node_modules
+			if (req.url?.startsWith("/vendor/")) {
+				const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
+				if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
+					res.writeHead(404);
+					res.end("Not found");
+					return;
+				}
+				try {
+					const content = readFileSync(vendorFile);
+					res.writeHead(200, { "Content-Type": "text/javascript" });
+					res.end(content);
+				} catch {
+					res.writeHead(500);
+					res.end("Internal error");
+				}
+				return;
+			}
+
+			const filePath = resolve(distDir, `.${req.url}`);
+
+			if (!filePath.startsWith(distDir) || !existsSync(filePath)) {
+				res.writeHead(404);
+				res.end("Not found");
+				return;
+			}
+
+			const ext = extname(filePath);
+			const contentType = MIME[ext] ?? "application/octet-stream";
+
 			try {
-				const content = readFileSync(vendorFile);
-				res.writeHead(200, { "Content-Type": "text/javascript" });
+				const content = readFileSync(filePath);
+				res.writeHead(200, { "Content-Type": contentType });
 				res.end(content);
 			} catch {
 				res.writeHead(500);
 				res.end("Internal error");
 			}
-			return;
-		}
-
-		const filePath = resolve(distDir, `.${req.url}`);
-
-		if (!filePath.startsWith(distDir) || !existsSync(filePath)) {
-			res.writeHead(404);
-			res.end("Not found");
-			return;
-		}
-
-		const ext = extname(filePath);
-		const contentType = MIME[ext] ?? "application/octet-stream";
-
-		try {
-			const content = readFileSync(filePath);
-			res.writeHead(200, { "Content-Type": contentType });
-			res.end(content);
-		} catch {
-			res.writeHead(500);
-			res.end("Internal error");
-		}
-	});
+		},
+	);
 
 	// ── WebSocket server ──
 
@@ -557,10 +616,15 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		// Send all currently tracked entities
 		for (const entity of Object.values(bot.entities)) {
 			if (entity.id === bot.entity?.id) continue;
-			const username = entity.type === "player"
-				? (entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
-				: null;
-			const skinUrl = entity.type === "player" && entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+			const username =
+				entity.type === "player"
+					? (entity.username ??
+						(entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
+					: null;
+			const skinUrl =
+				entity.type === "player" && entity.uuid
+					? `/skins/${entity.uuid}.png`
+					: undefined;
 			sendTo(ws, {
 				type: "entitySpawn",
 				id: entity.id,
@@ -637,18 +701,26 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const onTimeUpdate = (packet: Record<string, unknown>) => {
 		const timeOfDay = Number(packet.time) % 24000;
-		broadcast({ type: "time", time: timeOfDay < 0 ? timeOfDay + 24000 : timeOfDay });
+		broadcast({
+			type: "time",
+			time: timeOfDay < 0 ? timeOfDay + 24000 : timeOfDay,
+		});
 	};
 
 	// ── Entity events ──
 
 	const onEntitySpawn = (entity: Entity) => {
 		if (entity.id === bot.entity?.id) return;
-		const username = entity.type === "player"
-			? (entity.username ?? (entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
-			: null;
+		const username =
+			entity.type === "player"
+				? (entity.username ??
+					(entity.uuid ? bot.uuidToUsername[entity.uuid] : null))
+				: null;
 		// Serve skin through our proxy to avoid CORS (players only)
-		const skinUrl = entity.type === "player" && entity.uuid ? `/skins/${entity.uuid}.png` : undefined;
+		const skinUrl =
+			entity.type === "player" && entity.uuid
+				? `/skins/${entity.uuid}.png`
+				: undefined;
 		broadcast({
 			type: "entitySpawn",
 			id: entity.id,

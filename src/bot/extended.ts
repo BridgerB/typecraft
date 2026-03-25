@@ -200,10 +200,12 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		const pos = lastBobber.position;
 		const particleId = packet.particleId as number | undefined;
 		const particleObj = packet.particle as { type?: string } | undefined;
-		const amount = (packet.particles as number) ?? (packet.amount as number) ?? 0;
+		const amount =
+			(packet.particles as number) ?? (packet.amount as number) ?? 0;
 
 		// Check for fishing/bubble particles, amount=6, within 1.23 blocks XZ
-		const isFishingParticle = particleObj?.type === "fishing" || particleObj?.type === "bubble";
+		const isFishingParticle =
+			particleObj?.type === "fishing" || particleObj?.type === "bubble";
 		const isCorrectAmount = amount === 6;
 
 		if (isFishingParticle && isCorrectAmount) {
@@ -328,7 +330,12 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		});
 	};
 
-	bot.signBook = async (slot: number, pages: string[], title: string, author: string): Promise<void> => {
+	bot.signBook = async (
+		slot: number,
+		pages: string[],
+		title: string,
+		author: string,
+	): Promise<void> => {
 		// Move book to quickbar if needed
 		const quickBarStart = 36;
 		let bookSlot = slot;
@@ -362,7 +369,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 
 		// Distance check
 		const dx = pos.x - explosionPos.x;
-		const dy = (pos.y + h / 2) - explosionPos.y;
+		const dy = pos.y + h / 2 - explosionPos.y;
 		const dz = pos.z - explosionPos.z;
 		const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
@@ -420,12 +427,16 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		if (!rawDamages) {
 			// Apply armor reduction (simplified — use entity armor attribute if available)
 			const armorAttr = targetEntity.attributes["minecraft:generic.armor"];
-			const armorToughness = targetEntity.attributes["minecraft:generic.armor_toughness"];
+			const armorToughness =
+				targetEntity.attributes["minecraft:generic.armor_toughness"];
 			const armor = armorAttr?.value ?? 0;
 			const toughness = armorToughness?.value ?? 0;
 
 			if (armor > 0) {
-				const reducedArmor = Math.max(armor / 5, armor - damages / (2 + toughness / 4));
+				const reducedArmor = Math.max(
+					armor / 5,
+					armor - damages / (2 + toughness / 4),
+				);
 				damages = Math.floor(damages * (1 - Math.min(20, reducedArmor) / 25));
 			}
 		}

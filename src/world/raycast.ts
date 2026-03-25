@@ -5,7 +5,11 @@
 
 import { createPhysicsWorld } from "../physics/adapter.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
-import { type BlockFace, type RaycastHit, createRaycastIterator } from "./iterators.ts";
+import {
+	type BlockFace,
+	type RaycastHit,
+	createRaycastIterator,
+} from "./iterators.ts";
 import type { World } from "./world.ts";
 
 export type RaycastResult = {

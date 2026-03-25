@@ -14,4 +14,10 @@ export {
 	setEquipment,
 	setVehicle,
 } from "./entity.ts";
-export type { AttributeModifier, Effect, Entity, EntityAttribute, EntityType } from "./types.ts";
+export type {
+	AttributeModifier,
+	Effect,
+	Entity,
+	EntityAttribute,
+	EntityType,
+} from "./types.ts";

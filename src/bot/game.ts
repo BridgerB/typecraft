@@ -5,7 +5,10 @@
 
 import { simplifyNbt } from "../nbt/index.ts";
 import type { NbtTag } from "../nbt/index.ts";
-import { stringSerializer, stringDeserializer } from "../protocol/pluginChannels.ts";
+import {
+	stringSerializer,
+	stringDeserializer,
+} from "../protocol/pluginChannels.ts";
 import type { Bot, BotOptions, Difficulty, GameMode } from "./types.ts";
 
 const DIFFICULTY_NAMES: readonly Difficulty[] = [
@@ -142,7 +145,11 @@ export const initGame = (bot: Bot, options: BotOptions): void => {
 		const brandChannel = bot.supportFeature("customChannelMCPrefixed")
 			? "minecraft:brand"
 			: "MC|Brand";
-		bot.client.registerChannel(brandChannel, stringSerializer, stringDeserializer);
+		bot.client.registerChannel(
+			brandChannel,
+			stringSerializer,
+			stringDeserializer,
+		);
 		bot.client.writeChannel(brandChannel, brand);
 
 		// 1.21.4+ (protocol 769+) requires player_loaded acknowledgement
