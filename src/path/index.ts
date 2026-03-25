@@ -19,7 +19,6 @@ export {
 } from "./goals.ts";
 export { createMovements } from "./movements.ts";
 export { createPathfinder } from "./pathfinder.ts";
-export { defaultMovementsConfig, posHash } from "./types.ts";
 export type {
 	AStarContext,
 	BlockQuery,
@@ -33,3 +32,4 @@ export type {
 	PathResult,
 	PlaceAction,
 } from "./types.ts";
+export { defaultMovementsConfig, posHash } from "./types.ts";

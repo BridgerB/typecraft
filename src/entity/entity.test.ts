@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createItemByName } from "../item/item.ts";
+import { createRegistry } from "../registry/registry.ts";
 import {
 	addEffect,
 	addPassenger,
@@ -15,8 +17,6 @@ import {
 	setEquipment,
 	setVehicle,
 } from "./entity.ts";
-import { createItemByName } from "../item/item.ts";
-import { createRegistry } from "../registry/registry.ts";
 
 const reg = createRegistry("1.20.4");
 

@@ -16,6 +16,7 @@ export {
 	type TextureAtlas,
 	type TextureUV,
 } from "./assets.ts";
+export type { EntityRenderer } from "./entityRenderer.ts";
 export {
 	type GetBlock,
 	getModelVariants,
@@ -37,12 +38,11 @@ export {
 	setViewerBlockStateId,
 	setViewerCamera,
 	setViewerVersion,
+	updateViewerEntity,
 	type Viewer,
 	type ViewerOptions,
-	updateViewerEntity,
 	waitForViewerRender,
 } from "./viewer.ts";
-export type { EntityRenderer } from "./entityRenderer.ts";
 export {
 	initMesherWorker,
 	type WorkerMessage,

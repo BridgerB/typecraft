@@ -4,7 +4,7 @@
  */
 
 import type { Entity } from "../entity/index.ts";
-import { fromNotch, itemsEqual, type Item, toNotch } from "../item/index.ts";
+import { fromNotch, type Item, itemsEqual, toNotch } from "../item/index.ts";
 import type { Vec3 } from "../vec3/index.ts";
 import {
 	acceptClick,

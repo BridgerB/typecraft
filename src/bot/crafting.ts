@@ -4,8 +4,8 @@
  */
 
 import { findRecipes, type Recipe } from "../recipe/index.ts";
-import { findInventoryItem, type Window } from "../window/index.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
+import { findInventoryItem, type Window } from "../window/index.ts";
 import type { Bot, BotOptions } from "./types.ts";
 import { once, withTimeout } from "./utils.ts";
 

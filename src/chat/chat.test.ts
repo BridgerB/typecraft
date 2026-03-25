@@ -14,6 +14,7 @@ import {
 	vsprintf,
 } from "./index.ts";
 import type { Language } from "./types.ts";
+
 // Translation strings needed by tests (language data not extracted by datagen yet)
 const lang: Language = {
 	"chat.type.text": "<%s> %s",

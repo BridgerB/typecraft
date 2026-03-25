@@ -4,8 +4,8 @@
  */
 
 import { join } from "node:path";
-import { getMinecraftToken } from "./minecraft.ts";
 import { getMsaToken } from "./microsoft.ts";
+import { getMinecraftToken } from "./minecraft.ts";
 import type { AuthOptions, AuthResult } from "./types.ts";
 import { getXboxToken } from "./xbox.ts";
 
@@ -79,4 +79,4 @@ export const authenticateMicrosoft = async (
 	throw lastError ?? new Error("Authentication failed");
 };
 
-export type { AuthResult, AuthOptions } from "./types.ts";
+export type { AuthOptions, AuthResult } from "./types.ts";

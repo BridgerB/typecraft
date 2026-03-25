@@ -24,9 +24,9 @@ export {
 	stateIdToBlock,
 } from "./block.ts";
 export {
+	type Block,
 	type BossBar,
 	type BossBarColor,
-	type Block,
 	type Bot,
 	type BotEventMap,
 	type BotOptions,
@@ -402,18 +402,6 @@ export {
 	ZERO,
 } from "./vec3/index.ts";
 export {
-	addBotToDashboard,
-	closeDashboard,
-	closeWebViewer,
-	createDashboard,
-	createWebViewer,
-	type Dashboard,
-	type DashboardOptions,
-	removeBotFromDashboard,
-	type WebViewer,
-	type WebViewerOptions,
-} from "./web/index.ts";
-export {
 	addRendererColumn,
 	addViewerColumn,
 	type BiomeTints,
@@ -463,6 +451,18 @@ export {
 	waitForRender,
 	waitForViewerRender,
 } from "./viewer/index.ts";
+export {
+	addBotToDashboard,
+	closeDashboard,
+	closeWebViewer,
+	createDashboard,
+	createWebViewer,
+	type Dashboard,
+	type DashboardOptions,
+	removeBotFromDashboard,
+	type WebViewer,
+	type WebViewerOptions,
+} from "./web/index.ts";
 export {
 	acceptClick,
 	type Click,
@@ -552,6 +552,21 @@ export {
 
 // ── Pathfinder ──
 
+export type {
+	AStarContext,
+	BlockQuery,
+	Goal,
+	LookAtBlockOptions,
+	Move,
+	Movements,
+	MovementsConfig,
+	Pathfinder,
+	PathfinderConfig,
+	PathNode,
+	PathResult,
+	PlaceAction,
+	PlaceBlockGoalOptions,
+} from "./path/index.ts";
 export {
 	computeAStar,
 	createAStarContext,
@@ -572,20 +587,4 @@ export {
 	createPathfinder,
 	defaultMovementsConfig,
 	posHash,
-} from "./path/index.ts";
-
-export type {
-	AStarContext,
-	BlockQuery,
-	Goal,
-	LookAtBlockOptions,
-	Move,
-	Movements,
-	MovementsConfig,
-	Pathfinder,
-	PathfinderConfig,
-	PathNode,
-	PathResult,
-	PlaceAction,
-	PlaceBlockGoalOptions,
 } from "./path/index.ts";

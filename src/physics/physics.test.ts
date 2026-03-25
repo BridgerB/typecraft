@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEntity } from "../entity/entity.ts";
+import { createRegistry } from "../registry/registry.ts";
 import {
 	cloneAABB,
 	computeOffsetX,
@@ -24,7 +25,6 @@ import {
 	createPlayerState,
 } from "./physics.ts";
 import type { PhysicsBlock, PhysicsWorld, PlayerControls } from "./types.ts";
-import { createRegistry } from "../registry/registry.ts";
 
 const registry = createRegistry("1.20.4");
 

@@ -4,21 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	closeAnvilWorld,
-	loadChunk,
-	openAnvilWorld,
-	saveChunk,
-} from "./anvil.ts";
-import { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.ts";
-import { readLevelDat, writeLevelDat } from "./levelDat.ts";
-import {
-	closeRegionFile,
-	hasChunk,
-	openRegionFile,
-	readRegionChunk,
-	writeRegionChunk,
-} from "./region.ts";
-import {
 	blockToStateId,
 	getBlock,
 	setBlock,
@@ -35,6 +20,21 @@ import {
 import { nbtCompound, nbtInt, nbtString } from "../nbt/index.ts";
 import type { NbtTag } from "../nbt/types.ts";
 import { createRegistry } from "../registry/index.ts";
+import {
+	closeAnvilWorld,
+	loadChunk,
+	openAnvilWorld,
+	saveChunk,
+} from "./anvil.ts";
+import { chunkColumnToNbt, nbtToChunkColumn } from "./chunkNbt.ts";
+import { readLevelDat, writeLevelDat } from "./levelDat.ts";
+import {
+	closeRegionFile,
+	hasChunk,
+	openRegionFile,
+	readRegionChunk,
+	writeRegionChunk,
+} from "./region.ts";
 
 const registry = createRegistry("1.20.4");
 

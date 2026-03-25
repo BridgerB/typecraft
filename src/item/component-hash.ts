@@ -5,9 +5,9 @@
  */
 
 import {
+	createTypeRegistry,
 	type TypeDef,
 	type TypeRegistry,
-	createTypeRegistry,
 } from "../protocol/codec.ts";
 import { SHARED_TYPES } from "../protocol/shared-types.ts";
 import type { ItemComponent } from "./types.ts";

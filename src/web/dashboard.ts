@@ -9,10 +9,9 @@ import {
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
-import { extname, resolve } from "node:path";
-import { type WebSocket, WebSocketServer } from "ws";
-import { dirname, join as pathJoin } from "node:path";
+import { dirname, extname, join as pathJoin, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { type WebSocket, WebSocketServer } from "ws";
 import type { Bot } from "../bot/types.ts";
 import { dumpChunkColumn } from "../chunk/index.ts";
 import type { Entity } from "../entity/types.ts";

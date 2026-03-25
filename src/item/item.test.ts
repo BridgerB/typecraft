@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { nbtInt } from "../nbt/nbt.ts";
+import type { NbtCompound } from "../nbt/types.ts";
+import { createRegistry } from "../registry/registry.ts";
 import {
 	createItem,
 	createItemByName,
@@ -21,9 +24,6 @@ import {
 	setRepairCost,
 	toNotch,
 } from "./item.ts";
-import { nbtInt } from "../nbt/nbt.ts";
-import type { NbtCompound } from "../nbt/types.ts";
-import { createRegistry } from "../registry/registry.ts";
 
 // ── Registries ──
 

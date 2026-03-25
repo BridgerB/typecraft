@@ -4,10 +4,10 @@
  */
 
 import {
-	type KeyObject,
 	createHash,
-	generateKeyPairSync,
 	sign as cryptoSign,
+	generateKeyPairSync,
+	type KeyObject,
 } from "node:crypto";
 import { isDateValid, loadCache, saveCache } from "./cache.ts";
 import type { XboxToken, XboxUserToken } from "./types.ts";

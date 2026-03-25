@@ -1,7 +1,7 @@
-export { autoVersion } from "./autoVersion.ts";
 export type { AuthResult } from "../auth/auth.ts";
 export { authenticateMicrosoft } from "../auth/auth.ts";
 export { joinServer, mcServerHash } from "./auth.ts";
+export { autoVersion } from "./autoVersion.ts";
 export type { Client, ClientOptions, PacketMeta } from "./client.ts";
 export { connectClient, createProtocolClient } from "./client.ts";
 export type {
@@ -23,16 +23,16 @@ export { registerHandshake } from "./handshake.ts";
 export { registerKeepalive } from "./keepalive.ts";
 export type { PingOptions, PingResponse } from "./ping.ts";
 export { ping } from "./ping.ts";
+export type {
+	ChannelDeserializer,
+	ChannelSerializer,
+} from "./pluginChannels.ts";
 export {
 	initPluginChannels,
 	rawDeserializer,
 	rawSerializer,
 	stringDeserializer,
 	stringSerializer,
-} from "./pluginChannels.ts";
-export type {
-	ChannelDeserializer,
-	ChannelSerializer,
 } from "./pluginChannels.ts";
 export { Direction, ProtocolState } from "./states.ts";
 export {

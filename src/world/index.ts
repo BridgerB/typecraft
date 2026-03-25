@@ -15,8 +15,8 @@ export {
 	directionFromYawPitch,
 	PLAYER_EYE_HEIGHT,
 	PLAYER_SNEAK_EYE_HEIGHT,
-	raycast,
 	type RaycastResult,
+	raycast,
 } from "./raycast.ts";
 export {
 	anvilProvider,

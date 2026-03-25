@@ -1,3 +1,4 @@
+export { initBlockActions } from "./block_actions.ts";
 export {
 	fromNotchianPitch,
 	fromNotchianPitchByte,
@@ -9,7 +10,6 @@ export {
 	toNotchianYaw,
 	toRadians,
 } from "./conversions.ts";
-export { initBlockActions } from "./block_actions.ts";
 export { createBot } from "./createBot.ts";
 export type { BotEventMap } from "./events.ts";
 export type {

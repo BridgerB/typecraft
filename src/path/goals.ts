@@ -6,8 +6,8 @@
 import type { Entity } from "../entity/types.ts";
 import type { Vec3 } from "../vec3/index.ts";
 import { vec3 } from "../vec3/index.ts";
-import { raycast } from "../world/index.ts";
 import type { World } from "../world/index.ts";
+import { raycast } from "../world/index.ts";
 import type { Goal } from "./types.ts";
 
 /** Octile distance on XZ + manhattan on Y. Admissible heuristic for A*. */

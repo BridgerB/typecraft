@@ -31,8 +31,8 @@ import {
 	setViewerBlockStateId,
 	setViewerCamera,
 	setViewerTime,
-	type Viewer,
 	updateViewerEntity,
+	type Viewer,
 } from "../viewer/viewer.ts";
 
 // ── Types ──

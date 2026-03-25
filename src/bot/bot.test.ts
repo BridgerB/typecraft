@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
+import type { Client } from "../protocol/index.ts";
 import {
 	clamp,
 	createBot,
@@ -16,7 +17,6 @@ import {
 	toRadians,
 	withTimeout,
 } from "./index.ts";
-import type { Client } from "../protocol/index.ts";
 
 // ── Mock client factory ──
 

@@ -1,5 +1,5 @@
-import { ping } from "./src/protocol/index.ts";
 import { createBot } from "./src/bot/index.ts";
+import { ping } from "./src/protocol/index.ts";
 import { createWebViewer } from "./src/web/index.ts";
 
 const info = await ping({ host: "localhost", port: 25565 });

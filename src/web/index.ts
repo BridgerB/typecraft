@@ -1,10 +1,4 @@
 export {
-	closeWebViewer,
-	createWebViewer,
-	type WebViewer,
-	type WebViewerOptions,
-} from "./serve.ts";
-export {
 	addBotToDashboard,
 	closeDashboard,
 	createDashboard,
@@ -12,3 +6,9 @@ export {
 	type DashboardOptions,
 	removeBotFromDashboard,
 } from "./dashboard.ts";
+export {
+	closeWebViewer,
+	createWebViewer,
+	type WebViewer,
+	type WebViewerOptions,
+} from "./serve.ts";

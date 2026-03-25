@@ -3,11 +3,11 @@
  * Handles login, respawn, game_state_change, difficulty, and brand packets.
  */
 
-import { simplifyNbt } from "../nbt/index.ts";
 import type { NbtTag } from "../nbt/index.ts";
+import { simplifyNbt } from "../nbt/index.ts";
 import {
-	stringSerializer,
 	stringDeserializer,
+	stringSerializer,
 } from "../protocol/pluginChannels.ts";
 import type { Bot, BotOptions, Difficulty, GameMode } from "./types.ts";
 
