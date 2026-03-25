@@ -23,7 +23,6 @@ import type {
 export const createAStarContext = (
 	start: Move,
 	goal: Goal,
-	totalTimeout: number,
 	searchRadius: number,
 ): AStarContext => {
 	const openHeap = createHeap();

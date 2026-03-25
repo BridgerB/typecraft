@@ -36,7 +36,7 @@ export const createBot = (options: BotOptions): Bot => {
 		(options as unknown as { client?: Client }).client ?? createClient(options);
 
 	const emitter = new EventEmitter();
-	const loadedPlugins = new Set<Function>();
+	const loadedPlugins = new Set<(bot: Bot, options: BotOptions) => void>();
 
 	// Default settings
 	const settings: GameSettings = {

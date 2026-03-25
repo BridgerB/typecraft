@@ -3,13 +3,7 @@
  * data from multiple bots to a grid-view browser client.
  */
 
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
 	createServer,
 	type IncomingMessage,

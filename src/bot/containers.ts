@@ -42,7 +42,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		const isMatch = allowedTypes.some((t) =>
 			window.type.toString().startsWith(t),
 		);
-		if (!isMatch) throw new Error("Not a furnace-like window: " + window.type);
+		if (!isMatch) throw new Error(`Not a furnace-like window: ${window.type}`);
 
 		const furnace = window as unknown as FurnaceWindow;
 		furnace.fuel = null;
@@ -151,7 +151,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		const window = await bot.openBlock(block.position);
 
 		if (!/minecraft:(?:chipped_|damaged_)?anvil/.test(window.type.toString())) {
-			throw new Error("Not an anvil window: " + window.type);
+			throw new Error(`Not an anvil window: ${window.type}`);
 		}
 
 		const anvil = window as unknown as AnvilWindow;
@@ -228,7 +228,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 		const window = await bot.openBlock(block.position);
 
 		if (!window.type.toString().startsWith("minecraft:enchant")) {
-			throw new Error("Not an enchantment table: " + window.type);
+			throw new Error(`Not an enchantment table: ${window.type}`);
 		}
 
 		const table = window as unknown as EnchantmentTableWindow;
@@ -363,7 +363,7 @@ export const initContainers = (bot: Bot, _options: BotOptions): void => {
 				const inputItem2 = inputItem2Raw
 					? fromNotch(bot.registry!, inputItem2Raw as never)
 					: null;
-				const hasItem2 = !!(inputItem2 && inputItem2.type && inputItem2.count);
+				const hasItem2 = !!(inputItem2?.type && inputItem2.count);
 
 				const demand = (trade.demand as number) ?? 0;
 				const specialPrice = (trade.specialPrice as number) ?? 0;

@@ -130,6 +130,12 @@ export type BotEventMap = {
 	dismount: [vehicle: Entity];
 	physicsTick: [];
 
+	// ── Pathfinder ──
+	goal_reached: [goal: unknown];
+	goal_updated: [goal: unknown, isDynamic: boolean];
+	path_update: [result: unknown];
+	path_reset: [reason: string];
+
 	// ── Digging ──
 	diggingCompleted: [block: unknown];
 	diggingAborted: [block: unknown];

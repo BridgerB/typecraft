@@ -6,7 +6,8 @@
 		"useIgnoreFile": false
 	},
 	"files": {
-		"includes": ["**", "!!**/dist", "!!**/upstream", "!!**/.claude"]
+		"includes": ["src/**/*.ts", "scripts/**/*.ts"],
+		"ignoreUnknown": true
 	},
 	"formatter": {
 		"enabled": true,

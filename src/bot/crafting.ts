@@ -96,7 +96,7 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 								.startsWith("minecraft:crafting")
 						) {
 							throw new Error(
-								"Non-crafting table block used: " + windowCraftingTable.type,
+								`Non-crafting table block used: ${windowCraftingTable.type}`,
 							);
 						}
 						window = windowCraftingTable;

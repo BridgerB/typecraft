@@ -6,7 +6,6 @@ import type {
 	BiomeDefinition,
 	BlockCollisionShapes,
 	BlockDefinition,
-	BlockStateProperty,
 	EffectDefinition,
 	EnchantmentDefinition,
 	EntityDefinition,
@@ -138,7 +137,8 @@ const loadRecipes = (
 					inShape.push(shapeRow);
 				}
 				const recipe: RawRecipe = { inShape, result };
-				(byResultId[result.id] ??= []).push(recipe);
+				if (!byResultId[result.id]) byResultId[result.id] = [];
+				byResultId[result.id].push(recipe);
 			} else if (
 				raw.type === "minecraft:crafting_shapeless" &&
 				raw.ingredients
@@ -152,7 +152,8 @@ const loadRecipes = (
 					ingredients.push(id !== null ? id : null);
 				}
 				const recipe: RawRecipe = { ingredients, result };
-				(byResultId[result.id] ??= []).push(recipe);
+				if (!byResultId[result.id]) byResultId[result.id] = [];
+				byResultId[result.id].push(recipe);
 			}
 			// Skip smelting, stonecutting, smithing — not used by bot.craft()
 		} catch {

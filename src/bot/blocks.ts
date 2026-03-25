@@ -12,7 +12,6 @@ import {
 import { type Vec3, vec3 } from "../vec3/index.ts";
 import {
 	createWorld,
-	directionFromYawPitch,
 	onWorldEvent,
 	PLAYER_EYE_HEIGHT,
 	raycast,

@@ -1,5 +1,3 @@
-import type { Entity } from "../entity/types.ts";
-
 /**
  * Collision-free numeric position hash.
  * Unique for x,z ∈ [-30000, 30000] and y ∈ [-64, 320].

@@ -42,7 +42,7 @@ export {
 	updateViewerEntity,
 	waitForViewerRender,
 } from "./viewer.ts";
-export { type EntityRenderer } from "./entityRenderer.ts";
+export type { EntityRenderer } from "./entityRenderer.ts";
 export {
 	initMesherWorker,
 	type WorkerMessage,

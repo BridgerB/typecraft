@@ -6,8 +6,6 @@
 
 import type { Bot } from "../bot/types.ts";
 import { createPhysicsWorld } from "../physics/adapter.ts";
-import type { PhysicsWorld } from "../physics/types.ts";
-import type { Registry } from "../registry/types.ts";
 import type {
 	BlockQuery,
 	Move,
@@ -159,7 +157,7 @@ export const createMovements = (
 	};
 
 	// Pre-allocated neighbors buffer — reused per getNeighbors call
-	let neighbors: Move[] = [];
+	const neighbors: Move[] = [];
 	let neighborCount = 0;
 
 	/** Push a move into the neighbors buffer. */

@@ -546,7 +546,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 					speed = toolSpeed;
 				}
 			}
-			if (blockDef.harvestTools && blockDef.harvestTools[heldItem.type]) {
+			if (blockDef.harvestTools?.[heldItem.type]) {
 				canHarvest = true;
 			}
 		}
@@ -578,7 +578,7 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 		// Mining Fatigue effect (id 3)
 		const fatigue = bot.entity.effects.get(3);
 		if (fatigue) {
-			speed *= Math.pow(0.3, fatigue.amplifier + 1);
+			speed *= 0.3 ** (fatigue.amplifier + 1);
 		}
 
 		// Underwater penalty (unless Aqua Affinity helmet)
@@ -723,7 +723,6 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			await new Promise((r) => setTimeout(r, 500));
 			if (!bot.entities[nearest.id]) {
 				collected++;
-				continue;
 			}
 		}
 

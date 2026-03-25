@@ -198,7 +198,6 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		if (!lastBobber || !fishingTask) return;
 
 		const pos = lastBobber.position;
-		const particleId = packet.particleId as number | undefined;
 		const particleObj = packet.particle as { type?: string } | undefined;
 		const amount =
 			(packet.particles as number) ?? (packet.amount as number) ?? 0;
@@ -303,7 +302,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 
 		bot.client.write("sign_update", {
 			location: { x: block.x, y: block.y, z: block.z },
-			isFrontText: back ? false : true,
+			isFrontText: !back,
 			text1: JSON.stringify(lines[0]),
 			text2: JSON.stringify(lines[1]),
 			text3: JSON.stringify(lines[2]),
@@ -349,6 +348,7 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 			hand: 0,
 			pages,
 			title,
+			author,
 		});
 	};
 
@@ -389,8 +389,6 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 					const testX = pos.x - w + fx * targetEntity.width;
 					const testY = pos.y + fy * h;
 					const testZ = pos.z - w + fz * targetEntity.width;
-
-					const testPos = vec3(testX, testY, testZ);
 
 					// Check if ray from explosion to this point is blocked
 					if (bot.world) {

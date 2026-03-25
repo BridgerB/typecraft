@@ -7,13 +7,7 @@ import { equalNbt, nbtInt, nbtList, nbtShort, nbtString } from "../nbt/nbt.ts";
 import type { NbtCompound, NbtTag } from "../nbt/types.ts";
 import type { Registry } from "../registry/types.ts";
 import { hashComponents } from "./component-hash.ts";
-import type {
-	Enchant,
-	Item,
-	ItemComponent,
-	NotchItem,
-	NotchItemBlockId,
-} from "./types.ts";
+import type { Enchant, Item, ItemComponent, NotchItem } from "./types.ts";
 
 // ── Construction ──
 
