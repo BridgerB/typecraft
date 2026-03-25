@@ -8,7 +8,7 @@ import {
 	PLAYER_EYE_HEIGHT,
 	raycast,
 } from "../world/index.ts";
-import type { Bot, BotOptions, Task } from "./types.ts";
+import type { Block, Bot, BotOptions, Task } from "./types.ts";
 import { createTask, nextSequence } from "./utils.ts";
 
 // ── Tool speed lookup (fallback when registry.materials is empty) ──
@@ -82,13 +82,13 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 	let digGeneration = 0; // increments each dig — stale timeouts are ignored
 
 	bot.dig = async (
-		block: unknown,
+		block: Block,
 		forceLook?: boolean | "ignore",
 		digFace?: unknown,
 	): Promise<void> => {
 		if (!block || !bot.registry) return;
 
-		const blockObj = block as { position: Vec3; name: string; stateId: number };
+		const blockObj = block as Block;
 		const pos = blockObj.position;
 		if (!pos) return;
 

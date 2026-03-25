@@ -5,7 +5,7 @@
 
 import type { Entity } from "../entity/index.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
-import type { Bot, BotOptions, PlaceBlockOptions } from "./types.ts";
+import type { Block, Bot, BotOptions, PlaceBlockOptions } from "./types.ts";
 import { nextSequence, once } from "./utils.ts";
 
 export const initPlacing = (bot: Bot, _options: BotOptions): void => {
@@ -171,7 +171,7 @@ export const initPlacing = (bot: Bot, _options: BotOptions): void => {
 	};
 
 	bot.placeBlock = async (
-		referenceBlock: unknown,
+		referenceBlock: Block,
 		faceVector: Vec3,
 	): Promise<void> => {
 		await bot.placeBlockWithOptions(referenceBlock, faceVector);

@@ -246,6 +246,16 @@ export type TransferOptions = {
 	readonly destEnd: number;
 };
 
+// ── Block ──
+
+/** A block in the world with position and state. */
+export type Block = {
+	readonly name: string;
+	readonly stateId: number;
+	readonly position: Vec3;
+	readonly properties: Readonly<Record<string, string>>;
+};
+
 // ── Find block ──
 
 export type FindBlockOptions = {
@@ -524,31 +534,31 @@ export type Bot = EventEmitter & {
 	) => Promise<void>;
 
 	// ── Methods: Blocks ──
-	blockAt: (point: Vec3, extraInfos?: boolean) => unknown | null;
-	findBlock: (options: FindBlockOptions) => unknown | null;
+	blockAt: (point: Vec3, extraInfos?: boolean) => Block | null;
+	findBlock: (options: FindBlockOptions) => Block | null;
 	findBlocks: (options: FindBlockOptions) => Vec3[];
 	canSeeBlock: (block: Vec3) => boolean;
 	waitForChunksToLoad: () => Promise<void>;
 
 	// ── Methods: Digging ──
 	dig: (
-		block: unknown,
+		block: Block,
 		forceLook?: boolean | "ignore",
 		digFace?: DigFace,
 	) => Promise<void>;
 	stopDigging: () => void;
-	canDigBlock: (block: unknown) => boolean;
-	digTime: (block: unknown) => number;
+	canDigBlock: (block: Block) => boolean;
+	digTime: (block: Block) => number;
 	collectDrops: (range?: number, timeout?: number, navigate?: (pos: Vec3) => Promise<void>) => Promise<number>;
 
 	// ── Methods: Placing ──
-	placeBlock: (referenceBlock: unknown, faceVector: Vec3) => Promise<void>;
+	placeBlock: (referenceBlock: Block, faceVector: Vec3) => Promise<void>;
 	placeBlockWithOptions: (
-		referenceBlock: unknown,
+		referenceBlock: Block,
 		faceVector: Vec3,
 		options?: PlaceBlockOptions,
 	) => Promise<void>;
-	placeEntity: (referenceBlock: unknown, faceVector: Vec3) => Promise<Entity>;
+	placeEntity: (referenceBlock: Block, faceVector: Vec3) => Promise<Entity>;
 	activateBlock: (
 		block: Vec3,
 		direction?: Vec3,
@@ -592,7 +602,7 @@ export type Bot = EventEmitter & {
 	craft: (
 		recipe: Recipe,
 		count?: number,
-		craftingTable?: unknown,
+		craftingTable?: Block | null,
 	) => Promise<void>;
 
 	// ── Methods: Extended ──
@@ -600,7 +610,7 @@ export type Bot = EventEmitter & {
 	wake: () => Promise<void>;
 	fish: () => Promise<void>;
 	setSettings: (options: Partial<GameSettings>) => void;
-	blockAtCursor: (maxDistance?: number) => unknown | null;
+	blockAtCursor: (maxDistance?: number) => Block | null;
 	updateSign: (block: Vec3, text: string, back?: boolean) => void;
 	writeBook: (slot: number, pages: string[]) => Promise<void>;
 	signBook: (slot: number, pages: string[], title: string, author: string) => Promise<void>;
@@ -614,13 +624,13 @@ export type Bot = EventEmitter & {
 
 	// ── Methods: Containers ──
 	openChest: (
-		chestBlock: unknown,
+		chestBlock: Block,
 		direction?: Vec3,
 		cursorPos?: Vec3,
 	) => Promise<Window>;
-	openFurnace: (furnaceBlock: unknown) => Promise<FurnaceWindow>;
-	openAnvil: (anvilBlock: unknown) => Promise<AnvilWindow>;
-	openEnchantmentTable: (tableBlock: unknown) => Promise<EnchantmentTableWindow>;
+	openFurnace: (furnaceBlock: Block) => Promise<FurnaceWindow>;
+	openAnvil: (anvilBlock: Block) => Promise<AnvilWindow>;
+	openEnchantmentTable: (tableBlock: Block) => Promise<EnchantmentTableWindow>;
 	openVillager: (villagerEntity: Entity) => Promise<VillagerWindow>;
 	trade: (villager: Window, index: number, count?: number) => Promise<void>;
 

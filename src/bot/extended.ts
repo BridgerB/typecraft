@@ -3,6 +3,7 @@
  * resource pack, kick, fishing, ray trace.
  */
 
+import { stateIdToBlock } from "../block.ts";
 import type { Entity } from "../entity/index.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
 import {
@@ -263,12 +264,14 @@ export const initExtended = (bot: Bot, _options: BotOptions): void => {
 		const dir = directionFromYawPitch(bot.entity.yaw, bot.entity.pitch);
 		const hit = raycast(bot.world, eye, dir, maxDistance);
 		if (!hit) return null;
+		const blockInfo = stateIdToBlock(bot.registry, hit.stateId);
 		return {
 			position: hit.position,
 			face: hit.face,
 			intersect: hit.intersect,
 			name: hit.name,
 			stateId: hit.stateId,
+			properties: blockInfo.properties,
 		};
 	};
 

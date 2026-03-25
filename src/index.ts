@@ -26,6 +26,7 @@ export {
 export {
 	type BossBar,
 	type BossBarColor,
+	type Block,
 	type Bot,
 	type BotEventMap,
 	type BotOptions,
