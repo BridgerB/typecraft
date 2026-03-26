@@ -13,6 +13,7 @@ import {
 	updateSlot,
 	type Window,
 } from "../window/index.ts";
+import { toNotchianPitch, toNotchianYaw } from "./conversions.ts";
 import type {
 	Bot,
 	BotOptions,
@@ -369,6 +370,10 @@ export const initInventory = (bot: Bot, _options: BotOptions): void => {
 			bot.client.write("use_item", {
 				hand: offhand ? 1 : 0,
 				sequence: nextSequence(),
+				rotation: {
+					x: toNotchianYaw(bot.entity.yaw),
+					y: toNotchianPitch(bot.entity.pitch),
+				},
 			});
 		} else {
 			bot.client.write("use_item_on", {

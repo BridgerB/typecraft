@@ -322,9 +322,13 @@ export const initPhysics = (bot: Bot, _options: BotOptions): void => {
 		});
 
 		positionUpdateTimer = 0;
-		lastSentPos = { ...pos };
-		lastSentYaw = yaw;
-		lastSentPitch = pitch;
+		if (posChanged) {
+			lastSentPos = { ...pos };
+		}
+		if (lookChanged) {
+			lastSentYaw = yaw;
+			lastSentPitch = pitch;
+		}
 
 		if (posChanged || lookChanged) {
 			bot.emit("move", pos);
