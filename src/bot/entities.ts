@@ -289,15 +289,10 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
-		if (bot.supportFeature("fixedPointDelta128")) {
-			entity._fixedX += packet.dX as number;
-			entity._fixedY += packet.dY as number;
-			entity._fixedZ += packet.dZ as number;
-		} else {
-			entity._fixedX += (packet.dX as number) * (FIXED_SCALE / 32);
-			entity._fixedY += (packet.dY as number) * (FIXED_SCALE / 32);
-			entity._fixedZ += (packet.dZ as number) * (FIXED_SCALE / 32);
-		}
+		// 1.9+: deltas are i16 in 4096-scale, add directly
+		entity._fixedX += packet.dX as number;
+		entity._fixedY += packet.dY as number;
+		entity._fixedZ += packet.dZ as number;
 		const pos = entity.position as MutableVec3;
 		pos.x = entity._fixedX / FIXED_SCALE;
 		pos.y = entity._fixedY / FIXED_SCALE;
@@ -320,15 +315,10 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 		const entity = bot.entities[packet.entityId as number];
 		if (!entity) return;
 
-		if (bot.supportFeature("fixedPointDelta128")) {
-			entity._fixedX += packet.dX as number;
-			entity._fixedY += packet.dY as number;
-			entity._fixedZ += packet.dZ as number;
-		} else {
-			entity._fixedX += (packet.dX as number) * (FIXED_SCALE / 32);
-			entity._fixedY += (packet.dY as number) * (FIXED_SCALE / 32);
-			entity._fixedZ += (packet.dZ as number) * (FIXED_SCALE / 32);
-		}
+		// 1.9+: deltas are i16 in 4096-scale, add directly
+		entity._fixedX += packet.dX as number;
+		entity._fixedY += packet.dY as number;
+		entity._fixedZ += packet.dZ as number;
 		const pos = entity.position as MutableVec3;
 		pos.x = entity._fixedX / FIXED_SCALE;
 		pos.y = entity._fixedY / FIXED_SCALE;
