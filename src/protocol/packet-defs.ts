@@ -2309,7 +2309,6 @@ export const PACKET_DEFS: Readonly<Record<string, unknown>> = {
 	"play.toClient.packet_waypoint": [
 		"container",
 		[
-			{ name: "entityId", type: "varint" },
 			{ name: "operation", type: "varint" },
 			{ name: "hasUUID", type: "bool" },
 			{

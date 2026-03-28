@@ -294,8 +294,9 @@ export const createPathfinder = (
 				return;
 			}
 
-			// Create movements once per path computation
-			movements = createMovements(bot, { maxDropDown: cfg.maxDropDown });
+			// Create movements once per path computation (preserve if set via setMovements)
+			if (!movements)
+				movements = createMovements(bot, { maxDropDown: cfg.maxDropDown });
 			astarCtx = createAStarContext(currentMove, currentGoal, cfg.searchRadius);
 			const result = computeAStar(
 				astarCtx,
