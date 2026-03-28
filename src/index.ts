@@ -588,3 +588,5 @@ export {
 	defaultMovementsConfig,
 	posHash,
 } from "./path/index.ts";
+export type { RconClient, RconOptions } from "./rcon/index.ts";
+export { createRcon, stripColors } from "./rcon/index.ts";
