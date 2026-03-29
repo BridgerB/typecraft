@@ -1,9 +1,17 @@
 /**
- * World renderer — manages section meshes in a Three.js scene.
+ * World renderer — manages section meshes in a Babylon.js scene.
  * Dispatches meshing to a pool of web workers and handles dirty section tracking.
  */
 
-import * as THREE from "three";
+import {
+	Color3,
+	Mesh,
+	RawTexture,
+	type Scene,
+	StandardMaterial,
+	Texture,
+	VertexData,
+} from "@babylonjs/core";
 import type { Vec3 } from "../vec3/index.ts";
 import type {
 	BiomeTints,
@@ -15,9 +23,9 @@ import type { WorkerMessage, WorkerResponse } from "./workerEntry.ts";
 // ── Types ──
 
 export type WorldRenderer = {
-	readonly scene: THREE.Scene;
-	readonly material: THREE.MeshLambertMaterial;
-	readonly sectionMeshes: Map<string, THREE.Mesh>;
+	readonly scene: Scene;
+	readonly material: StandardMaterial;
+	readonly sectionMeshes: Map<string, Mesh>;
 	readonly workers: Worker[];
 	readonly loadedChunks: Set<string>;
 	readonly sectionsOutstanding: Set<string>;
@@ -28,23 +36,30 @@ export type WorldRenderer = {
 
 const mod = (x: number, n: number): number => ((x % n) + n) % n;
 
-const dispose3 = (mesh: THREE.Mesh): void => {
-	mesh.geometry.dispose();
+const expandRGBtoRGBA = (rgb: Float32Array): Float32Array => {
+	const count = rgb.length / 3;
+	const rgba = new Float32Array(count * 4);
+	for (let i = 0; i < count; i++) {
+		rgba[i * 4] = rgb[i * 3]!;
+		rgba[i * 4 + 1] = rgb[i * 3 + 1]!;
+		rgba[i * 4 + 2] = rgb[i * 3 + 2]!;
+		rgba[i * 4 + 3] = 1.0;
+	}
+	return rgba;
 };
 
 // ── Lifecycle ──
 
 export const createWorldRenderer = (
-	scene: THREE.Scene,
+	scene: Scene,
 	workerUrl: string | URL,
 	numWorkers = 4,
 ): WorldRenderer => {
-	const material = new THREE.MeshLambertMaterial({
-		vertexColors: true,
-		alphaTest: 0.1,
-	});
+	const material = new StandardMaterial("terrain", scene);
+	material.specularColor = Color3.Black();
+	material.backFaceCulling = true;
 
-	const sectionMeshes = new Map<string, THREE.Mesh>();
+	const sectionMeshes = new Map<string, Mesh>();
 	const loadedChunks = new Set<string>();
 	const sectionsOutstanding = new Set<string>();
 	const onRenderUpdate = new Set<() => void>();
@@ -57,12 +72,10 @@ export const createWorldRenderer = (
 			if (data.type === "geometry") {
 				const existing = sectionMeshes.get(data.key);
 				if (existing) {
-					scene.remove(existing);
-					dispose3(existing);
+					existing.dispose();
 					sectionMeshes.delete(data.key);
 				}
 
-				// Check chunk is still loaded
 				const [sx, , sz] = data.key.split(",").map(Number) as [
 					number,
 					number,
@@ -74,26 +87,20 @@ export const createWorldRenderer = (
 				const geo = data.geometry;
 				if (geo.positions.length === 0) return;
 
-				const geometry = new THREE.BufferGeometry();
-				geometry.setAttribute(
-					"position",
-					new THREE.BufferAttribute(geo.positions, 3),
-				);
-				geometry.setAttribute(
-					"normal",
-					new THREE.BufferAttribute(geo.normals, 3),
-				);
-				geometry.setAttribute(
-					"color",
-					new THREE.BufferAttribute(geo.colors, 3),
-				);
-				geometry.setAttribute("uv", new THREE.BufferAttribute(geo.uvs, 2));
-				geometry.setIndex(new THREE.BufferAttribute(geo.indices, 1));
+				const vertexData = new VertexData();
+				vertexData.positions = geo.positions;
+				vertexData.normals = geo.normals;
+				vertexData.uvs = geo.uvs;
+				vertexData.colors = expandRGBtoRGBA(geo.colors);
+				vertexData.indices = geo.indices;
 
-				const mesh = new THREE.Mesh(geometry, material);
+				const mesh = new Mesh(`section_${data.key}`, scene);
+				mesh.sideOrientation = Mesh.BACKSIDE;
+				vertexData.applyToMesh(mesh);
+				mesh.material = material;
 				mesh.position.set(geo.sx, geo.sy, geo.sz);
+				mesh.freezeWorldMatrix();
 				sectionMeshes.set(data.key, mesh);
-				scene.add(mesh);
 			} else if (data.type === "sectionFinished") {
 				sectionsOutstanding.delete(data.key);
 				for (const cb of onRenderUpdate) cb();
@@ -151,14 +158,26 @@ export const setWorldRendererTexture = (
 	wr: WorldRenderer,
 	atlas: TextureAtlas,
 ): void => {
-	const texture = new THREE.CanvasTexture(
-		atlas.canvas as unknown as HTMLCanvasElement,
+	const ctx = (atlas.canvas as OffscreenCanvas).getContext("2d")!;
+	const imageData = ctx.getImageData(
+		0,
+		0,
+		atlas.canvas.width,
+		atlas.canvas.height,
 	);
-	texture.magFilter = THREE.NearestFilter;
-	texture.minFilter = THREE.NearestFilter;
-	texture.flipY = false;
-	wr.material.map = texture;
-	wr.material.needsUpdate = true;
+	const texture = RawTexture.CreateRGBATexture(
+		imageData.data,
+		atlas.canvas.width,
+		atlas.canvas.height,
+		wr.scene,
+		false,
+		false,
+		Texture.NEAREST_SAMPLINGMODE,
+	);
+	texture.hasAlpha = true;
+	wr.material.diffuseTexture = texture;
+	wr.material.useAlphaFromDiffuseTexture = true;
+	wr.material.transparencyMode = 1; // MATERIAL_ALPHATEST
 };
 
 // ── Column management ──
@@ -183,7 +202,6 @@ export const addRendererColumn = (
 		} satisfies WorkerMessage);
 	}
 
-	// Mark all sections dirty, plus neighbors
 	for (let y = minY; y < minY + worldHeight; y += 16) {
 		const loc = { x: chunkX * 16, y, z: chunkZ * 16 };
 		setSectionDirty(wr, loc.x, loc.y, loc.z);
@@ -210,7 +228,6 @@ export const removeRendererColumn = (
 		} satisfies WorkerMessage);
 	}
 
-	// Remove all section meshes for this column
 	for (const [meshKey, mesh] of wr.sectionMeshes) {
 		const [sx, , sz] = meshKey.split(",").map(Number) as [
 			number,
@@ -218,8 +235,7 @@ export const removeRendererColumn = (
 			number,
 		];
 		if (Math.floor(sx / 16) === chunkX && Math.floor(sz / 16) === chunkZ) {
-			wr.scene.remove(mesh);
-			dispose3(mesh);
+			mesh.dispose();
 			wr.sectionMeshes.delete(meshKey);
 		}
 	}
@@ -243,7 +259,6 @@ export const setRendererBlockStateId = (
 	}
 
 	setSectionDirty(wr, pos.x, pos.y, pos.z);
-	// Mark boundary neighbors dirty
 	if ((pos.x & 15) === 0) setSectionDirty(wr, pos.x - 16, pos.y, pos.z);
 	if ((pos.x & 15) === 15) setSectionDirty(wr, pos.x + 16, pos.y, pos.z);
 	if ((pos.y & 15) === 0) setSectionDirty(wr, pos.x, pos.y - 16, pos.z);
@@ -279,8 +294,8 @@ const setSectionDirty = (
 
 // ── Wait for rendering ──
 
-export const waitForRender = (wr: WorldRenderer): Promise<void> => {
-	return new Promise((resolve) => {
+export const waitForRender = (wr: WorldRenderer): Promise<void> =>
+	new Promise((resolve) => {
 		if (wr.sectionsOutstanding.size === 0) {
 			resolve();
 			return;
@@ -294,14 +309,12 @@ export const waitForRender = (wr: WorldRenderer): Promise<void> => {
 		};
 		wr.onRenderUpdate.add(handler);
 	});
-};
 
 // ── Cleanup ──
 
 export const resetWorldRenderer = (wr: WorldRenderer): void => {
 	for (const mesh of wr.sectionMeshes.values()) {
-		wr.scene.remove(mesh);
-		dispose3(mesh);
+		mesh.dispose();
 	}
 	wr.sectionMeshes.clear();
 	wr.loadedChunks.clear();

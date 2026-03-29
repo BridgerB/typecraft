@@ -354,11 +354,6 @@ export const createWebViewer = (
 
 	// ── Static file server ──
 
-	const threeDir = resolve(
-		import.meta.dirname,
-		"../../node_modules/three/build",
-	);
-
 	// Steve skin texture from extracted client JAR assets
 	const steveTexturePath = (() => {
 		const p = join(DATA_DIR, "assets/textures/entity/player/wide/steve.png");
@@ -369,9 +364,6 @@ export const createWebViewer = (
 <html lang="en">
 <head>
 <title>Typecraft Viewer</title>
-<script type="importmap">
-{ "imports": { "three": "/vendor/three.module.js" } }
-</script>
 <script>
 // Minimal Buffer polyfill for browser (read-only subset used by chunk code)
 class Buffer extends Uint8Array {
@@ -543,25 +535,6 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				}
 				res.writeHead(404);
 				res.end("Not found");
-				return;
-			}
-
-			// Serve three.js from node_modules
-			if (req.url?.startsWith("/vendor/")) {
-				const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
-				if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
-					res.writeHead(404);
-					res.end("Not found");
-					return;
-				}
-				try {
-					const content = readFileSync(vendorFile);
-					res.writeHead(200, { "Content-Type": "text/javascript" });
-					res.end(content);
-				} catch {
-					res.writeHead(500);
-					res.end("Internal error");
-				}
 				return;
 			}
 

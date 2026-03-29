@@ -3,22 +3,38 @@
  * Supports all entity types from entities.json, with Steve-model players as a special case.
  */
 
-import * as THREE from "three";
+import {
+	Bone,
+	Color3,
+	DynamicTexture,
+	Matrix,
+	Mesh,
+	MeshBuilder,
+	type Scene,
+	Skeleton,
+	Space,
+	StandardMaterial,
+	Texture,
+	TransformNode,
+	Vector3,
+	VertexBuffer,
+	VertexData,
+} from "@babylonjs/core";
 
 // ── Bedrock geometry types ──
 
-type Cube = {
+type CubeDef = {
 	readonly origin: readonly [number, number, number];
 	readonly size: readonly [number, number, number];
 	readonly uv: readonly [number, number];
 	readonly inflate?: number;
 };
 
-type Bone = {
+type BoneDef = {
 	readonly name: string;
 	readonly parent?: string;
 	readonly pivot?: readonly [number, number, number];
-	readonly cubes?: readonly Cube[];
+	readonly cubes?: readonly CubeDef[];
 };
 
 // ── Entity model definitions (populated by setEntityModels) ──
@@ -26,7 +42,7 @@ type Bone = {
 export type EntityModelDef = {
 	readonly texturewidth: number;
 	readonly textureheight: number;
-	readonly bones: readonly Bone[];
+	readonly bones: readonly BoneDef[];
 };
 
 let entityModels: Record<string, EntityModelDef> = {};
@@ -38,7 +54,7 @@ export const setEntityModels = (data: Record<string, EntityModelDef>): void => {
 const getEntityModel = (name: string): EntityModelDef | null =>
 	entityModels[name] ?? null;
 
-const PLAYER_BONES: readonly Bone[] = [
+const PLAYER_BONES: readonly BoneDef[] = [
 	{ name: "root", pivot: [0, 0, 0] },
 	{ name: "waist", parent: "root", pivot: [0, 12, 0] },
 	{
@@ -244,12 +260,23 @@ type GeoData = {
 	skinWeights: number[];
 };
 
+// Rotate vector by euler angles (XYZ order) — replaces THREE.Vector3.applyEuler
+const applyEuler = (
+	v: Vector3,
+	rx: number,
+	ry: number,
+	rz: number,
+): Vector3 => {
+	const mat = Matrix.RotationYawPitchRoll(ry, rx, rz);
+	return Vector3.TransformCoordinates(v, mat);
+};
+
 const addCube = (
 	geo: GeoData,
 	boneId: number,
-	bonePos: THREE.Vector3,
-	boneRot: THREE.Euler,
-	cube: Cube,
+	bonePos: Vector3,
+	boneRot: Vector3,
+	cube: CubeDef,
 	texW: number,
 	texH: number,
 ): void => {
@@ -263,7 +290,7 @@ const addCube = (
 			const v =
 				(cube.uv[1] + dot3(corner[4] ? face.v1 : face.v0, cube.size)) / texH;
 
-			const p = new THREE.Vector3(
+			const p = new Vector3(
 				cube.origin[0] +
 					corner[0] * cube.size[0] +
 					(corner[0] ? inflate : -inflate),
@@ -276,9 +303,11 @@ const addCube = (
 			);
 
 			// Transform to bone-local space
-			p.sub(bonePos).applyEuler(boneRot).add(bonePos);
+			const offset = p.subtract(bonePos);
+			const rotated = applyEuler(offset, boneRot.x, boneRot.y, boneRot.z);
+			const final = rotated.add(bonePos);
 
-			geo.positions.push(p.x, p.y, p.z);
+			geo.positions.push(final.x, final.y, final.z);
 			geo.normals.push(face.dir[0], face.dir[1], face.dir[2]);
 			geo.uvs.push(u, v);
 			geo.skinIndices.push(boneId, 0, 0, 0);
@@ -289,11 +318,18 @@ const addCube = (
 	}
 };
 
-const buildEntityGeometry = (
-	bones: readonly Bone[],
+// Store raw skin data alongside VertexData since it can't hold skin attributes
+type EntityGeoData = {
+	readonly vertexData: VertexData;
+	readonly skinIndices: number[];
+	readonly skinWeights: number[];
+};
+
+const buildEntityGeoData = (
+	bones: readonly BoneDef[],
 	texW: number,
 	texH: number,
-): THREE.BufferGeometry => {
+): EntityGeoData => {
 	const geo: GeoData = {
 		positions: [],
 		normals: [],
@@ -304,15 +340,15 @@ const buildEntityGeometry = (
 	};
 	const boneMap = new Map<
 		string,
-		{ idx: number; pos: THREE.Vector3; rot: THREE.Euler }
+		{ idx: number; pos: Vector3; rot: Vector3 }
 	>();
 
 	let idx = 0;
 	for (const bone of bones) {
 		const pos = bone.pivot
-			? new THREE.Vector3(bone.pivot[0], bone.pivot[1], bone.pivot[2])
-			: new THREE.Vector3();
-		const rot = new THREE.Euler(0, 0, 0);
+			? new Vector3(bone.pivot[0], bone.pivot[1], bone.pivot[2])
+			: Vector3.Zero();
+		const rot = Vector3.Zero();
 		boneMap.set(bone.name, { idx, pos, rot });
 
 		if (bone.cubes) {
@@ -323,79 +359,86 @@ const buildEntityGeometry = (
 		idx++;
 	}
 
-	const bufGeo = new THREE.BufferGeometry();
-	bufGeo.setAttribute(
-		"position",
-		new THREE.Float32BufferAttribute(geo.positions, 3),
-	);
-	bufGeo.setAttribute(
-		"normal",
-		new THREE.Float32BufferAttribute(geo.normals, 3),
-	);
-	bufGeo.setAttribute("uv", new THREE.Float32BufferAttribute(geo.uvs, 2));
-	bufGeo.setAttribute(
-		"skinIndex",
-		new THREE.Uint16BufferAttribute(geo.skinIndices, 4),
-	);
-	bufGeo.setAttribute(
-		"skinWeight",
-		new THREE.Float32BufferAttribute(geo.skinWeights, 4),
-	);
-	bufGeo.setIndex(geo.indices);
-	return bufGeo;
+	const vd = new VertexData();
+	vd.positions = geo.positions;
+	vd.normals = geo.normals;
+	vd.uvs = geo.uvs;
+	vd.indices = geo.indices;
+
+	return {
+		vertexData: vd,
+		skinIndices: geo.skinIndices,
+		skinWeights: geo.skinWeights,
+	};
 };
 
-const buildPlayerGeometry = (): THREE.BufferGeometry =>
-	buildEntityGeometry(PLAYER_BONES, TEX_W, TEX_H);
+const buildPlayerGeoData = (): EntityGeoData =>
+	buildEntityGeoData(PLAYER_BONES, TEX_W, TEX_H);
+
+const applyGeoToMesh = (mesh: Mesh, geoData: EntityGeoData): void => {
+	geoData.vertexData.applyToMesh(mesh);
+	mesh.setVerticesData(
+		VertexBuffer.MatricesIndicesKind,
+		Float32Array.from(geoData.skinIndices),
+		false,
+	);
+	mesh.setVerticesData(
+		VertexBuffer.MatricesWeightsKind,
+		new Float32Array(geoData.skinWeights),
+		false,
+	);
+};
 
 const buildEntitySkeleton = (
-	bones: readonly Bone[],
-): { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] } => {
-	const boneMap = new Map<string, THREE.Bone>();
-	const pivotMap = new Map<string, THREE.Vector3>();
-	const rootBones: THREE.Bone[] = [];
+	bones: readonly BoneDef[],
+	scene: Scene,
+): Skeleton => {
+	const skeleton = new Skeleton("skel", "skel", scene);
+	const boneMap = new Map<string, Bone>();
+	const pivotMap = new Map<string, Vector3>();
 
 	for (const def of bones) {
-		const bone = new THREE.Bone();
 		const pivot = def.pivot
-			? new THREE.Vector3(def.pivot[0], def.pivot[1], def.pivot[2])
-			: new THREE.Vector3();
+			? new Vector3(def.pivot[0], def.pivot[1], def.pivot[2])
+			: Vector3.Zero();
 		pivotMap.set(def.name, pivot);
+	}
+
+	for (const def of bones) {
+		const pivot = pivotMap.get(def.name)!;
+		const parentBone = def.parent ? (boneMap.get(def.parent) ?? null) : null;
+
+		// Position relative to parent
+		const localPos =
+			parentBone && def.parent
+				? pivot.subtract(pivotMap.get(def.parent)!)
+				: pivot.clone();
+
+		const bone = new Bone(
+			def.name,
+			skeleton,
+			parentBone,
+			Matrix.Translation(localPos.x, localPos.y, localPos.z),
+		);
 		boneMap.set(def.name, bone);
 	}
 
-	// Use positions relative to parent so rotation pivots are correct
-	for (const def of bones) {
-		const bone = boneMap.get(def.name)!;
-		const pivot = pivotMap.get(def.name)!;
-		if (def.parent) {
-			const parentPivot = pivotMap.get(def.parent)!;
-			bone.position.copy(pivot).sub(parentPivot);
-			boneMap.get(def.parent)!.add(bone);
-		} else {
-			bone.position.copy(pivot);
-			rootBones.push(bone);
-		}
-	}
-
-	return { skeleton: new THREE.Skeleton([...boneMap.values()]), rootBones };
+	return skeleton;
 };
 
-const buildPlayerSkeleton = (): {
-	skeleton: THREE.Skeleton;
-	rootBones: THREE.Bone[];
-} => buildEntitySkeleton(PLAYER_BONES);
+const buildPlayerSkeleton = (scene: Scene): Skeleton =>
+	buildEntitySkeleton(PLAYER_BONES, scene);
 
 // ── Animation ──
 
-// Bone indices in PLAYER_BONES array (used for player walk animation)
 const BONE_LEFT_ARM = 5;
 const BONE_RIGHT_ARM = 7;
 const BONE_LEFT_LEG = 9;
 const BONE_RIGHT_LEG = 11;
 
 type AnimState = {
-	skeleton: THREE.Skeleton;
+	skeleton: Skeleton;
+	mesh: Mesh;
 	isPlayer: boolean;
 	lastX: number;
 	lastZ: number;
@@ -405,54 +448,60 @@ type AnimState = {
 // ── Public API ──
 
 export type EntityRenderer = {
-	readonly scene: THREE.Scene;
-	readonly entities: Map<number, THREE.Group>;
+	readonly scene: Scene;
+	readonly entities: Map<number, TransformNode>;
 	readonly animStates: Map<number, AnimState>;
-	readonly geometry: THREE.BufferGeometry;
-	readonly material: THREE.MeshLambertMaterial;
+	readonly geoData: EntityGeoData;
+	readonly material: StandardMaterial;
 };
 
 export const createEntityRenderer = (
-	scene: THREE.Scene,
+	scene: Scene,
 	textureUrl: string,
 ): EntityRenderer => {
-	const geometry = buildPlayerGeometry();
-	const material = new THREE.MeshLambertMaterial({
-		transparent: true,
-		alphaTest: 0.1,
-	});
+	const geoData = buildPlayerGeoData();
+	const material = new StandardMaterial("entityMat", scene);
+	material.disableLighting = true;
+	material.backFaceCulling = false;
+	material.emissiveColor = Color3.White();
+	material.specularColor = Color3.Black();
+	material.useAlphaFromDiffuseTexture = true;
+	material.transparencyMode = 1; // ALPHA_TEST
+	material.alphaCutOff = 0.1;
 
-	// Load Steve texture
-	new THREE.TextureLoader().load(textureUrl, (tex) => {
-		tex.magFilter = THREE.NearestFilter;
-		tex.minFilter = THREE.NearestFilter;
-		tex.flipY = false;
-		material.map = tex;
-		material.needsUpdate = true;
-	});
+	const tex = new Texture(
+		textureUrl,
+		scene,
+		false,
+		false,
+		Texture.NEAREST_SAMPLINGMODE,
+	);
+	tex.hasAlpha = true;
+	material.diffuseTexture = tex;
 
 	return {
 		scene,
 		entities: new Map(),
 		animStates: new Map(),
-		geometry,
+		geoData,
 		material,
 	};
 };
 
 const loadSkinTexture = (
 	url: string,
-	material: THREE.MeshLambertMaterial,
+	material: StandardMaterial,
+	scene: Scene,
 ): void => {
-	const loader = new THREE.TextureLoader();
-	loader.crossOrigin = "anonymous";
-	loader.load(url, (tex) => {
-		tex.magFilter = THREE.NearestFilter;
-		tex.minFilter = THREE.NearestFilter;
-		tex.flipY = false;
-		material.map = tex;
-		material.needsUpdate = true;
-	});
+	const tex = new Texture(
+		url,
+		scene,
+		false,
+		false,
+		Texture.NEAREST_SAMPLINGMODE,
+	);
+	tex.hasAlpha = true;
+	material.diffuseTexture = tex;
 };
 
 export const addEntity = (
@@ -468,73 +517,98 @@ export const addEntity = (
 ): void => {
 	if (er.entities.has(id)) removeEntity(er, id);
 
-	const group = new THREE.Group();
+	const node = new TransformNode(`entity-${id}`, er.scene);
 
-	let geometry: THREE.BufferGeometry;
-	let skeletonResult: { skeleton: THREE.Skeleton; rootBones: THREE.Bone[] };
+	let geoData: EntityGeoData;
 	let scale: number;
 
 	if (entityName === "player") {
-		geometry = er.geometry; // shared player geometry
-		skeletonResult = buildPlayerSkeleton();
-		// Bedrock geometry is 32px tall (2 blocks at 1/16). Real Steve is 1.8 blocks.
+		geoData = er.geoData;
 		scale = 1.8 / 32;
 	} else {
 		const model = getEntityModel(entityName);
 		if (model) {
-			geometry = buildEntityGeometry(
+			geoData = buildEntityGeoData(
 				model.bones,
 				model.texturewidth,
 				model.textureheight,
 			);
-			skeletonResult = buildEntitySkeleton(model.bones);
-			// Bedrock geometry uses 1/16 scale (pixels to blocks)
 			scale = 1 / 16;
 		} else {
 			// Fallback: colored box for unknown entities
-			const boxGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-			const boxMat = new THREE.MeshLambertMaterial({ color: 0xff6600 });
-			const box = new THREE.Mesh(boxGeo, boxMat);
+			const box = MeshBuilder.CreateBox(
+				`box-${id}`,
+				{ size: 0.5, sideOrientation: Mesh.BACKSIDE },
+				er.scene,
+			);
+			const boxMat = new StandardMaterial(`boxMat-${id}`, er.scene);
+			boxMat.diffuseColor = new Color3(1, 0.4, 0);
+			boxMat.specularColor = Color3.Black();
+			box.material = boxMat;
 			box.position.y = 0.25;
-			group.add(box);
-			group.position.set(x, y, z);
-			group.rotation.y = yaw;
-			er.scene.add(group);
-			er.entities.set(id, group);
+			box.parent = node;
+			node.position.set(x, y, z);
+			node.rotation.y = yaw;
+			er.entities.set(id, node);
 			return;
 		}
 	}
 
-	// Use per-entity material when a skin/texture URL is provided, otherwise shared Steve for players
 	const material = skinUrl
-		? new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.1 })
+		? (() => {
+				const mat = new StandardMaterial(`skin-${id}`, er.scene);
+				mat.disableLighting = true;
+				mat.backFaceCulling = false;
+				mat.emissiveColor = Color3.White();
+				mat.specularColor = Color3.Black();
+				mat.useAlphaFromDiffuseTexture = true;
+				mat.transparencyMode = 1;
+				mat.alphaCutOff = 0.1;
+				return mat;
+			})()
 		: entityName === "player"
 			? er.material
-			: new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.1 });
-	if (skinUrl) loadSkinTexture(skinUrl, material);
+			: (() => {
+					const mat = new StandardMaterial(`entityMat-${id}`, er.scene);
+					mat.disableLighting = true;
+					mat.backFaceCulling = false;
+					mat.emissiveColor = Color3.White();
+					mat.specularColor = Color3.Black();
+					mat.useAlphaFromDiffuseTexture = true;
+					mat.transparencyMode = 1;
+					mat.alphaCutOff = 0.1;
+					return mat;
+				})();
+	if (skinUrl) loadSkinTexture(skinUrl, material, er.scene);
 
-	// Build skinned mesh
-	const mesh = new THREE.SkinnedMesh(geometry, material);
-	mesh.frustumCulled = false; // prevent matrixWorld crash during bounding sphere computation
-	mesh.add(...skeletonResult.rootBones);
-	mesh.bind(skeletonResult.skeleton);
-	mesh.scale.set(scale, scale, scale);
-	group.add(mesh);
+	const skeleton =
+		entityName === "player"
+			? buildPlayerSkeleton(er.scene)
+			: buildEntitySkeleton(
+					getEntityModel(entityName)?.bones ?? PLAYER_BONES,
+					er.scene,
+				);
 
-	// Username label (players only)
+	const mesh = new Mesh(`skinned-${id}`, er.scene);
+	applyGeoToMesh(mesh, geoData);
+	mesh.material = material;
+	mesh.skeleton = skeleton;
+	mesh.scaling.set(scale, scale, scale);
+	mesh.parent = node;
+
 	if (username) {
-		const label = createTextSprite(username);
+		const label = createLabelPlane(username, er.scene);
 		label.position.y = 2.1;
-		group.add(label);
+		label.parent = node;
 	}
 
-	group.position.set(x, y, z);
-	group.rotation.y = yaw;
+	node.position.set(x, y, z);
+	node.rotation.y = yaw;
 
-	er.scene.add(group);
-	er.entities.set(id, group);
+	er.entities.set(id, node);
 	er.animStates.set(id, {
-		skeleton: skeletonResult.skeleton,
+		skeleton,
+		mesh,
 		isPlayer: entityName === "player",
 		lastX: x,
 		lastZ: z,
@@ -550,12 +624,11 @@ export const updateEntity = (
 	z: number,
 	yaw: number,
 ): void => {
-	const group = er.entities.get(id);
-	if (!group) return;
-	group.position.set(x, y, z);
-	group.rotation.y = yaw;
+	const node = er.entities.get(id);
+	if (!node) return;
+	node.position.set(x, y, z);
+	node.rotation.y = yaw;
 
-	// Walk animation (player entities only)
 	const anim = er.animStates.get(id);
 	if (!anim) return;
 
@@ -568,57 +641,75 @@ export const updateEntity = (
 	if (!anim.isPlayer) return;
 
 	if (dist > 0.001 && dist < 1) {
-		// Accumulate distance and compute swing
 		anim.distanceMoved += dist;
-		const speed = Math.min(dist * 20, 1); // scale by ~tick rate, cap at 1
+		const speed = Math.min(dist * 20, 1);
 		const tcos0 = Math.cos(anim.distanceMoved * 38.17) * speed * 57.3;
 		const rad = tcos0 * (Math.PI / 180);
 
-		anim.skeleton.bones[BONE_LEFT_ARM]!.rotation.x = rad;
-		anim.skeleton.bones[BONE_RIGHT_ARM]!.rotation.x = -rad;
-		anim.skeleton.bones[BONE_LEFT_LEG]!.rotation.x = -rad * 1.4;
-		anim.skeleton.bones[BONE_RIGHT_LEG]!.rotation.x = rad * 1.4;
+		anim.skeleton.bones[BONE_LEFT_ARM]!.setRotation(
+			new Vector3(rad, 0, 0),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_RIGHT_ARM]!.setRotation(
+			new Vector3(-rad, 0, 0),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_LEFT_LEG]!.setRotation(
+			new Vector3(-rad * 1.4, 0, 0),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_RIGHT_LEG]!.setRotation(
+			new Vector3(rad * 1.4, 0, 0),
+			Space.LOCAL,
+		);
 	} else {
-		// Standing still — reset to bind pose
-		anim.skeleton.bones[BONE_LEFT_ARM]!.rotation.x = 0;
-		anim.skeleton.bones[BONE_RIGHT_ARM]!.rotation.x = 0;
-		anim.skeleton.bones[BONE_LEFT_LEG]!.rotation.x = 0;
-		anim.skeleton.bones[BONE_RIGHT_LEG]!.rotation.x = 0;
+		anim.skeleton.bones[BONE_LEFT_ARM]!.setRotation(
+			Vector3.Zero(),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_RIGHT_ARM]!.setRotation(
+			Vector3.Zero(),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_LEFT_LEG]!.setRotation(
+			Vector3.Zero(),
+			Space.LOCAL,
+		);
+		anim.skeleton.bones[BONE_RIGHT_LEG]!.setRotation(
+			Vector3.Zero(),
+			Space.LOCAL,
+		);
 	}
 };
 
 // ── Equipment rendering ──
 
-// Item texture cache (loaded on demand)
-const itemTextureCache = new Map<string, THREE.Texture>();
+const itemTextureCache = new Map<string, Texture>();
 const loadingTextures = new Set<string>();
 
-const getItemTexture = (itemName: string): THREE.Texture | null => {
+const getItemTexture = (itemName: string, scene: Scene): Texture | null => {
 	const cached = itemTextureCache.get(itemName);
 	if (cached) return cached;
 	if (loadingTextures.has(itemName)) return null;
 
 	loadingTextures.add(itemName);
 	const url = `/textures/item/${itemName}.png`;
-	new THREE.TextureLoader().load(
+	const tex = new Texture(
 		url,
-		(tex) => {
-			tex.magFilter = THREE.NearestFilter;
-			tex.minFilter = THREE.NearestFilter;
+		scene,
+		false,
+		true,
+		Texture.NEAREST_SAMPLINGMODE,
+		() => {
 			itemTextureCache.set(itemName, tex);
 		},
-		undefined,
-		() => loadingTextures.delete(itemName), // failed — allow retry
+		() => {
+			loadingTextures.delete(itemName);
+		},
 	);
 	return null;
 };
 
-const ITEM_SPRITE_GEO = /* lazy */ (() => {
-	const g = new THREE.PlaneGeometry(1, 1);
-	return g;
-})();
-
-/** Attach or update an item sprite on an entity's right hand. */
 export const updateEntityEquipment = (
 	er: EntityRenderer,
 	entityId: number,
@@ -627,83 +718,83 @@ export const updateEntityEquipment = (
 ): void => {
 	const anim = er.animStates.get(entityId);
 	if (!anim) return;
-
-	// Only handle main hand (slot 0) for now
 	if (slot !== 0) return;
 
 	const rightArm = anim.skeleton.bones[BONE_RIGHT_ARM];
 	if (!rightArm) return;
 
 	// Remove existing held item
-	const existing = rightArm.children.find((c) => c.userData.heldItem);
+	const existing = anim.mesh
+		.getChildMeshes(true)
+		.find((c) => (c.metadata as { heldItem?: boolean } | null)?.heldItem);
 	if (existing) {
-		rightArm.remove(existing);
-		if (existing instanceof THREE.Mesh) {
-			(existing.material as THREE.MeshBasicMaterial).map?.dispose();
-			(existing.material as THREE.MeshBasicMaterial).dispose();
-		}
+		existing.material?.dispose();
+		existing.dispose();
 	}
 
 	if (!itemName) return;
 
-	const tex = getItemTexture(itemName);
-	if (!tex) {
-		// Texture not loaded yet — retry on next equip update
-		// For now, create a colored placeholder
-		const mat = new THREE.MeshBasicMaterial({
-			color: 0xaaaaaa,
-			transparent: true,
-			side: THREE.DoubleSide,
-		});
-		const mesh = new THREE.Mesh(ITEM_SPRITE_GEO, mat);
-		mesh.userData.heldItem = true;
-		// Position at hand tip: rightArm pivot is [-5, 22, 0], arm is 12px tall
-		// In bone-local space, hand is at bottom of arm (-12 from pivot)
-		mesh.position.set(0, -10, -1);
-		mesh.scale.set(8, 8, 8); // 8px = half a block
-		mesh.rotation.x = -Math.PI / 4; // tilt forward 45°
-		rightArm.add(mesh);
-		return;
+	const tex = getItemTexture(itemName, er.scene);
+
+	const plane = MeshBuilder.CreatePlane(
+		`held-${entityId}`,
+		{ size: 1 },
+		er.scene,
+	);
+	plane.metadata = { heldItem: true };
+
+	if (tex) {
+		const mat = new StandardMaterial(`heldMat-${entityId}`, er.scene);
+		mat.backFaceCulling = false;
+		mat.diffuseTexture = tex;
+		mat.transparencyMode = 1;
+		mat.alphaCutOff = 0.1;
+		mat.emissiveTexture = tex;
+		mat.disableLighting = true;
+		plane.material = mat;
+	} else {
+		const mat = new StandardMaterial(`heldPlaceholder-${entityId}`, er.scene);
+		mat.backFaceCulling = false;
+		mat.diffuseColor = new Color3(0.67, 0.67, 0.67);
+		mat.disableLighting = true;
+		plane.material = mat;
 	}
 
-	const mat = new THREE.MeshBasicMaterial({
-		map: tex,
-		transparent: true,
-		alphaTest: 0.1,
-		side: THREE.DoubleSide,
-	});
-	const mesh = new THREE.Mesh(ITEM_SPRITE_GEO, mat);
-	mesh.userData.heldItem = true;
-	mesh.position.set(0, -10, -1);
-	mesh.scale.set(8, 8, 8);
-	mesh.rotation.x = -Math.PI / 4;
-	rightArm.add(mesh);
+	plane.scaling.set(8, 8, 8);
+	plane.position.set(0, -10, -1);
+	plane.rotation.x = -Math.PI / 4;
+	plane.attachToBone(rightArm, anim.mesh);
 };
 
 export const removeEntity = (er: EntityRenderer, id: number): void => {
-	const group = er.entities.get(id);
-	if (!group) return;
-	er.scene.remove(group);
-	for (const child of group.children) {
-		if (child instanceof THREE.SkinnedMesh) {
-			child.skeleton.dispose();
-			// Dispose per-entity geometry (not the shared player one)
-			if (child.geometry !== er.geometry) child.geometry.dispose();
-			// Dispose per-entity material (not the shared Steve one)
-			if (child.material !== er.material) {
-				(child.material as THREE.MeshLambertMaterial).map?.dispose();
-				(child.material as THREE.MeshLambertMaterial).dispose();
+	const node = er.entities.get(id);
+	if (!node) return;
+
+	for (const child of node.getChildMeshes(false)) {
+		if (child instanceof Mesh) {
+			// Dispose skeleton if present
+			if (child.skeleton) {
+				child.skeleton.dispose();
 			}
-		} else if (child instanceof THREE.Mesh) {
-			// Fallback box or other plain meshes
-			child.geometry.dispose();
-			(child.material as THREE.MeshLambertMaterial).dispose();
-		}
-		if (child instanceof THREE.Sprite) {
-			child.material.map?.dispose();
-			child.material.dispose();
+			// Dispose per-entity material (not the shared Steve one)
+			if (child.material && child.material !== er.material) {
+				const mat = child.material as StandardMaterial;
+				mat.diffuseTexture?.dispose();
+				mat.dispose();
+			}
+			child.dispose();
 		}
 	}
+
+	// Dispose label planes (direct children that are meshes on the node)
+	for (const child of node.getChildren()) {
+		if (child instanceof Mesh) {
+			child.material?.dispose();
+			child.dispose();
+		}
+	}
+
+	node.dispose();
 	er.entities.delete(id);
 	er.animStates.delete(id);
 };
@@ -714,12 +805,21 @@ export const clearEntities = (er: EntityRenderer): void => {
 	}
 };
 
-// ── Text sprite ──
+// ── Label plane (billboard) ──
 
-const createTextSprite = (text: string): THREE.Sprite => {
-	const canvas = new OffscreenCanvas(256, 64);
-	const ctx = canvas.getContext("2d")!;
+const createLabelPlane = (text: string, scene: Scene): Mesh => {
+	const texWidth = 256;
+	const texHeight = 64;
 
+	const dynamicTex = new DynamicTexture(
+		"labelTex",
+		{ width: texWidth, height: texHeight },
+		scene,
+		false,
+		Texture.LINEAR_LINEAR,
+	);
+
+	const ctx = dynamicTex.getContext() as unknown as CanvasRenderingContext2D;
 	ctx.font = "bold 32px monospace";
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
@@ -736,20 +836,24 @@ const createTextSprite = (text: string): THREE.Sprite => {
 
 	ctx.fillStyle = "#ffffff";
 	ctx.fillText(text, cx, cy);
+	dynamicTex.update();
 
-	const texture = new THREE.CanvasTexture(
-		canvas as unknown as HTMLCanvasElement,
+	const mat = new StandardMaterial("labelMat", scene);
+	mat.diffuseTexture = dynamicTex;
+	mat.emissiveTexture = dynamicTex;
+	mat.disableLighting = true;
+	mat.backFaceCulling = false;
+	mat.transparencyMode = 2; // ALPHA_BLEND
+	mat.useAlphaFromDiffuseTexture = true;
+	mat.disableDepthWrite = true;
+
+	const plane = MeshBuilder.CreatePlane(
+		"label",
+		{ width: 3, height: 0.75 },
+		scene,
 	);
-	texture.minFilter = THREE.LinearFilter;
-	texture.magFilter = THREE.LinearFilter;
+	plane.material = mat;
+	plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 
-	const material = new THREE.SpriteMaterial({
-		map: texture,
-		depthTest: false,
-		transparent: true,
-	});
-	const sprite = new THREE.Sprite(material);
-	sprite.scale.set(3, 0.75, 1);
-
-	return sprite;
+	return plane;
 };

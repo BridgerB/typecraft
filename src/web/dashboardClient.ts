@@ -1,9 +1,9 @@
 /**
  * Dashboard browser client — renders multiple bots in a grid using a single
- * Three.js WebGLRenderer with viewport/scissor per cell.
+ * Babylon.js Engine with viewport per cell.
  */
 
-import * as THREE from "three";
+import { Engine, Viewport } from "@babylonjs/core";
 import {
 	createChunkColumn,
 	GLOBAL_BITS_PER_BIOME,
@@ -52,9 +52,8 @@ const canvas = document.getElementById("dashboard") as HTMLCanvasElement;
 const labelsDiv = document.getElementById("labels")!;
 const statusEl = document.getElementById("status")!;
 
-// Single shared renderer — no devicePixelRatio (20 viewports don't need retina)
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setSize(window.innerWidth, window.innerHeight, true);
+const engine = new Engine(canvas, false);
+engine.setSize(window.innerWidth, window.innerHeight);
 
 const cells = new Map<string, BotCell>();
 let botOrder: string[] = [];
@@ -163,8 +162,7 @@ const getOrCreateCell = (botId: string): BotCell => {
 	let cell = cells.get(botId);
 	if (cell) return cell;
 
-	// Create a scene that shares the single renderer
-	const viewer = createViewerScene(renderer, {
+	const viewer = createViewerScene(engine, {
 		workerUrl: "/web/clientWorker.js",
 	});
 
@@ -183,7 +181,6 @@ const getOrCreateCell = (botId: string): BotCell => {
 		updateLabels();
 	}
 
-	// If assets are already decoded, apply them immediately
 	if (assetsDecoded) {
 		applyAssets(cell);
 	}
@@ -333,7 +330,6 @@ const connect = () => {
 			setEntityModels(msg.entityModels as Record<string, EntityModelDef>);
 			assetsDecoded = true;
 
-			// Apply to all existing cells
 			for (const cell of cells.values()) {
 				if (!cell.assetsReady) applyAssets(cell);
 			}
@@ -358,25 +354,17 @@ const connect = () => {
 	ws.onerror = () => ws.close();
 };
 
-// ── Render loop — single renderer, multiple viewports ──
+// ── Render loop — single engine, multiple viewports ──
 
-const _sizeVec = new THREE.Vector2();
 const loop = () => {
 	requestAnimationFrame(loop);
 	if (cells.size === 0) return;
 
 	const { cols, rows } = getGrid();
-	renderer.getSize(_sizeVec);
-	const w = _sizeVec.x;
-	const h = _sizeVec.y;
-	const cellW = w / cols;
-	const cellH = h / rows;
-
-	// Clear entire framebuffer before rendering viewports
-	renderer.setScissorTest(false);
-	renderer.clear();
-	renderer.setScissorTest(true);
-	renderer.autoClear = false;
+	const canvasW = engine.getRenderWidth();
+	const canvasH = engine.getRenderHeight();
+	const cellW = canvasW / cols;
+	const cellH = canvasH / rows;
 
 	for (let i = 0; i < botOrder.length; i++) {
 		const cell = cells.get(botOrder[i]!);
@@ -385,27 +373,26 @@ const loop = () => {
 		const col = i % cols;
 		const row = Math.floor(i / cols);
 		const x = col * cellW;
-		const y = h - (row + 1) * cellH; // WebGL y is bottom-up
+		const y = row * cellH;
 
-		renderer.setViewport(x, y, cellW, cellH);
-		renderer.setScissor(x, y, cellW, cellH);
-		renderer.clear(true, true, true); // clear color+depth+stencil per cell
-		cell.viewer.camera.aspect = cellW / cellH;
-		cell.viewer.camera.updateProjectionMatrix();
+		cell.viewer.camera.viewport = new Viewport(
+			x / canvasW,
+			y / canvasH,
+			cellW / canvasW,
+			cellH / canvasH,
+		);
 		try {
-			renderer.render(cell.viewer.scene, cell.viewer.camera);
+			cell.viewer.scene.render();
 		} catch (_) {
 			// Entity mesh errors must not kill the render loop
 		}
 	}
-
-	renderer.setScissorTest(false);
 };
 
 // ── Resize ──
 
 window.addEventListener("resize", () => {
-	renderer.setSize(window.innerWidth, window.innerHeight, true);
+	engine.setSize(window.innerWidth, window.innerHeight);
 	updateLabels();
 });
 

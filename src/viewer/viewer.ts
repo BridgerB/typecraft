@@ -1,9 +1,13 @@
-/**
- * Top-level Viewer API — creates a Three.js scene with camera, lights,
- * and a WorldRenderer for rendering Minecraft chunks.
- */
-
-import * as THREE from "three";
+import {
+	Color3,
+	Color4,
+	Engine,
+	FreeCamera,
+	HemisphericLight,
+	Quaternion,
+	Scene,
+	Vector3,
+} from "@babylonjs/core";
 import type { Vec3 } from "../vec3/index.ts";
 import type {
 	BiomeTints,
@@ -35,9 +39,10 @@ import {
 // ── Types ──
 
 export type Viewer = {
-	readonly scene: THREE.Scene;
-	readonly camera: THREE.PerspectiveCamera;
-	readonly renderer: THREE.WebGLRenderer;
+	readonly engine: Engine;
+	readonly scene: Scene;
+	readonly camera: FreeCamera;
+	readonly light: HemisphericLight;
 	readonly worldRenderer: WorldRenderer;
 	readonly entityRenderer: EntityRenderer;
 };
@@ -54,25 +59,34 @@ export const createViewer = (
 	canvas: HTMLCanvasElement,
 	options: ViewerOptions,
 ): Viewer => {
-	const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-	renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+	const engine = new Engine(canvas, false);
+	engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 2));
+	engine.setSize(canvas.clientWidth, canvas.clientHeight);
 
-	return createViewerScene(renderer, options);
+	return createViewerScene(engine, options);
 };
 
-/** Create a viewer scene that shares an existing renderer (for dashboard grid). */
 export const createViewerScene = (
-	renderer: THREE.WebGLRenderer,
+	engine: Engine,
 	options: ViewerOptions,
 ): Viewer => {
-	const scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x87ceeb);
+	const scene = new Scene(engine);
+	scene.useRightHandedSystem = true;
+	scene.clearColor = new Color4(0x87 / 255, 0xce / 255, 0xeb / 255, 1);
 
-	const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-	scene.add(ambientLight);
+	scene.ambientColor = new Color3(1, 1, 1);
 
-	const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+	const light = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
+	light.intensity = 1.0;
+	light.diffuse = new Color3(1, 1, 1);
+	light.groundColor = new Color3(1, 1, 1);
+
+	const camera = new FreeCamera("camera", Vector3.Zero(), scene);
+	camera.fov = (75 * Math.PI) / 180;
+	camera.minZ = 0.1;
+	camera.maxZ = 1000;
+	camera.inputs.clear();
+	camera.detachControl();
 
 	const worldRenderer = createWorldRenderer(
 		scene,
@@ -85,7 +99,7 @@ export const createViewerScene = (
 		options.textureUrl ?? "/textures/steve.png",
 	);
 
-	return { scene, camera, renderer, worldRenderer, entityRenderer };
+	return { engine, scene, camera, light, worldRenderer, entityRenderer };
 };
 
 // ── Version & assets ──
@@ -192,7 +206,11 @@ export const setViewerCamera = (
 	pitch: number,
 ): void => {
 	viewer.camera.position.set(pos.x, pos.y + 1.6, pos.z);
-	viewer.camera.rotation.set(pitch, yaw, 0, "ZYX");
+	viewer.camera.rotationQuaternion = Quaternion.RotationYawPitchRoll(
+		yaw,
+		pitch,
+		0,
+	);
 };
 
 export const resizeViewer = (
@@ -200,53 +218,41 @@ export const resizeViewer = (
 	width: number,
 	height: number,
 ): void => {
-	viewer.camera.aspect = width / height;
-	viewer.camera.updateProjectionMatrix();
-	viewer.renderer.setSize(width, height);
+	viewer.engine.setSize(width, height);
 };
 
 // ── Day/night cycle ──
 
-// Sky colors: day = light blue, night = dark blue
-const DAY_SKY = new THREE.Color(0x87ceeb);
-const NIGHT_SKY = new THREE.Color(0x0c1445);
+const DAY_SKY = new Color3(0x87 / 255, 0xce / 255, 0xeb / 255);
+const NIGHT_SKY = new Color3(0x0c / 255, 0x14 / 255, 0x45 / 255);
 
-/** Set time of day (0–24000 MC ticks). Adjusts ambient light + sky color. */
 export const setViewerTime = (viewer: Viewer, time: number): void => {
-	// Sun angle: 0 at noon (tick 6000), π at midnight (tick 18000)
 	const angle = (time / 24000 - 0.25) * 2 * Math.PI;
 	const raw = Math.cos(angle);
-	// Brightness: 1.0 at noon, 0.15 at midnight
 	const brightness = Math.max(0.15, raw * 0.5 + 0.5);
 
-	// Find the ambient light in the scene
-	for (const child of viewer.scene.children) {
-		if (child instanceof THREE.AmbientLight) {
-			child.intensity = brightness;
-			break;
-		}
-	}
+	viewer.light.intensity = brightness;
 
-	// Blend sky color
-	const bg = viewer.scene.background as THREE.Color;
-	bg.copy(NIGHT_SKY).lerp(DAY_SKY, brightness);
+	const r = NIGHT_SKY.r + (DAY_SKY.r - NIGHT_SKY.r) * brightness;
+	const g = NIGHT_SKY.g + (DAY_SKY.g - NIGHT_SKY.g) * brightness;
+	const b = NIGHT_SKY.b + (DAY_SKY.b - NIGHT_SKY.b) * brightness;
+	viewer.scene.clearColor = new Color4(r, g, b, 1);
 };
 
 // ── Render loop ──
 
 export const renderViewer = (viewer: Viewer): void => {
-	viewer.renderer.render(viewer.scene, viewer.camera);
+	viewer.scene.render();
 };
 
 // ── Waiting ──
 
-export const waitForViewerRender = (viewer: Viewer): Promise<void> => {
-	return waitForRender(viewer.worldRenderer);
-};
+export const waitForViewerRender = (viewer: Viewer): Promise<void> =>
+	waitForRender(viewer.worldRenderer);
 
 // ── Cleanup ──
 
 export const disposeViewer = (viewer: Viewer): void => {
 	disposeWorldRenderer(viewer.worldRenderer);
-	viewer.renderer.dispose();
+	viewer.engine.dispose();
 };

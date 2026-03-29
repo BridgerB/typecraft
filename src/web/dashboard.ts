@@ -60,10 +60,6 @@ export const createDashboard = (options?: DashboardOptions): Dashboard => {
 	const port = options?.port ?? 3000;
 	const viewDistance = options?.viewDistance ?? 2;
 	const distDir = resolve(import.meta.dirname, "../../dist");
-	const threeDir = resolve(
-		import.meta.dirname,
-		"../../node_modules/three/build",
-	);
 
 	// Offline skin selection — matches Minecraft's built-in skin assignment
 	const BUILTIN_SKINS = [
@@ -134,9 +130,6 @@ export const createDashboard = (options?: DashboardOptions): Dashboard => {
 <html lang="en">
 <head>
 <title>Typecraft Dashboard</title>
-<script type="importmap">
-{ "imports": { "three": "/vendor/three.module.js" } }
-</script>
 <script>
 class Buffer extends Uint8Array {
   static from(src, enc) {
@@ -310,18 +303,6 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			}
 			res.writeHead(404);
 			res.end("Not found");
-			return;
-		}
-
-		if (req.url?.startsWith("/vendor/")) {
-			const vendorFile = resolve(threeDir, req.url.slice("/vendor/".length));
-			if (!vendorFile.startsWith(threeDir) || !existsSync(vendorFile)) {
-				res.writeHead(404);
-				res.end("Not found");
-				return;
-			}
-			res.writeHead(200, { "Content-Type": "text/javascript" });
-			res.end(readFileSync(vendorFile));
 			return;
 		}
 
