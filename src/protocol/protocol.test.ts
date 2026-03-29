@@ -408,15 +408,15 @@ describe("codec", () => {
 			const codec = createPacketCodec({ types });
 
 			const params = {
-				username: "Steve",
-				playerUUID: "12345678-1234-1234-1234-123456789abc",
+				name: "Steve",
+				profileId: "12345678-1234-1234-1234-123456789abc",
 			};
 			const buf = codec.write("hello", params);
 			const result = codec.read(buf);
 
 			expect(result.name).toBe("hello");
-			expect(result.params.username).toBe("Steve");
-			expect(result.params.playerUUID).toBe(
+			expect(result.params.name).toBe("Steve");
+			expect(result.params.profileId).toBe(
 				"12345678-1234-1234-1234-123456789abc",
 			);
 		});

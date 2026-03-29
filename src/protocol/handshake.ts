@@ -32,8 +32,8 @@ export const registerHandshake = (
 		client.state = ProtocolState.LOGIN;
 
 		client.write("hello", {
-			username: client.username,
-			playerUUID: client.uuid || "0".repeat(32),
+			name: client.username,
+			profileId: client.uuid || "0".repeat(32),
 		});
 	});
 
@@ -48,7 +48,7 @@ export const registerHandshake = (
 	// ── Step 3: Handle compression ──
 
 	client.on("login_compression", (packet: Record<string, unknown>) => {
-		client.setCompressionThreshold(packet.threshold as number);
+		client.setCompressionThreshold(packet.compressionThreshold as number);
 	});
 
 	// ── Step 4: Handle login success → CONFIGURATION or PLAY ──
@@ -102,7 +102,7 @@ const handleEncryption = (
 	accessToken?: string,
 ) => {
 	const serverPublicKey = packet.publicKey as Buffer;
-	const verifyToken = packet.verifyToken as Buffer;
+	const verifyToken = packet.challenge as Buffer;
 	const serverId = (packet.serverId as string) ?? "";
 
 	const sharedSecret = randomBytes(16);
@@ -119,8 +119,8 @@ const handleEncryption = (
 		);
 
 		client.write("key", {
-			sharedSecret: encryptedSecret,
-			verifyToken: encryptedToken,
+			keybytes: encryptedSecret,
+			encryptedChallenge: encryptedToken,
 		});
 
 		client.setEncryption(sharedSecret);

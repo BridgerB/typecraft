@@ -2362,6 +2362,136 @@ const RecipeDisplay: Schema = [
 	],
 ];
 
+// ── Player info update ──
+
+const packet_common_player_info_update: Schema = [
+	"container",
+	[
+		{
+			name: "action",
+			type: [
+				"bitflags",
+				{
+					type: "u8",
+					flags: [
+						"add_player",
+						"initialize_chat",
+						"update_game_mode",
+						"update_listed",
+						"update_latency",
+						"update_display_name",
+						"update_hat",
+						"update_list_order",
+					],
+				},
+			],
+		},
+		{
+			name: "data",
+			type: [
+				"array",
+				{
+					countType: "varint",
+					type: [
+						"container",
+						[
+							{ name: "uuid", type: "UUID" },
+							{
+								name: "player",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/add_player",
+										fields: { true: "game_profile_name_prop" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "chatSession",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/initialize_chat",
+										fields: { true: "chat_session" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "gamemode",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_game_mode",
+										fields: { true: "varint" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "listed",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_listed",
+										fields: { true: "varint" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "latency",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_latency",
+										fields: { true: "varint" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "displayName",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_display_name",
+										fields: { true: ["option", "anonymousNbt"] },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "hat",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_hat",
+										fields: { true: "bool" },
+										default: "void",
+									},
+								],
+							},
+							{
+								name: "listPriority",
+								type: [
+									"switch",
+									{
+										compareTo: "../action/update_list_order",
+										fields: { true: "varint" },
+										default: "void",
+									},
+								],
+							},
+						],
+					],
+				},
+			],
+		},
+	],
+];
+
 // ── Common packets (shared between configuration and play) ──
 
 const packet_common_client_information: Schema = [
@@ -2635,6 +2765,9 @@ export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
 	RecipeBookSetting,
 	SlotDisplay,
 	RecipeDisplay,
+
+	// Player info
+	packet_common_player_info_update,
 
 	// Common packets (Mojang names — shared between configuration and play)
 	packet_common_client_information,

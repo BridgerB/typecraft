@@ -16,9 +16,13 @@ const bot = createBot({
 bot.on("error", (err: Error) => console.error("[error]", err.message));
 bot.on("login", () => console.log("[bot] Logged in, version:", bot.version));
 
+let viewerCreated = false;
 bot.on("spawn", () => {
 	console.log("[bot] Spawned at", bot.entity.position);
-	createWebViewer(bot, { port: 3000, viewDistance: 6 });
+	if (!viewerCreated) {
+		createWebViewer(bot, { port: 3000, viewDistance: 6 });
+		viewerCreated = true;
+	}
 
 	// // Spin slowly: full rotation every ~30 seconds
 	// const SPIN_SPEED = (2 * Math.PI) / (30 * 20);
