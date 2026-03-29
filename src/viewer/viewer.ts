@@ -55,7 +55,7 @@ export const createViewer = (
 	options: ViewerOptions,
 ): Viewer => {
 	const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 	renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
 	return createViewerScene(renderer, options);
