@@ -20,7 +20,7 @@ let viewerCreated = false;
 bot.on("spawn", () => {
 	console.log("[bot] Spawned at", bot.entity.position);
 	if (!viewerCreated) {
-		createWebViewer(bot, { port: 3000, viewDistance: 6 });
+		createWebViewer(bot, { port: 3000, viewDistance: 2 });
 		viewerCreated = true;
 	}
 
