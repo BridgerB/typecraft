@@ -333,6 +333,16 @@ export const createWebViewer = (
 	const skinCacheDir = resolve(import.meta.dirname, "../../.cache/skins");
 	mkdirSync(skinCacheDir, { recursive: true });
 
+	// Usernames confirmed not to be real Mojang accounts — skip API calls
+	const notRealAccounts = new Set<string>();
+
+	/** UUID v3 = offline mode (0x30 version nibble), v4 = real Mojang account */
+	const isOfflineUuid = (uuid: string): boolean => uuid.charAt(14) === "3";
+
+	/** Skip Mojang API for our own bots (offline accounts that don't exist on Mojang) */
+	const isBotUsername = (name: string): boolean =>
+		name === bot.username || /^Steve\d*$|Bot/.test(name);
+
 	const getSkinCache = (uuid: string): Buffer | null => {
 		const p = join(skinCacheDir, `${uuid}.png`);
 		return existsSync(p) ? readFileSync(p) : null;
@@ -426,10 +436,15 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				let skinUrl: string | undefined;
 				const uname = bot.uuidToUsername[uuid];
 				if (uname) skinUrl = bot.players[uname]?.skinData?.url;
-				if (!skinUrl) {
-					// For offline-mode servers, resolve username → Mojang UUID → skin
+				if (
+					!skinUrl &&
+					uname &&
+					!isBotUsername(uname) &&
+					!notRealAccounts.has(uname)
+				) {
+					// Only call Mojang for real players, never for our own bots
 					let lookupUuid = uuid.replace(/-/g, "");
-					if (uname) {
+					if (isOfflineUuid(uuid)) {
 						try {
 							const nameRes = await fetch(
 								`https://api.mojang.com/users/profiles/minecraft/${uname}`,
@@ -437,31 +452,35 @@ canvas { display: block; width: 100vw; height: 100vh; }
 							if (nameRes.ok) {
 								const nameData = (await nameRes.json()) as { id: string };
 								lookupUuid = nameData.id;
+							} else {
+								notRealAccounts.add(uname);
 							}
 						} catch {
-							/* use original uuid */
+							/* transient — retry next time */
 						}
 					}
-					try {
-						const profileRes = await fetch(
-							`https://sessionserver.mojang.com/session/minecraft/profile/${lookupUuid}`,
-						);
-						if (profileRes.ok) {
-							const profile = (await profileRes.json()) as {
-								properties: { name: string; value: string }[];
-							};
-							const texProp = profile.properties.find(
-								(p: { name: string }) => p.name === "textures",
+					if (!notRealAccounts.has(uname)) {
+						try {
+							const profileRes = await fetch(
+								`https://sessionserver.mojang.com/session/minecraft/profile/${lookupUuid}`,
 							);
-							if (texProp) {
-								const decoded = JSON.parse(
-									Buffer.from(texProp.value, "base64").toString("utf8"),
+							if (profileRes.ok) {
+								const profile = (await profileRes.json()) as {
+									properties: { name: string; value: string }[];
+								};
+								const texProp = profile.properties.find(
+									(p: { name: string }) => p.name === "textures",
 								);
-								skinUrl = decoded?.textures?.SKIN?.url;
+								if (texProp) {
+									const decoded = JSON.parse(
+										Buffer.from(texProp.value, "base64").toString("utf8"),
+									);
+									skinUrl = decoded?.textures?.SKIN?.url;
+								}
 							}
+						} catch {
+							/* fall through to steve */
 						}
-					} catch {
-						/* fall through to steve */
 					}
 				}
 
