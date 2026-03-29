@@ -147,7 +147,7 @@ export const buildProtocol = (): ProtocolSchema => {
 	}
 
 	// Handshaking — always present, stable across versions
-	if (!protocol.handshaking) {
+	{ // Always override handshaking
 		protocol.handshaking = {
 			toClient: { types: {} },
 			toServer: {
