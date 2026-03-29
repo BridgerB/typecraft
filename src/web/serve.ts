@@ -481,12 +481,13 @@ canvas { display: block; width: 100vw; height: 100vh; }
 					}
 				}
 
-				// Fallback: cache steve under this UUID so we don't re-fetch
+				// Fallback: serve steve but don't cache it — next request will retry Mojang
 				if (steveTexturePath) {
-					const buf = readFileSync(steveTexturePath);
-					setSkinCache(uuid, buf);
-					res.writeHead(200, skinHeaders);
-					res.end(buf);
+					res.writeHead(200, {
+						...skinHeaders,
+						"Cache-Control": "no-cache",
+					});
+					res.end(readFileSync(steveTexturePath));
 					return;
 				}
 				res.writeHead(404);
