@@ -427,9 +427,24 @@ canvas { display: block; width: 100vw; height: 100vh; }
 				const uname = bot.uuidToUsername[uuid];
 				if (uname) skinUrl = bot.players[uname]?.skinData?.url;
 				if (!skinUrl) {
+					// For offline-mode servers, resolve username → Mojang UUID → skin
+					let lookupUuid = uuid.replace(/-/g, "");
+					if (uname) {
+						try {
+							const nameRes = await fetch(
+								`https://api.mojang.com/users/profiles/minecraft/${uname}`,
+							);
+							if (nameRes.ok) {
+								const nameData = (await nameRes.json()) as { id: string };
+								lookupUuid = nameData.id;
+							}
+						} catch {
+							/* use original uuid */
+						}
+					}
 					try {
 						const profileRes = await fetch(
-							`https://sessionserver.mojang.com/session/minecraft/profile/${uuid.replace(/-/g, "")}`,
+							`https://sessionserver.mojang.com/session/minecraft/profile/${lookupUuid}`,
 						);
 						if (profileRes.ok) {
 							const profile = (await profileRes.json()) as {
@@ -628,7 +643,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 			sendTo(ws, {
 				type: "entitySpawn",
 				id: entity.id,
-				entityName: entity.name ?? "unknown",
+				entityName: entity.name ?? entity.type ?? "unknown",
 				username: username ?? entity.username,
 				skinUrl,
 				x: entity.position.x,
@@ -724,7 +739,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 		broadcast({
 			type: "entitySpawn",
 			id: entity.id,
-			entityName: entity.name ?? "unknown",
+			entityName: entity.name ?? entity.type ?? "unknown",
 			username: username ?? entity.username,
 			skinUrl,
 			x: entity.position.x,

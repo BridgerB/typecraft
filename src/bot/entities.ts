@@ -143,7 +143,7 @@ export const initEntities = (bot: Bot, _options: BotOptions): void => {
 
 		// Check if it's a player (1.19+)
 		const entityDef = bot.registry.entitiesById.get(typeId);
-		if (entityDef?.type === "player") {
+		if (entityDef?.type === "player" || entityDef?.name === "player") {
 			const uuid = (packet.objectUUID ?? packet.entityUUID) as string;
 			const entity = addNewPlayer(packet.entityId as number, uuid, packet);
 			bot.emit("entitySpawn", entity);
