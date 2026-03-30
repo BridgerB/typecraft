@@ -123,9 +123,12 @@ export const buildProtocol = (): ProtocolSchema => {
 				switchFields[name] = `packet_${name}`;
 
 				const defKey = `${state}.${dir}.packet_${name}`;
-				types[`packet_${name}`] = 
+				// Prefer shared-types (hand-written, accurate) over extracted (may have wrong types)
+				// Fall back to extracted, then empty container
+				types[`packet_${name}`] =
+					SHARED_TYPES[`packet_common_${name}`] ??
 					extractedDefs[defKey] ??
-					SHARED_TYPES[`packet_common_${name}`] ?? ["container", []];
+					["container", []];
 			}
 
 			types.packet = [
