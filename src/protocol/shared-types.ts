@@ -1327,16 +1327,6 @@ const EntityMetadataPaintingVariant: Schema = [
 	],
 ];
 
-const EntityMetadataWolfVariant: Schema = [
-	"container",
-	[
-		{ name: "wildTexture", type: "string" },
-		{ name: "tameTexture", type: "string" },
-		{ name: "angryTexture", type: "string" },
-		{ name: "biome", type: "IDSet" },
-	],
-];
-
 // Explosion particle entry: used in packet_explode blockParticles array
 const ExplosionParticleEntry: Schema = [
 	"container",
@@ -2716,7 +2706,6 @@ export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
 
 	// Entity metadata
 	EntityMetadataPaintingVariant,
-	EntityMetadataWolfVariant,
 	entityMetadataEntry,
 	entityMetadata,
 
