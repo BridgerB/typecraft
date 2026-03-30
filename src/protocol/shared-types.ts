@@ -2872,6 +2872,18 @@ const packet_common_login_compression: Schema = [
 	[{ name: "compressionThreshold", type: "varint" }],
 ];
 
+// ── Chat types holder (varint chat type registry ID) ──
+
+const ChatTypesHolder: Schema = "varint";
+
+// ── Exact component matcher (for merchant offers) ──
+// Count-prefixed array of component type + data, same structure as slot components
+
+const ExactComponentMatcher: Schema = [
+	"array",
+	{ countType: "varint", type: "SlotComponent" },
+];
+
 // ── Export all shared types as a flat record ──
 
 export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
@@ -2933,6 +2945,8 @@ export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
 	ingredient,
 
 	// Chat / social
+	ChatTypesHolder,
+	ExactComponentMatcher,
 	previousMessages,
 	chat_session,
 	game_profile,
