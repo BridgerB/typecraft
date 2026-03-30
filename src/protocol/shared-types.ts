@@ -112,6 +112,7 @@ const soundSource: Schema = [
 			"7": "player",
 			"8": "ambient",
 			"9": "voice",
+			"10": "ui",
 		},
 	},
 ];
@@ -615,6 +616,7 @@ const SlotComponent: Schema = [
 																	"7": "head",
 																	"8": "armor",
 																	"9": "body",
+																	"10": "saddle",
 																},
 															},
 														],
@@ -694,6 +696,7 @@ const SlotComponent: Schema = [
 												"7": "spyglass",
 												"8": "toot_horn",
 												"9": "brush",
+												"10": "bundle",
 											},
 										},
 									],
@@ -770,6 +773,7 @@ const SlotComponent: Schema = [
 												"4": "chest",
 												"5": "head",
 												"6": "body",
+												"7": "saddle",
 											},
 										},
 									],
@@ -2334,7 +2338,7 @@ const SpawnInfo: Schema = [
 			type: [
 				"mapper",
 				{
-					type: "i8",
+					type: "u8",
 					mappings: {
 						"0": "survival",
 						"1": "creative",
@@ -2344,7 +2348,7 @@ const SpawnInfo: Schema = [
 				},
 			],
 		},
-		{ name: "previousGamemode", type: "u8" },
+		{ name: "previousGamemode", type: "i8" },
 		{ name: "isDebug", type: "bool" },
 		{ name: "isFlat", type: "bool" },
 		{ name: "death", type: ["option", "GlobalPos"] },
