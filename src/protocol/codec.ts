@@ -624,12 +624,13 @@ const buildEntityMetadataLoop = (
 		read: (b, o, ctx) => {
 			const arr: unknown[] = [];
 			let totalSize = 0;
-			while (true) {
+			while (o + totalSize < b.length) {
 				if (b[o + totalSize] === endVal) {
 					totalSize += 1;
 					break;
 				}
 				const r = innerType.read(b, o + totalSize, ctx);
+				if (r.size === 0) break; // unknown type — stop to avoid infinite loop
 				arr.push(r.value);
 				totalSize += r.size;
 			}
@@ -659,7 +660,7 @@ const buildTopBitSetArray = (
 		read: (b, o, ctx) => {
 			const arr: unknown[] = [];
 			let totalSize = 0;
-			while (true) {
+			while (o + totalSize < b.length) {
 				const hasMore = !!(b[o + totalSize]! & 0x80);
 				b[o + totalSize]! &= 0x7f; // Clear top bit for reading
 				const r = innerType.read(b, o + totalSize, ctx);
@@ -952,7 +953,11 @@ export const createPacketCodec = (
 	// Extract packet mappings from the "packet" type definition
 	// The packet type is: container[{name:"name", type:mapper}, {name:"params", type:switch}]
 	const packetSchema = typesSection.packet as unknown[] | undefined;
-	if (!packetSchema) return { read: () => ({ name: "unknown", params: {} }), write: () => {} } as unknown as PacketCodec;
+	if (!packetSchema)
+		return {
+			read: () => ({ name: "unknown", params: {} }),
+			write: () => {},
+		} as unknown as PacketCodec;
 	const containerFields = packetSchema[1] as { name: string; type: unknown }[];
 
 	// Find the mapper (name field) to get packet ID ↔ name mappings
