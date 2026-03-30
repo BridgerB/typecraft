@@ -1579,12 +1579,12 @@ const ExplosionParticleEntry: Schema = [
 				"container",
 				[
 					{ name: "particle", type: "Particle" },
-					{ name: "speed", type: "f32" },
 					{ name: "scaling", type: "f32" },
+					{ name: "speed", type: "f32" },
 				],
 			],
 		},
-		{ name: "weight", type: "f32" },
+		{ name: "weight", type: "varint" },
 	],
 ];
 
