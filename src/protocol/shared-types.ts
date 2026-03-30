@@ -1169,10 +1169,46 @@ const SlotComponent: Schema = [
 						rabbit_variant: "varint",
 						pig_variant: "varint",
 						cow_variant: "varint",
-						chicken_variant: "varint",
+						chicken_variant: [
+							"container",
+							[
+								{
+									name: "mode",
+									type: [
+										"mapper",
+										{
+											type: "u8",
+											mappings: { "0": "identifier", "1": "registry_id" },
+										},
+									],
+								},
+								{
+									name: "value",
+									type: [
+										"switch",
+										{
+											compareTo: "mode",
+											fields: {
+												identifier: "string",
+												registry_id: "varint",
+											},
+										},
+									],
+								},
+							],
+						],
 						frog_variant: "varint",
 						horse_variant: "varint",
-						painting_variant: "varint",
+						painting_variant: [
+							"registryEntryHolder",
+							{
+								baseName: "variantId",
+								otherwise: {
+									name: "variantData",
+									type: "EntityMetadataPaintingVariant",
+								},
+							},
+						],
 						llama_variant: "varint",
 						axolotl_variant: "varint",
 						cat_variant: "varint",
