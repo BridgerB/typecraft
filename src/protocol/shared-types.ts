@@ -2704,6 +2704,36 @@ const packet_common_update_enabled_features: Schema = [
 	],
 ];
 
+const packet_common_login_finished: Schema = [
+	"container",
+	[
+		{ name: "uuid", type: "UUID" },
+		{ name: "username", type: "string" },
+		{
+			name: "properties",
+			type: [
+				"array",
+				{
+					countType: "varint",
+					type: [
+						"container",
+						[
+							{ name: "name", type: "string" },
+							{ name: "value", type: "string" },
+							{ name: "signature", type: ["option", "string"] },
+						],
+					],
+				},
+			],
+		},
+	],
+];
+
+const packet_common_login_compression: Schema = [
+	"container",
+	[{ name: "compressionThreshold", type: "varint" }],
+];
+
 // ── Export all shared types as a flat record ──
 
 export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
@@ -2820,5 +2850,7 @@ export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
 	// Critical packets not covered by auto-extraction
 	packet_common_registry_data,
 	packet_common_update_enabled_features,
+	packet_common_login_finished,
+	packet_common_login_compression,
 };
 
