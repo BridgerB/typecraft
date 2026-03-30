@@ -874,7 +874,6 @@ const SlotComponent: Schema = [
 										},
 									],
 								},
-								{ name: "showInTooltip", type: "bool" },
 							],
 						],
 						debug_stick_state: "anonymousNbt",
