@@ -104,14 +104,22 @@ export const initStatus = (bot: Bot, options: BotOptions): void => {
 			(sp.showHat ? 64 : 0);
 
 		const payload: Record<string, unknown> = {
+			// Field names differ between configuration and play states
+			// Configuration: locale, chatFlags, skinParts, enableTextFiltering, enableServerListing
+			// Play (extracted): language, chatVisibility, modelCustomisation, textFilteringEnabled, allowsListing
 			locale: "en_US",
+			language: "en_US",
 			viewDistance: viewDistanceBits,
 			chatFlags: chatBits,
+			chatVisibility: chatBits,
 			chatColors: bot.settings.colorsEnabled,
 			skinParts,
+			modelCustomisation: skinParts,
 			mainHand: handBits,
 			enableTextFiltering: false,
+			textFilteringEnabled: false,
 			enableServerListing: true,
+			allowsListing: true,
 		};
 
 		// 1.21.3+ (protocol 768+) requires particleStatus
