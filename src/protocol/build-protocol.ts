@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { PACKET_DEFS } from "./packet-defs.ts";
 import { SHARED_TYPES } from "./shared-types.ts";
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../data");
@@ -127,6 +128,7 @@ export const buildProtocol = (): ProtocolSchema => {
 				// Fall back to extracted, then empty container
 				types[`packet_${name}`] =
 					SHARED_TYPES[`packet_common_${name}`] ??
+					PACKET_DEFS[defKey] ??
 					extractedDefs[defKey] ??
 					["container", []];
 			}
