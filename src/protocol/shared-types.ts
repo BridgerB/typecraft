@@ -1641,7 +1641,7 @@ const entityMetadataEntry: Schema = [
 						chicken_variant: "varint",
 						chicken_sound_variant: "varint",
 						zombie_nautilus_variant: "varint",
-						optional_global_pos: ["option", "string"],
+						optional_global_pos: ["option", "GlobalPos"],
 						painting_variant: [
 							"registryEntryHolder",
 							{
