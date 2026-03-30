@@ -183,6 +183,14 @@ for (const [name, mapper] of Object.entries(mappers)) {
 if (particleTypes) output.ParticleType = particleTypes;
 if (entityMetadataTypes) output.entityMetadataType = entityMetadataTypes;
 
+// Normalize: replace "/" with "_" in mapper values (proto.yml uses "wolf/variant"
+// but our switch fields use "wolf_variant")
+for (const mapper of Object.values(output)) {
+	for (const [k, v] of Object.entries(mapper)) {
+		mapper[k] = v.replace(/\//g, "_").replace("zomie_", "zombie_");
+	}
+}
+
 // Write output
 const { writeFileSync } = await import("node:fs");
 const { join } = await import("node:path");
