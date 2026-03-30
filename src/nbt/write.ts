@@ -301,8 +301,9 @@ export const writeAnonymousTag = (
 	if (root == null) return Buffer.from([0x00]);
 	const writer = getWriter(format);
 	const buf = Buffer.alloc(1024 * 1024);
-	buf.writeInt8(10, 0);
-	const offset = writeCompound(root.value, buf, 1, writer);
+	const tagId = TAG_TYPE_TO_ID[root.type] ?? 10;
+	buf.writeInt8(tagId, 0);
+	const offset = writePayload(root as NbtTag, buf, 1, writer);
 	return Buffer.from(buf.subarray(0, offset));
 };
 
