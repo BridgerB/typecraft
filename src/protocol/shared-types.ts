@@ -2669,6 +2669,41 @@ const packet_common_server_links: Schema = [
 	],
 ];
 
+// ── Critical packets not covered by auto-extraction ──
+
+const packet_common_registry_data: Schema = [
+	"container",
+	[
+		{ name: "id", type: "string" },
+		{
+			name: "entries",
+			type: [
+				"array",
+				{
+					countType: "varint",
+					type: [
+						"container",
+						[
+							{ name: "key", type: "string" },
+							{ name: "value", type: ["option", "anonymousNbt"] },
+						],
+					],
+				},
+			],
+		},
+	],
+];
+
+const packet_common_update_enabled_features: Schema = [
+	"container",
+	[
+		{
+			name: "features",
+			type: ["array", { countType: "varint", type: "string" }],
+		},
+	],
+];
+
 // ── Export all shared types as a flat record ──
 
 export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
@@ -2781,4 +2816,9 @@ export const SHARED_TYPES: Readonly<Record<string, Schema>> = {
 	packet_common_resource_pack_push,
 	ServerLinkType,
 	packet_common_server_links,
+
+	// Critical packets not covered by auto-extraction
+	packet_common_registry_data,
+	packet_common_update_enabled_features,
 };
+
