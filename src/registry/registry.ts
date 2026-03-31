@@ -273,7 +273,7 @@ export const createRegistry = (version: string): Registry => {
 	}
 
 	// Parse version from the string
-	const parts = version.split(".");
+	const parts = (version ?? "1.21.11").split(".");
 	const major = `${parts[0]}.${parts[1]}`;
 
 	const versionInfo: VersionInfo = {
