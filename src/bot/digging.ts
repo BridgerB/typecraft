@@ -642,6 +642,11 @@ export const initDigging = (bot: Bot, _options: BotOptions): void => {
 			}
 
 			if (!nearest) {
+				// Items take time to spawn after digging — wait and retry
+				if (Date.now() - startTime < Math.min(timeout, 2000)) {
+					await new Promise<void>((r) => setTimeout(r, 100));
+					continue;
+				}
 				bot.emit("debug", "collect", {
 					event: "no_items",
 					entityCount: Object.keys(bot.entities).length,
