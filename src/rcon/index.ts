@@ -12,6 +12,10 @@ export interface RconOptions {
 	password?: string;
 	/** Command timeout in ms (default 5000) */
 	timeout?: number;
+	/** Delay between retries in ms (default 2000) */
+	retryMs?: number;
+	/** Max retries on ECONNREFUSED/ETIMEDOUT (default 15) */
+	maxRetries?: number;
 }
 
 export interface RconClient {
@@ -55,13 +59,13 @@ const decodePacket = (
 export const stripColors = (s: string): string =>
 	s.replace(/§[0-9a-fk-or]/gi, "");
 
-export const createRcon = (options: RconOptions = {}): Promise<RconClient> => {
-	const host = options.host ?? "localhost";
-	const port = options.port ?? 25575;
-	const password = options.password ?? "";
-	const cmdTimeout = options.timeout ?? 5000;
-
-	return new Promise((resolve, reject) => {
+const connectOnce = (
+	host: string,
+	port: number,
+	password: string,
+	cmdTimeout: number,
+): Promise<RconClient> =>
+	new Promise((resolve, reject) => {
 		let connected = true;
 		const socket: Socket = createConnection({ host, port }, () => {
 			socket.write(encodePacket(1, PACKET_TYPE.AUTH, password));
@@ -138,4 +142,30 @@ export const createRcon = (options: RconOptions = {}): Promise<RconClient> => {
 			},
 		};
 	});
+
+export const createRcon = async (
+	options: RconOptions = {},
+): Promise<RconClient> => {
+	const host = options.host ?? "localhost";
+	const port = options.port ?? 25575;
+	const password = options.password ?? "";
+	const cmdTimeout = options.timeout ?? 5000;
+	const retryMs = options.retryMs ?? 2000;
+	const maxRetries = options.maxRetries ?? 15;
+
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await connectOnce(host, port, password, cmdTimeout);
+		} catch (err) {
+			const code = (err as NodeJS.ErrnoException).code;
+			if (
+				attempt < maxRetries &&
+				(code === "ECONNREFUSED" || code === "ETIMEDOUT")
+			) {
+				await new Promise<void>((r) => setTimeout(r, retryMs));
+				continue;
+			}
+			throw err;
+		}
+	}
 };
