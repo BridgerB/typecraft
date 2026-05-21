@@ -213,6 +213,17 @@ export const setViewerCamera = (
 	);
 };
 
+/** Position the camera freely and point it at a target (debug / multi-angle). */
+export const setViewerFreeCam = (
+	viewer: Viewer,
+	cam: Vec3,
+	target: Vec3,
+): void => {
+	viewer.camera.rotationQuaternion = null;
+	viewer.camera.position.set(cam.x, cam.y, cam.z);
+	viewer.camera.setTarget(new Vector3(target.x, target.y, target.z));
+};
+
 export const resizeViewer = (
 	viewer: Viewer,
 	width: number,

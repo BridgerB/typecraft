@@ -32,6 +32,7 @@ import {
 	setViewerAssets,
 	setViewerBlockStateId,
 	setViewerCamera,
+	setViewerFreeCam,
 	setViewerTime,
 	updateViewerEntity,
 	type Viewer,
@@ -74,6 +75,9 @@ type AssetsMessage = {
 	type: "assets";
 	blockStates: Record<string, unknown>;
 	blockModels: Record<string, unknown>;
+	blockEntityShapes: Record<string, unknown>;
+	entitySheets?: { name: string; width: number; height: number }[];
+	entitySheetData?: Record<string, string>;
 	textureNames: string[];
 	textureData: Record<string, string>;
 	tints: SerializedTints;
@@ -242,11 +246,53 @@ const decodeTextures = async (
 	return images;
 };
 
+// ── Fixed-angle view mode (?view=front|back|left|right|top|bottom) ──
+// Locks the camera to one of six orthogonal angles around a target point
+// (?at=x,y,z, default 0.5,0.5,0.5). Used by the 6-pane inspection grid.
+
+const VIEW_OFFSETS: Record<string, [number, number, number]> = {
+	front: [0, 0.4, 4.5],
+	back: [0, 0.4, -4.5],
+	right: [4.5, 0.4, 0],
+	left: [-4.5, 0.4, 0],
+	top: [0.01, 5, 0],
+	bottom: [0.01, -5, 0],
+};
+
+const viewParams = new URLSearchParams(window.location.search);
+const viewMode = viewParams.get("view");
+const viewTarget = ((): [number, number, number] => {
+	const at = viewParams.get("at");
+	if (at) {
+		const p = at.split(",").map(Number);
+		if (p.length === 3 && p.every(Number.isFinite))
+			return [p[0]!, p[1]!, p[2]!];
+	}
+	return [0.5, 0.5, 0.5];
+})();
+
 // ── Message processing ──
 
 const processMessage = (msg: ServerMessage): void => {
 	if (msg.type === "position") {
 		if (!viewer) return;
+		// Fixed-angle inspection view: ignore the bot, lock to a set angle.
+		const offset = viewMode ? VIEW_OFFSETS[viewMode] : undefined;
+		if (offset) {
+			setViewerFreeCam(
+				viewer,
+				vec3(
+					viewTarget[0] + offset[0],
+					viewTarget[1] + offset[1],
+					viewTarget[2] + offset[2],
+				),
+				vec3(viewTarget[0], viewTarget[1], viewTarget[2]),
+			);
+			return;
+		}
+		// Free-camera debug mode: when locked, ignore bot-follow so an external
+		// driver (Playwright) can position the camera from any angle.
+		if ((window as unknown as { __camLock?: boolean }).__camLock) return;
 		setViewerCamera(viewer, vec3(msg.x, msg.y, msg.z), msg.yaw, msg.pitch);
 	} else if (msg.type === "chunk") {
 		if (!viewer) return;
@@ -324,7 +370,23 @@ const connect = () => {
 			if (!viewer) {
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
-				viewer = createViewer(canvas, { workerUrl: "/web/clientWorker.js" });
+				viewer = createViewer(canvas, { workerUrl: "/web/worker.js" });
+				const w = window as unknown as {
+					__viewer: unknown;
+					__camLock?: boolean;
+					__lookAt?: (cam: number[], target: number[]) => void;
+				};
+				w.__viewer = viewer;
+				// Debug: lock camera and aim it from any angle (multi-view capture).
+				w.__lookAt = (cam, target) => {
+					w.__camLock = true;
+					if (viewer)
+						setViewerFreeCam(
+							viewer,
+							vec3(cam[0]!, cam[1]!, cam[2]!),
+							vec3(target[0]!, target[1]!, target[2]!),
+						);
+				};
 			}
 
 			setStatus("Waiting for assets...");
@@ -338,12 +400,24 @@ const connect = () => {
 				);
 				const images = await decodeTextures(msg.textureNames, msg.textureData);
 
+				// Decode block-entity texture sheets (chests/signs/banners/…).
+				const sheetNames = (msg.entitySheets ?? []).map((s) => s.name);
+				const sheetImages = await decodeTextures(
+					sheetNames,
+					msg.entitySheetData ?? {},
+				);
+
 				setStatus("Building texture atlas...");
 				console.log("[assets] Building atlas...");
-				const atlas = createTextureAtlas(msg.textureNames, (name) => {
-					const clean = name.replace(".png", "");
-					return images.get(clean)!;
-				});
+				const atlas = createTextureAtlas(
+					msg.textureNames,
+					(name) => {
+						const clean = name.replace(".png", "");
+						return images.get(clean)!;
+					},
+					msg.entitySheets ?? [],
+					(name) => sheetImages.get(name)!,
+				);
 
 				setStatus("Preparing block states...");
 				console.log("[assets] Preparing block states...");
@@ -351,6 +425,7 @@ const connect = () => {
 					msg.blockStates,
 					msg.blockModels as Parameters<typeof prepareBlockStates>[1],
 					atlas.uvMap,
+					msg.blockEntityShapes as Parameters<typeof prepareBlockStates>[3],
 				);
 
 				// Send registry data to workers (custom message for browser worker)

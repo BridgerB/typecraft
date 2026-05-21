@@ -10,6 +10,7 @@ datagen/mod/build/
 datagen/mod/.gradle/
 datagen/mod/.fabric/
 datagen/mod/run/
+datagen/mod/logs/
 
 # Dev files
 debug.ts

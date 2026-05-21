@@ -112,7 +112,7 @@ const workerGetBlock = (world: WorkerWorld): GetBlock => {
 						const state = blockDef.states[i]!;
 						if (state.values) {
 							const idx = offset % state.values.length;
-							properties[state.name] = state.values[idx]!;
+							properties[state.name] = state.values[idx]!.toLowerCase();
 							offset = Math.floor(offset / state.values.length);
 						}
 					}

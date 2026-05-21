@@ -27,3 +27,13 @@ tasks.processResources {
         expand("version" to project.version)
     }
 }
+
+// Standalone extractor for block-entity / entity model geometry.
+// Runs as a plain JVM main (no Fabric loader) so it can load client-only
+// classes that Fabric's server environment otherwise blocks.
+tasks.register<JavaExec>("extractModels") {
+    dependsOn("classes")
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.typecraft.datagen.ModelExtractor")
+    args(project.findProperty("out") ?: "blockEntityModels.json")
+}
