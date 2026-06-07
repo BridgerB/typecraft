@@ -1265,72 +1265,9 @@ export const PACKET_DEFS: Readonly<Record<string, unknown>> = {
 	],
 	"play.toClient.packet_recipe_book_add": [
 		"container",
-		[
-			{
-				name: "entries",
-				type: [
-					"array",
-					{
-						countType: "varint",
-						type: [
-							"container",
-							[
-								{
-									name: "recipe",
-									type: [
-										"container",
-										[
-											{ name: "displayId", type: "varint" },
-											{ name: "display", type: "RecipeDisplay" },
-											{ name: "group", type: "optvarint" },
-											{
-												name: "category",
-												type: [
-													"mapper",
-													{
-														type: "varint",
-														mappings: {
-															"0": "crafting_building_blocks",
-															"1": "crafting_redstone",
-															"2": "crafting_equipment",
-															"3": "crafting_misc",
-															"4": "furnace_food",
-															"5": "furnace_blocks",
-															"6": "furnace_misc",
-															"7": "blast_furnace_blocks",
-															"8": "blast_furnace_misc",
-															"9": "smoker_food",
-															"10": "stonecutter",
-															"11": "smithing",
-															"12": "campfire",
-														},
-													},
-												],
-											},
-											{
-												name: "craftingRequirements",
-												type: [
-													"option",
-													["array", { countType: "varint", type: "IDSet" }],
-												],
-											},
-										],
-									],
-								},
-								{
-									name: "flags",
-									type: [
-										"bitflags",
-										{ type: "u8", flags: ["notification", "highlight"] },
-									],
-								},
-							],
-						],
-					},
-				],
-			},
-			{ name: "replace", type: "bool" },
-		],
+		// 26.1.2: recipe-book UI payload (RecipeDisplay/RecipePropertySet type system),
+		// unused by the bot — read opaque so it decodes cleanly and stays stream-aligned.
+		[{ name: "data", type: "restBuffer" }],
 	],
 	"play.toClient.packet_recipe_book_remove": [
 		"container",
@@ -1799,12 +1736,30 @@ export const PACKET_DEFS: Readonly<Record<string, unknown>> = {
 		"container",
 		[{ name: "text", type: "anonymousNbt" }],
 	],
+	// 26.1.2: composite(LONG gameTime, map(WorldClock=holderRegistry varint,
+	// ClockNetworkState=composite(VAR_LONG, FLOAT, FLOAT)))
 	"play.toClient.packet_set_time": [
 		"container",
 		[
-			{ name: "age", type: "i64" },
-			{ name: "time", type: "i64" },
-			{ name: "tickDayTime", type: "bool" },
+			{ name: "gameTime", type: "i64" },
+			{
+				name: "clocks",
+				type: [
+					"array",
+					{
+						countType: "varint",
+						type: [
+							"container",
+							[
+								{ name: "clock", type: "varint" },
+								{ name: "time", type: "varlong" },
+								{ name: "rate", type: "f32" },
+								{ name: "phase", type: "f32" },
+							],
+						],
+					},
+				],
+			},
 		],
 	],
 	"play.toClient.packet_set_title_text": [
@@ -2154,43 +2109,9 @@ export const PACKET_DEFS: Readonly<Record<string, unknown>> = {
 	],
 	"play.toClient.packet_update_recipes": [
 		"container",
-		[
-			{
-				name: "recipes",
-				type: [
-					"array",
-					{
-						countType: "varint",
-						type: [
-							"container",
-							[
-								{ name: "name", type: "string" },
-								{
-									name: "items",
-									type: ["array", { countType: "varint", type: "varint" }],
-								},
-							],
-						],
-					},
-				],
-			},
-			{
-				name: "stoneCutterRecipes",
-				type: [
-					"array",
-					{
-						countType: "varint",
-						type: [
-							"container",
-							[
-								{ name: "input", type: "IDSet" },
-								{ name: "slotDisplay", type: "SlotDisplay" },
-							],
-						],
-					},
-				],
-			},
-		],
+		// 26.1.2: recipe-book UI payload (RecipeDisplay/RecipePropertySet type system),
+		// unused by the bot — read opaque so it decodes cleanly and stays stream-aligned.
+		[{ name: "data", type: "restBuffer" }],
 	],
 	"play.toClient.packet_update_tags": [
 		"container",

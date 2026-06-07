@@ -490,8 +490,8 @@ describe("initWorldState", () => {
 		} as never);
 
 		client.emit("set_time", {
-			age: 24000n,
-			time: 6000n,
+			gameTime: 24000n,
+			clocks: [{ clock: 0, time: 6000n, rate: 1, phase: 0 }],
 		});
 
 		expect(bot.time.age).toBe(24000);
@@ -508,8 +508,8 @@ describe("initWorldState", () => {
 		} as never);
 
 		client.emit("set_time", {
-			age: 48000n,
-			time: 18000n,
+			gameTime: 48000n,
+			clocks: [{ clock: 0, time: 18000n, rate: 1, phase: 0 }],
 		});
 
 		expect(bot.time.timeOfDay).toBe(18000);

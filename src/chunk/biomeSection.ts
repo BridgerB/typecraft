@@ -73,7 +73,6 @@ export const biomeSectionFromLocalPalette = (
 export const readBiomeSection = (
 	buffer: Buffer,
 	offset: number,
-	maxBitsPerBiome: number = GLOBAL_BITS_PER_BIOME,
 	noArrayLength = false,
 ): [BiomeSection, number] => {
 	let data: PaletteContainer;
@@ -81,7 +80,6 @@ export const readBiomeSection = (
 		buffer,
 		offset,
 		BIOME_CONFIG,
-		maxBitsPerBiome,
 		noArrayLength,
 	);
 	return [{ data }, offset];

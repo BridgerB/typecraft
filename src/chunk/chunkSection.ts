@@ -19,6 +19,8 @@ import {
 export type ChunkSection = {
 	data: PaletteContainer;
 	solidBlockCount: number;
+	// 26.1.2 added a second section-header short (fluid block count)
+	fluidCount: number;
 };
 
 const blockIndex = (x: number, y: number, z: number): number =>
@@ -40,6 +42,7 @@ export const createChunkSection = (
 		makeBlockConfig(maxBitsPerBlock),
 	),
 	solidBlockCount: initialValue ? BLOCK_SECTION_VOLUME : 0,
+	fluidCount: 0,
 });
 
 export const getSectionBlock = (
@@ -98,7 +101,7 @@ export const sectionFromLocalPalette = (
 		}
 	}
 
-	return { data: container, solidBlockCount };
+	return { data: container, solidBlockCount, fluidCount: 0 };
 };
 
 /** Read a section from the network binary format. */
@@ -110,17 +113,19 @@ export const readChunkSection = (
 ): [ChunkSection, number] => {
 	const solidBlockCount = buffer.readInt16BE(offset);
 	offset += 2;
+	// 26.1.2: section header is two shorts (nonEmptyBlockCount, fluidCount)
+	const fluidCount = buffer.readInt16BE(offset);
+	offset += 2;
 
 	let data: PaletteContainer;
 	[data, offset] = readPaletteContainer(
 		buffer,
 		offset,
 		makeBlockConfig(maxBitsPerBlock),
-		maxBitsPerBlock,
 		noArrayLength,
 	);
 
-	return [{ data, solidBlockCount }, offset];
+	return [{ data, solidBlockCount, fluidCount }, offset];
 };
 
 /** Write a section to the network binary format. */
@@ -131,6 +136,7 @@ export const writeChunkSection = (
 	noArrayLength = false,
 ): number => {
 	offset = buffer.writeInt16BE(section.solidBlockCount, offset);
+	offset = buffer.writeInt16BE(section.fluidCount ?? 0, offset);
 	offset = writePaletteContainer(section.data, buffer, offset, noArrayLength);
 	return offset;
 };

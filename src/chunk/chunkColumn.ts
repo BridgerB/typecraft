@@ -328,12 +328,7 @@ export const loadChunkColumn = (
 			col.maxBitsPerBlock,
 			noArrayLength,
 		);
-		[col.biomes[i], offset] = readBiomeSection(
-			data,
-			offset,
-			col.maxBitsPerBiome,
-			noArrayLength,
-		);
+		[col.biomes[i], offset] = readBiomeSection(data, offset, noArrayLength);
 	}
 };
 

@@ -10,27 +10,52 @@ export const initWorldState = (bot: Bot, _options: BotOptions): void => {
 	// ── Time ──
 
 	bot.client.on("set_time", (packet: Record<string, unknown>) => {
-		const age = packet.age as bigint | number;
-		const time = packet.time as bigint | number;
+		// 26.1.2: { gameTime: i64, clocks: [{ clock, time(varlong), rate, phase }] }.
+		// Game-time-only updates carry no clocks; day time lives in the clock.
+		const gameTime = packet.gameTime as bigint | number | undefined;
+		const bigAge =
+			gameTime == null
+				? (bot.time?.bigAge ?? 0n)
+				: typeof gameTime === "bigint"
+					? gameTime
+					: BigInt(gameTime);
 
-		const bigAge = typeof age === "bigint" ? age : BigInt(age);
-		const bigTime = typeof time === "bigint" ? time : BigInt(time);
+		const clocks = (packet.clocks as Array<Record<string, unknown>>) ?? [];
+		const clock = clocks[0];
 
-		// Negative time means doDaylightCycle is false
-		const doDaylightCycle = bigTime >= 0n;
-		const absTime = doDaylightCycle ? bigTime : -bigTime;
+		if (clock) {
+			const ct = clock.time as bigint | number | undefined;
+			const bigTime = ct == null ? 0n : typeof ct === "bigint" ? ct : BigInt(ct);
+			const doDaylightCycle = Number(clock.rate ?? 0) !== 0;
+			const absTime = bigTime < 0n ? -bigTime : bigTime;
 
-		bot.time = {
-			doDaylightCycle,
-			bigTime: absTime,
-			time: Number(absTime),
-			timeOfDay: Number(absTime % 24000n),
-			day: Number(absTime / 24000n),
-			isDay: Number(absTime % 24000n) < 13000,
-			moonPhase: Number(absTime / 24000n) % 8,
-			bigAge,
-			age: Number(bigAge),
-		};
+			bot.time = {
+				doDaylightCycle,
+				bigTime: absTime,
+				time: Number(absTime),
+				timeOfDay: Number(absTime % 24000n),
+				day: Number(absTime / 24000n),
+				isDay: Number(absTime % 24000n) < 13000,
+				moonPhase: Number(absTime / 24000n) % 8,
+				bigAge,
+				age: Number(bigAge),
+			};
+		} else if (bot.time) {
+			// Game-time-only tick: keep day time, refresh age.
+			bot.time = { ...bot.time, bigAge, age: Number(bigAge) };
+		} else {
+			bot.time = {
+				doDaylightCycle: true,
+				bigTime: 0n,
+				time: 0,
+				timeOfDay: 0,
+				day: 0,
+				isDay: true,
+				moonPhase: 0,
+				bigAge,
+				age: Number(bigAge),
+			};
+		}
 
 		bot.emit("time");
 	});

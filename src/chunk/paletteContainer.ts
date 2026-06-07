@@ -195,7 +195,6 @@ export const readPaletteContainer = (
 	buffer: Buffer,
 	offset: number,
 	config: PaletteConfig,
-	maxGlobalBits: number,
 	noArrayLength = false,
 ): [PaletteContainer, number] => {
 	const bitsPerBlock = buffer.readUInt8(offset++);
@@ -211,12 +210,14 @@ export const readPaletteContainer = (
 		return [createSingleValueContainer(value, config), offset];
 	}
 
-	// Direct palette
+	// Direct palette — use the wire bitsPerBlock (the server's global-palette bit
+	// width), not a fixed constant. 26.1.2 has 133 biomes -> 8-bit direct biome
+	// palette, so the old fixed GLOBAL_BITS_PER_BIOME (6) read too few longs.
 	if (bitsPerBlock > config.maxBits) {
-		const data = createBitArray(maxGlobalBits, config.capacity);
+		const data = createBitArray(bitsPerBlock, config.capacity);
 		let longCount: number;
 		if (noArrayLength) {
-			longCount = calcLongCount(maxGlobalBits, config.capacity);
+			longCount = calcLongCount(bitsPerBlock, config.capacity);
 		} else {
 			[longCount, offset] = readVarint(buffer, offset);
 		}
