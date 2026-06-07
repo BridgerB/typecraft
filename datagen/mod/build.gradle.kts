@@ -3,7 +3,7 @@ plugins {
     java
 }
 
-val minecraftVersion = "1.21.11"
+val minecraftVersion = "26.1.2"
 val fabricLoaderVersion = "0.18.4"
 repositories {
     mavenCentral()

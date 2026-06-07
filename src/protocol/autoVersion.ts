@@ -8,6 +8,7 @@ import { ping } from "./ping.ts";
 
 /** Known protocol version → Minecraft version mappings. */
 const PROTOCOL_VERSIONS: Record<number, string> = {
+	775: "26.1.2",
 	774: "1.21.11",
 	769: "1.21.4",
 	768: "1.21.2",

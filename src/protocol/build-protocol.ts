@@ -214,9 +214,9 @@ export const buildProtocol = (): ProtocolSchema => {
 		protocol,
 		version: {
 			type: "pc",
-			majorVersion: "1.21",
-			version: 774,
-			minecraftVersion: "1.21.11",
+			majorVersion: "26.1",
+			version: 775,
+			minecraftVersion: "26.1.2",
 		},
 	};
 
