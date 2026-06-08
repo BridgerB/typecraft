@@ -150,6 +150,8 @@ export type BlockQuery = {
 	readonly safe: boolean;
 	readonly physical: boolean;
 	readonly liquid: boolean;
+	/** Liquid that is specifically lava — never fall/swim into it. */
+	readonly lava: boolean;
 	readonly climbable: boolean;
 	readonly height: number;
 	readonly name: string;

@@ -36,6 +36,7 @@ const VOID_BLOCK: BlockQuery = {
 	safe: false,
 	physical: false,
 	liquid: false,
+	lava: false,
 	climbable: false,
 	height: 0,
 	name: "void",
@@ -56,6 +57,7 @@ export const createMovements = (
 
 	// Pre-compute block classification sets
 	const liquidIds = new Set<number>();
+	const lavaIds = new Set<number>();
 	const climbableIds = new Set<number>();
 	const avoidIds = new Set<number>();
 	const fenceIds = new Set<number>();
@@ -69,6 +71,8 @@ export const createMovements = (
 	addId("flowing_water", liquidIds);
 	addId("lava", liquidIds);
 	addId("flowing_lava", liquidIds);
+	addId("lava", lavaIds);
+	addId("flowing_lava", lavaIds);
 	addId("lava", avoidIds);
 	addId("flowing_lava", avoidIds);
 	addId("fire", avoidIds);
@@ -126,6 +130,7 @@ export const createMovements = (
 		}
 
 		const isLiquid = liquidIds.has(block.id);
+		const isLava = lavaIds.has(block.id);
 		const isClimbable = climbableIds.has(block.id);
 		const isAvoid = avoidIds.has(block.id);
 		const isFence = fenceIds.has(block.id);
@@ -144,6 +149,7 @@ export const createMovements = (
 			safe: isSafe,
 			physical: isPhysical,
 			liquid: isLiquid,
+			lava: isLava,
 			climbable: isClimbable,
 			height,
 			name: block.name,
@@ -304,6 +310,7 @@ export const createMovements = (
 				return;
 			}
 			if (landing.liquid) {
+				if (landing.lava) return; // never fall into lava
 				// Land in water — safe with cost
 				pushNeighbor(nx, node.y + dy, nz, 1 + (node.y - (node.y + dy)) * 0.3);
 				return;
@@ -469,6 +476,7 @@ export const createMovements = (
 				return;
 			}
 			if (landing.liquid) {
+				if (landing.lava) return; // never drop into lava
 				pushNeighbor(
 					node.x,
 					node.y + dy,
@@ -486,9 +494,9 @@ export const createMovements = (
 	/** Swim up: move up one block while in water. */
 	const getMoveSwimUp = (node: Move): void => {
 		const current = queryBlock(node.x, node.y, node.z);
-		if (!current.liquid) return; // only from water
+		if (!current.liquid || current.lava) return; // only from water, never lava
 		const above = queryBlock(node.x, node.y + 1, node.z);
-		if (above.safe || above.liquid) {
+		if ((above.safe || above.liquid) && !above.lava) {
 			pushNeighbor(node.x, node.y + 1, node.z, 1);
 		}
 	};
