@@ -3,6 +3,9 @@ export type RecipeItem = {
 	readonly id: number;
 	readonly metadata: number | null;
 	readonly count: number;
+	// Tag ingredients (e.g. #minecraft:planks) accept any of these item IDs.
+	// `id` is the representative member; `choices` lists all acceptable IDs.
+	readonly choices?: readonly number[];
 };
 
 /** A parsed crafting recipe. */

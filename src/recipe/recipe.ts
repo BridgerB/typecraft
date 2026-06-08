@@ -12,7 +12,12 @@ import type { Recipe, RecipeItem } from "./types.ts";
 const parseItem = (raw: RawRecipeItem): RecipeItem => {
 	if (raw === null) return { id: -1, metadata: null, count: 1 };
 	if (typeof raw === "number") return { id: raw, metadata: null, count: 1 };
-	return { id: raw.id, metadata: raw.metadata ?? null, count: 1 };
+	return {
+		id: raw.id,
+		metadata: raw.metadata ?? null,
+		count: 1,
+		choices: raw.choices,
+	};
 };
 
 const parseShape = (

@@ -76,18 +76,26 @@ const loadItemTags = (): ReadonlyMap<string, readonly string[]> => {
 	return tags;
 };
 
-/** Resolve an ingredient reference to an item ID. Tags use the first item. */
+/**
+ * Resolve an ingredient reference to a recipe item. Tags (e.g.
+ * #minecraft:planks) keep ALL their member IDs as `choices` so the crafter can
+ * satisfy the ingredient with any one of them (oak, birch, …), not just the
+ * first. Concrete items resolve to a plain numeric ID.
+ */
 const resolveIngredient = (
 	ref: string,
 	itemsByName: ReadonlyMap<string, ItemDefinition>,
 	tags: ReadonlyMap<string, readonly string[]>,
-): number | null => {
+): RawRecipeItem => {
 	if (ref.startsWith("#minecraft:")) {
 		const tagName = ref.slice("#minecraft:".length);
 		const tagItems = tags.get(tagName);
 		if (!tagItems || tagItems.length === 0) return null;
-		const item = itemsByName.get(tagItems[0]!);
-		return item?.id ?? null;
+		const ids = tagItems
+			.map((n) => itemsByName.get(n)?.id)
+			.filter((id): id is number => id != null);
+		if (ids.length === 0) return null;
+		return ids.length === 1 ? ids[0]! : { id: ids[0]!, choices: ids };
 	}
 	const name = ref.replace("minecraft:", "");
 	return itemsByName.get(name)?.id ?? null;
@@ -130,8 +138,7 @@ const loadRecipes = (
 								shapeRow.push(null);
 								continue;
 							}
-							const id = resolveIngredient(ref, itemsByName, tags);
-							shapeRow.push(id !== null ? id : null);
+							shapeRow.push(resolveIngredient(ref, itemsByName, tags));
 						}
 					}
 					inShape.push(shapeRow);
@@ -148,8 +155,7 @@ const loadRecipes = (
 				for (const ing of raw.ingredients) {
 					const ref = typeof ing === "string" ? ing : ing[0];
 					if (!ref) continue;
-					const id = resolveIngredient(ref, itemsByName, tags);
-					ingredients.push(id !== null ? id : null);
+					ingredients.push(resolveIngredient(ref, itemsByName, tags));
 				}
 				const recipe: RawRecipe = { ingredients, result };
 				if (!byResultId[result.id]) byResultId[result.id] = [];

@@ -3,11 +3,33 @@
  * Uses src/recipe/ for recipe data.
  */
 
-import { findRecipes, type Recipe } from "../recipe/index.ts";
+import { findRecipes, type Recipe, type RecipeItem } from "../recipe/index.ts";
 import { type Vec3, vec3 } from "../vec3/index.ts";
 import { findInventoryItem, type Window } from "../window/index.ts";
 import type { Bot, BotOptions } from "./types.ts";
 import { once, withTimeout } from "./utils.ts";
+
+/** Whether an item type satisfies a recipe ingredient (tag-aware). */
+const ingredientMatches = (type: number, ingredient: RecipeItem): boolean =>
+	type === ingredient.id || (ingredient.choices?.includes(type) ?? false);
+
+/**
+ * Find an inventory slot holding any item that satisfies the ingredient.
+ * Tries the representative ID first, then each tag choice (e.g. a recipe asking
+ * for #planks is satisfied by oak, birch, or any other plank the bot holds).
+ */
+const findIngredientSlot = (
+	window: Window,
+	ingredient: RecipeItem,
+): number | null => {
+	const direct = findInventoryItem(window, ingredient.id, ingredient.metadata);
+	if (direct !== null) return direct;
+	for (const id of ingredient.choices ?? []) {
+		const slot = findInventoryItem(window, id, ingredient.metadata);
+		if (slot !== null) return slot;
+	}
+	return null;
+};
 
 export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 	bot.recipesFor = (
@@ -154,15 +176,11 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 
 								if (
 									!window.selectedItem ||
-									window.selectedItem.type !== ingredient.id ||
+									!ingredientMatches(window.selectedItem.type, ingredient) ||
 									(ingredient.metadata != null &&
 										window.selectedItem.metadata !== ingredient.metadata)
 								) {
-									const sourceSlot = findInventoryItem(
-										window,
-										ingredient.id,
-										ingredient.metadata,
-									);
+									const sourceSlot = findIngredientSlot(window, ingredient);
 									if (sourceSlot === null)
 										throw new Error("Missing ingredient");
 									if (originalSourceSlot === null)
@@ -184,15 +202,11 @@ export const initCrafting = (bot: Bot, _options: BotOptions): void => {
 
 							if (
 								!window.selectedItem ||
-								window.selectedItem.type !== ingredient.id ||
+								!ingredientMatches(window.selectedItem.type, ingredient) ||
 								(ingredient.metadata != null &&
 									window.selectedItem.metadata !== ingredient.metadata)
 							) {
-								const sourceSlot = findInventoryItem(
-									window,
-									ingredient.id,
-									ingredient.metadata,
-								);
+								const sourceSlot = findIngredientSlot(window, ingredient);
 								if (sourceSlot === null) {
 									const allItems = window.slots
 										.filter((s) => s)

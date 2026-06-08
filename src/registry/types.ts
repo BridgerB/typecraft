@@ -106,7 +106,11 @@ export type AttributeDefinition = {
 export type RawRecipeItem =
 	| null
 	| number
-	| { readonly id: number; readonly metadata?: number | null };
+	| {
+			readonly id: number;
+			readonly metadata?: number | null;
+			readonly choices?: readonly number[];
+		};
 
 /** Raw recipe entry. */
 export type RawRecipe = {
