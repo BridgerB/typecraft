@@ -1391,6 +1391,7 @@ const entityMetadataEntry: Schema = [
 						optional_uuid: ["option", "UUID"],
 						block_state: "varint",
 						optional_block_state: "optvarint",
+						nbt: "anonymousNbt",
 						particle: "Particle",
 						particles: ["array", { countType: "varint", type: "Particle" }],
 						villager_data: [
@@ -1424,6 +1425,9 @@ const entityMetadataEntry: Schema = [
 						],
 						sniffer_state: "varint",
 						armadillo_state: "varint",
+						copper_golem_state: "varint",
+						weathering_copper_golem_state: "varint",
+						humanoid_arm: "varint",
 						vector3: "vec3f",
 						quaternion: "vec4f",
 					},

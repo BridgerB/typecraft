@@ -12,7 +12,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsc",
+		"typecheck": "tsc --noEmit",
 		"build:web": "tsx scripts/build-web.ts",
 		"test": "vitest run",
 		"format": "biome format --write",
