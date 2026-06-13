@@ -1193,4 +1193,8 @@ export const applyPlayerState = (state: PlayerState, entity: Entity): void => {
 	entity.velocity = { x: state.vel.x, y: state.vel.y, z: state.vel.z };
 	entity.onGround = state.onGround;
 	entity.elytraFlying = state.elytraFlying;
+	// Without this, bot.entity.isInWater is stuck at its default (false) forever:
+	// the sim computes it every tick for buoyancy but never published it back, so
+	// every consumer (water-escape, drowning guard, digging-in-water) was blind.
+	entity.isInWater = state.isInWater;
 };
