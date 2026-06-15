@@ -30,18 +30,18 @@
       devSystem = "x86_64-linux";
       devPkgs = pkgsFor devSystem;
 
-      version = "1.21.11";
+      version = "26.1.2";
 
       makeDatagen =
         pkgs:
         let
           serverJar = pkgs.fetchurl {
-            url = "https://piston-data.mojang.com/v1/objects/64bb6d763bed0a9f1d632ec347938594144943ed/server.jar";
-            sha256 = "09hpvmjnspf74k8ks9imcc3lqz8p3gjald3y3j9nz035704qwfzq";
+            url = "https://piston-data.mojang.com/v1/objects/97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51/server.jar";
+            sha256 = "0hnbxnghbbki3vlgwkrxnr06nj92ig6qzbqpzml4gxi8hg1yfiyd";
           };
           clientJar = pkgs.fetchurl {
-            url = "https://piston-data.mojang.com/v1/objects/ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd/client.jar";
-            sha256 = "1gfkdil6nxfqm5dpzchdc6w106nnf1mafjah8cydl3y5k94cjwql";
+            url = "https://piston-data.mojang.com/v1/objects/4e618f09a0c649dde3fdf829df443ce0b8831e65/client.jar";
+            sha256 = "1c6hb61pmmrh2wqlydbdvd9ljbnyqzcgm0hyy3plar36fa2ibcxi";
           };
         in
         pkgs.writeShellScriptBin "datagen" ''
