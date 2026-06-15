@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { build, context } from "esbuild";
 
@@ -19,46 +19,37 @@ const shared = {
 	loader: { ".ts": "ts" as const },
 };
 
+// Two browser bundles, both consumed by the eye-of-steve dashboard:
+//   viewer.js — embeddable Babylon viewer (mountViewer, from web/embed.ts)
+//   worker.js — chunk-mesher web worker (from web/clientWorker.ts)
+// The viewer's HTTP server (web/serve.ts) is separate and runs in the bot.
+
 const buildAll = async () => {
-	// Client bundle
-	const clientBuild = build({
-		...shared,
-		entryPoints: [resolve(root, "src/web/client.ts")],
-		outfile: resolve(outdir, "client.js"),
-	});
-
-	// Dashboard client bundle
-	const dashboardBuild = build({
-		...shared,
-		entryPoints: [resolve(root, "src/web/dashboardClient.ts")],
-		outfile: resolve(outdir, "dashboardClient.js"),
-	});
-
-	// Worker bundle
-	const workerBuild = build({
-		...shared,
-		entryPoints: [resolve(root, "src/web/clientWorker.ts")],
-		outfile: resolve(outdir, "worker.js"),
-	});
-
-	await Promise.all([clientBuild, dashboardBuild, workerBuild]);
-
-	cpSync(resolve(root, "src/web/client.html"), resolve(outdir, "index.html"));
-	console.log("Built dist/web/ (client.js, worker.js, index.html)");
+	await Promise.all([
+		build({
+			...shared,
+			entryPoints: [resolve(root, "src/web/embed.ts")],
+			outfile: resolve(outdir, "viewer.js"),
+		}),
+		build({
+			...shared,
+			entryPoints: [resolve(root, "src/web/clientWorker.ts")],
+			outfile: resolve(outdir, "worker.js"),
+		}),
+	]);
+	console.log("Built dist/web/ (viewer.js, worker.js)");
 };
 
 if (watch) {
 	const ctx = await context({
 		...shared,
 		entryPoints: [
-			resolve(root, "src/web/client.ts"),
-			resolve(root, "src/web/dashboardClient.ts"),
+			resolve(root, "src/web/embed.ts"),
 			resolve(root, "src/web/clientWorker.ts"),
 		],
 		outdir,
 		splitting: false,
 	});
-	cpSync(resolve(root, "src/web/client.html"), resolve(outdir, "index.html"));
 	await ctx.watch();
 	console.log("Watching for changes...");
 } else {

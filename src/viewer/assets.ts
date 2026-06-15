@@ -39,15 +39,10 @@ export type BlockModelElement = {
 	readonly faces: Readonly<Record<string, BlockModelFace>>;
 };
 
-/** A block-entity quad: 4 vertices, each [x, y, z, atlasU, atlasV]. */
-export type BeQuad = readonly (readonly number[])[];
-
 export type BlockModel = {
 	readonly elements: readonly BlockModelElement[];
 	readonly ao: boolean;
 	readonly textures: Readonly<Record<string, unknown>>;
-	/** Block-entity geometry (signs/chests/…) — pre-resolved atlas-space quads. */
-	beQuads?: readonly BeQuad[];
 };
 
 export type BlockModelVariant = {
@@ -116,131 +111,52 @@ const tintToGl = (color: number): readonly [number, number, number] => {
 
 // ── Texture atlas ──
 
-/** A non-16x16 texture (block-entity sheet) packed into the atlas. */
-export type EntitySheet = {
-	readonly name: string;
-	readonly width: number;
-	readonly height: number;
-};
-
-type AtlasPlacement = {
-	uvMap: Record<string, TextureUV>;
-	atlasSize: number;
-	texSize: number;
-	/** Pixel placement for each entity sheet, keyed by name. */
-	sheetPlacements: Record<string, { x: number; y: number }>;
-};
-
-/**
- * Lay out the atlas: block textures fill a 16x16-cell grid row-major; entity
- * sheets (variable size) are shelf-packed into the cells after them.
- */
-const layoutAtlas = (
-	blockTextures: readonly string[],
-	entitySheets: readonly EntitySheet[],
-): AtlasPlacement => {
-	const tileSize = 16;
-	const blockCells = blockTextures.length;
-	// Cell footprint of every entity sheet.
-	const sheetCells = entitySheets.reduce(
-		(sum, s) => sum + Math.ceil(s.width / 16) * Math.ceil(s.height / 16),
-		0,
-	);
-	const texSize = nextPowerOfTwo(
-		Math.ceil(Math.sqrt(blockCells + sheetCells * 1.4)),
-	);
-	const uvMap: Record<string, TextureUV> = {};
-	const sheetPlacements: Record<string, { x: number; y: number }> = {};
-
-	// Block textures: one 16x16 cell each, row-major.
-	for (let i = 0; i < blockTextures.length; i++) {
-		const cx = i % texSize;
-		const cy = Math.floor(i / texSize);
-		const name = blockTextures[i]!.replace(".png", "");
-		uvMap[name] = { u: cx, v: cy, su: 1, sv: 1 };
-	}
-
-	// Entity sheets: shelf-pack into cell rows below the block grid.
-	let shelfRow = Math.ceil(blockCells / texSize);
-	let shelfCol = 0;
-	let shelfH = 0;
-	for (const sheet of entitySheets) {
-		const cw = Math.ceil(sheet.width / 16);
-		const ch = Math.ceil(sheet.height / 16);
-		if (shelfCol + cw > texSize) {
-			shelfRow += shelfH;
-			shelfCol = 0;
-			shelfH = 0;
-		}
-		uvMap[sheet.name] = { u: shelfCol, v: shelfRow, su: cw, sv: ch };
-		sheetPlacements[sheet.name] = {
-			x: shelfCol * tileSize,
-			y: shelfRow * tileSize,
-		};
-		shelfCol += cw;
-		shelfH = Math.max(shelfH, ch);
-	}
-	const neededRows = shelfRow + shelfH;
-	const atlasSize = nextPowerOfTwo(Math.max(texSize, neededRows)) * tileSize;
-
-	// Convert cell coords to normalized UVs now that atlasSize is known.
-	for (const [name, uv] of Object.entries(uvMap)) {
-		uvMap[name] = {
-			u: (uv.u * tileSize) / atlasSize,
-			v: (uv.v * tileSize) / atlasSize,
-			su: (uv.su * tileSize) / atlasSize,
-			sv: (uv.sv * tileSize) / atlasSize,
-		};
-	}
-
-	return { uvMap, atlasSize, texSize, sheetPlacements };
-};
-
 /** Compute UV map without a canvas — pure math, works on server. */
 export const computeUvMap = (
 	textureFiles: readonly string[],
-	entitySheets: readonly EntitySheet[] = [],
 ): {
 	uvMap: Record<string, TextureUV>;
 	tileSize: number;
 	atlasSize: number;
 	texSize: number;
 } => {
-	const { uvMap, atlasSize, texSize } = layoutAtlas(textureFiles, entitySheets);
-	return { uvMap, tileSize: 16, atlasSize, texSize };
+	const tileSize = 16;
+	const texSize = nextPowerOfTwo(Math.ceil(Math.sqrt(textureFiles.length)));
+	const atlasSize = texSize * tileSize;
+	const uvMap: Record<string, TextureUV> = {};
+
+	for (let i = 0; i < textureFiles.length; i++) {
+		const x = (i % texSize) * tileSize;
+		const y = Math.floor(i / texSize) * tileSize;
+		const name = textureFiles[i]!.replace(".png", "");
+		uvMap[name] = {
+			u: x / atlasSize,
+			v: y / atlasSize,
+			su: tileSize / atlasSize,
+			sv: tileSize / atlasSize,
+		};
+	}
+
+	return { uvMap, tileSize, atlasSize, texSize };
 };
 
 export const createTextureAtlas = (
 	textureFiles: readonly string[],
 	loadImage: (name: string) => ImageBitmap | HTMLImageElement,
-	entitySheets: readonly EntitySheet[] = [],
-	loadSheet?: (name: string) => ImageBitmap | HTMLImageElement,
 ): TextureAtlas => {
-	const { uvMap, atlasSize, texSize, sheetPlacements } = layoutAtlas(
-		textureFiles,
-		entitySheets,
-	);
+	const { uvMap, tileSize, atlasSize, texSize } = computeUvMap(textureFiles);
 
 	const canvas = new OffscreenCanvas(atlasSize, atlasSize);
 	const ctx = canvas.getContext("2d")!;
 
 	for (let i = 0; i < textureFiles.length; i++) {
-		const x = (i % texSize) * 16;
-		const y = Math.floor(i / texSize) * 16;
+		const x = (i % texSize) * tileSize;
+		const y = Math.floor(i / texSize) * tileSize;
 		const img = loadImage(textureFiles[i]!);
 		ctx.drawImage(img, 0, 0, 16, 16, x, y, 16, 16);
 	}
 
-	if (loadSheet) {
-		for (const sheet of entitySheets) {
-			const place = sheetPlacements[sheet.name];
-			if (!place) continue;
-			const img = loadSheet(sheet.name);
-			ctx.drawImage(img, place.x, place.y, sheet.width, sheet.height);
-		}
-	}
-
-	return { canvas, uvMap, tileSize: 16, atlasSize };
+	return { canvas, uvMap, tileSize, atlasSize };
 };
 
 // ── Model resolution ──
@@ -345,14 +261,6 @@ const prepareModel = (
 			} else {
 				const name = cleanupBlockName(face.texture);
 				resolvedTexture = uvMap[name];
-				// Fallback: some non-standard models reference textures-map keys
-				// without the `#` prefix (e.g. heavy_core uses "all" not "#all").
-				if (!resolvedTexture) {
-					const ref = model.textures[face.texture];
-					if (ref && typeof ref === "object") {
-						resolvedTexture = ref as unknown as TextureUV;
-					}
-				}
 			}
 
 			if (!resolvedTexture || !Number.isFinite(resolvedTexture.u)) continue;
@@ -406,7 +314,6 @@ export const prepareBlockStates = (
 	blocksStates: Record<string, unknown>,
 	blocksModels: RawBlockModels,
 	uvMap: Readonly<Record<string, TextureUV>>,
-	blockEntityShapes?: Record<string, { sheet: string; quads: number[][][] }>,
 ): ResolvedBlockStates => {
 	const result: Record<string, BlockStateDefinition> = {};
 
@@ -481,38 +388,6 @@ export const prepareBlockStates = (
 			}
 
 			result[blockName] = { ...result[blockName], multipart: parts };
-		}
-	}
-
-	// Inject block-entity geometry (signs/chests/banners/…) for blocks whose
-	// block model has no `elements`. Their real shape was baked from Minecraft's
-	// block-entity renderers into blockEntityShapes (quads with sheet-normalized
-	// UVs). We resolve each quad's UV into the atlas region of its texture sheet
-	// and attach the result to the model as `beQuads` for the mesher.
-	if (blockEntityShapes) {
-		for (const [blockName, shape] of Object.entries(blockEntityShapes)) {
-			const def = result[blockName];
-			if (!def?.variants) continue;
-			const first = Object.values(def.variants)[0];
-			const variant = Array.isArray(first) ? first[0] : first;
-			const model = variant?.model as
-				| { elements?: unknown[]; beQuads?: unknown }
-				| undefined;
-			if (!model) continue;
-
-			const region = uvMap[shape.sheet];
-			if (!region || !Number.isFinite(region.u)) continue;
-
-			// quad vert [x,y,z,u,v] → [x,y,z, atlasU, atlasV]
-			model.beQuads = shape.quads.map((quad) =>
-				quad.map((vt) => [
-					vt[0]!,
-					vt[1]!,
-					vt[2]!,
-					region.u + vt[3]! * region.su,
-					region.v + vt[4]! * region.sv,
-				]),
-			);
 		}
 	}
 

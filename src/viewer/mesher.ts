@@ -460,67 +460,6 @@ const renderElement = (
 	}
 };
 
-// ── Block-entity quads ──
-
-/**
- * Render pre-baked block-entity geometry (signs/chests/banners/…). Quads are in
- * block-model space (0-16) with atlas UVs already resolved. Rendered
- * double-sided so thin parts (sign planks, banner flags) show from any angle.
- */
-const renderBeQuads = (
-	quads: readonly (readonly (readonly number[])[])[],
-	cx: number,
-	cy: number,
-	cz: number,
-	attr: GeometryAccum,
-): void => {
-	const ox = (cx & 15) - 8;
-	const oy = (cy & 15) - 8;
-	const oz = (cz & 15) - 8;
-	for (const quad of quads) {
-		if (quad.length < 4) continue;
-		const ndx = attr.positions.length / 3;
-		const a = quad[0]!;
-		const b = quad[1]!;
-		const c = quad[2]!;
-		// Face normal from two edges (for lighting).
-		const e1x = b[0]! - a[0]!,
-			e1y = b[1]! - a[1]!,
-			e1z = b[2]! - a[2]!;
-		const e2x = c[0]! - a[0]!,
-			e2y = c[1]! - a[1]!,
-			e2z = c[2]! - a[2]!;
-		let nx = e1y * e2z - e1z * e2y;
-		let ny = e1z * e2x - e1x * e2z;
-		let nz = e1x * e2y - e1y * e2x;
-		const len = Math.hypot(nx, ny, nz) || 1;
-		nx /= len;
-		ny /= len;
-		nz /= len;
-		for (const v of quad) {
-			attr.positions.push(v[0]! / 16 + ox, v[1]! / 16 + oy, v[2]! / 16 + oz);
-			attr.normals.push(nx, ny, nz);
-			attr.colors.push(0.92, 0.92, 0.92);
-			attr.uvs.push(v[3]!, v[4]!);
-		}
-		// Two triangles, both windings → double-sided.
-		attr.indices.push(
-			ndx,
-			ndx + 1,
-			ndx + 2,
-			ndx,
-			ndx + 2,
-			ndx + 3,
-			ndx,
-			ndx + 2,
-			ndx + 1,
-			ndx,
-			ndx + 3,
-			ndx + 2,
-		);
-	}
-};
-
 // ── Block state matching ──
 
 const parseProperties = (
@@ -570,12 +509,7 @@ export const getModelVariants = (
 	block: MesherBlock,
 	blockStates: ResolvedBlockStates,
 ): readonly BlockModelVariant[] => {
-	if (
-		block.name === "air" ||
-		block.name === "cave_air" ||
-		block.name === "void_air"
-	)
-		return [];
+	if (block.name.includes("air")) return [];
 
 	const state = blockStates[block.name] as BlockStateDefinition | undefined;
 	if (!state) return [];
@@ -631,25 +565,13 @@ export const getSectionGeometry = (
 			for (let x = sx; x < sx + 16; x++) {
 				const block = getBlock(x, y, z);
 				if (!block) continue;
-				if (
-					block.name === "air" ||
-					block.name === "cave_air" ||
-					block.name === "void_air"
-				)
-					continue;
+				if (block.name.includes("air")) continue;
 
 				const biome = block.biome;
 				const variants = getModelVariants(block, blockStates);
 
 				for (const variant of variants) {
 					if (!variant?.model) continue;
-
-					// Block-entity geometry (signs/chests/banners/…): pre-baked
-					// quads with atlas UVs already resolved.
-					if (variant.model.beQuads) {
-						renderBeQuads(variant.model.beQuads, x, y, z, attr);
-						continue;
-					}
 
 					if (block.name === "water") {
 						const particle = (variant.model.textures as Record<string, unknown>)

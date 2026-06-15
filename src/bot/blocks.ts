@@ -309,7 +309,7 @@ export const initBlocks = (bot: Bot, _options: BotOptions): void => {
 	bot.blockAt = (point: Vec3, _extraInfos?: boolean) => {
 		if (!bot.world || !bot.registry) return null;
 		const stateId = worldGetBlockStateId(bot.world, point);
-		if (stateId == null || stateId === 0) return null;
+		if (stateId == null) return null;
 		const block = stateIdToBlock(bot.registry, stateId);
 		return {
 			...block,

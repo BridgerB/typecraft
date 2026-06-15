@@ -74,9 +74,6 @@ type EntityModelDef = {
 type CachedAssets = {
 	blockStates: Record<string, unknown>;
 	blockModels: Record<string, unknown>;
-	blockEntityShapes: Record<string, unknown>;
-	entitySheets: { name: string; width: number; height: number }[];
-	entitySheetData: Record<string, string>;
 	textureNames: string[];
 	textureData: Record<string, string>;
 	tints: SerializedTints;
@@ -196,13 +193,6 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 		}
 	}
 
-	// Block-entity geometry (signs/chests/banners/etc — no block model elements)
-	let blockEntityShapes: Record<string, unknown> = {};
-	const beShapesPath = join(DATA_DIR, "blockEntityShapes.json");
-	if (existsSync(beShapesPath)) {
-		blockEntityShapes = JSON.parse(readFileSync(beShapesPath, "utf8"));
-	}
-
 	// Load block textures as base64
 	const textureNames: string[] = [];
 	const textureData: Record<string, string> = {};
@@ -215,26 +205,6 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 			textureNames.push(name);
 			textureData[name] = b64;
 		}
-	}
-
-	// Load the entity texture sheets referenced by block-entity shapes.
-	const entitySheets: { name: string; width: number; height: number }[] = [];
-	const entitySheetData: Record<string, string> = {};
-	const entityTexDir = join(DATA_DIR, "assets/textures/entity");
-	const sheetNames = new Set<string>();
-	for (const v of Object.values(blockEntityShapes)) {
-		const sheet = (v as { sheet?: string }).sheet;
-		if (sheet) sheetNames.add(sheet);
-	}
-	for (const sheet of sheetNames) {
-		const p = join(entityTexDir, `${sheet}.png`);
-		if (!existsSync(p)) continue;
-		const buf = readFileSync(p);
-		// PNG IHDR: width/height are big-endian uint32 at byte offsets 16/20.
-		const width = buf.readUInt32BE(16);
-		const height = buf.readUInt32BE(20);
-		entitySheets.push({ name: sheet, width, height });
-		entitySheetData[sheet] = buf.toString("base64");
 	}
 
 	const tints = buildTints();
@@ -294,9 +264,6 @@ export const loadMcAssets = (_version: string, bot: Bot): CachedAssets => {
 	return {
 		blockStates,
 		blockModels,
-		blockEntityShapes,
-		entitySheets,
-		entitySheetData,
 		textureNames,
 		textureData,
 		tints: serializeTints(tints),
@@ -435,31 +402,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 	const server = createServer(
 		async (req: IncomingMessage, res: ServerResponse) => {
-			const path = (req.url ?? "/").split("?")[0];
-			if (path === "/" || path === "/index.html") {
+			if (req.url === "/" || req.url === "/index.html") {
 				res.writeHead(200, { "Content-Type": "text/html" });
 				res.end(INDEX_HTML);
-				return;
-			}
-
-			// 6-pane inspection grid — same block viewed from all six sides.
-			// Optional ?at=x,y,z forwards the target point to each pane.
-			if (req.url?.startsWith("/grid")) {
-				const at = new URL(req.url, "http://x").searchParams.get("at");
-				const atParam = at ? `&at=${encodeURIComponent(at)}` : "";
-				const views = ["front", "back", "left", "right", "top", "bottom"];
-				res.writeHead(200, { "Content-Type": "text/html" });
-				res.end(`<!DOCTYPE html><html><head><title>6-View</title><style>
-body{margin:0;background:#111;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;width:100vw;height:100vh;gap:2px}
-.cell{position:relative}
-iframe{width:100%;height:100%;border:none}
-.label{position:absolute;top:4px;left:6px;color:#fff;font:bold 13px monospace;text-shadow:0 0 4px #000;z-index:1}
-</style></head><body>${views
-					.map(
-						(v) =>
-							`<div class="cell"><div class="label">${v}</div><iframe src="/?view=${v}${atParam}"></iframe></div>`,
-					)
-					.join("")}</body></html>`);
 				return;
 			}
 
@@ -763,7 +708,10 @@ iframe{width:100%;height:100%;border:none}
 	};
 
 	const onTimeUpdate = (packet: Record<string, unknown>) => {
-		const timeOfDay = Number(packet.time) % 24000;
+		// 26.1.2 names the field `gameTime` (world age, monotonic); older protocols
+		// use `time`. gameTime % 24000 tracks the day cycle for a normal world.
+		const raw = Number(packet.gameTime ?? packet.time ?? 0);
+		const timeOfDay = (Number.isFinite(raw) ? raw : 0) % 24000;
 		broadcast({
 			type: "time",
 			time: timeOfDay < 0 ? timeOfDay + 24000 : timeOfDay,

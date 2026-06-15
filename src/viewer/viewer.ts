@@ -4,9 +4,12 @@ import {
 	Engine,
 	FreeCamera,
 	HemisphericLight,
+	Mesh,
 	Quaternion,
 	Scene,
+	StandardMaterial,
 	Vector3,
+	VertexData,
 } from "@babylonjs/core";
 import type { Vec3 } from "../vec3/index.ts";
 import type {
@@ -45,6 +48,7 @@ export type Viewer = {
 	readonly light: HemisphericLight;
 	readonly worldRenderer: WorldRenderer;
 	readonly entityRenderer: EntityRenderer;
+	readonly cloudMat: StandardMaterial;
 };
 
 export type ViewerOptions = {
@@ -77,9 +81,9 @@ export const createViewerScene = (
 	scene.ambientColor = new Color3(1, 1, 1);
 
 	const light = new HemisphericLight("ambient", new Vector3(0, 1, 0), scene);
-	light.intensity = 1.0;
+	light.intensity = 1.4;
 	light.diffuse = new Color3(1, 1, 1);
-	light.groundColor = new Color3(1, 1, 1);
+	light.groundColor = new Color3(0.85, 0.85, 0.85);
 
 	const camera = new FreeCamera("camera", Vector3.Zero(), scene);
 	camera.fov = (75 * Math.PI) / 180;
@@ -99,7 +103,133 @@ export const createViewerScene = (
 		options.textureUrl ?? "/textures/steve.png",
 	);
 
-	return { engine, scene, camera, light, worldRenderer, entityRenderer };
+	const cloudMat = addClouds(scene, camera);
+
+	return { engine, scene, camera, light, worldRenderer, entityRenderer, cloudMat };
+};
+
+// ── Clouds — real vanilla pattern, extruded into thick 3D boxes at y=192 ──
+// Reads Minecraft's actual clouds.png (256×256): each opaque pixel is a 12-block
+// cloud cell, extruded 4 blocks tall (vanilla geometry). A patch around the
+// camera is rebuilt only when the camera crosses a cell, so it's cheap.
+
+const CLOUDS_URL =
+	"https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.1/assets/minecraft/textures/environment/clouds.png";
+const CLOUD_CELL = 12; // blocks per cloud pixel
+const CLOUD_Y = 192; // vanilla cloud height
+const CLOUD_THICK = 4; // vanilla cloud thickness
+const CLOUD_PATCH = 40; // cells across the rendered patch (×12 ≈ 480 blocks)
+
+const addClouds = (scene: Scene, camera: FreeCamera): StandardMaterial => {
+	const mat = new StandardMaterial("cloudMat", scene);
+	mat.diffuseColor = new Color3(0.95, 0.95, 0.97);
+	mat.specularColor = new Color3(0, 0, 0);
+	mat.emissiveColor = new Color3(0.12, 0.12, 0.14); // small floor → visible at night
+	mat.backFaceCulling = false;
+
+	let pattern: Uint8Array | null = null;
+	let texSize = 0;
+	let mesh: Mesh | null = null;
+	let lastKey = "";
+
+	const isCloud = (wx: number, wz: number): boolean => {
+		if (!pattern) return false;
+		const px = ((wx % texSize) + texSize) % texSize;
+		const pz = ((wz % texSize) + texSize) % texSize;
+		return pattern[pz * texSize + px] === 1;
+	};
+
+	const rebuild = (camCx: number, camCz: number): void => {
+		if (!pattern) return;
+		if (mesh) {
+			mesh.dispose();
+			mesh = null;
+		}
+		const positions: number[] = [];
+		const indices: number[] = [];
+		const normals: number[] = [];
+		let vi = 0;
+		const quad = (
+			a: number[],
+			b: number[],
+			c: number[],
+			d: number[],
+			n: number[],
+		): void => {
+			positions.push(a[0]!, a[1]!, a[2]!, b[0]!, b[1]!, b[2]!, c[0]!, c[1]!, c[2]!, d[0]!, d[1]!, d[2]!);
+			for (let k = 0; k < 4; k++) normals.push(n[0]!, n[1]!, n[2]!);
+			indices.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3);
+			vi += 4;
+		};
+		const C = CLOUD_CELL;
+		const yT = CLOUD_Y + CLOUD_THICK / 2;
+		const yB = CLOUD_Y - CLOUD_THICK / 2;
+		const half = Math.floor(CLOUD_PATCH / 2);
+		// Emit a face only where it's on the OUTSIDE of the cloud mass → one solid
+		// shape with no visible internal cell edges (vanilla "fancy" cloud hull).
+		for (let i = 0; i < CLOUD_PATCH; i++) {
+			for (let j = 0; j < CLOUD_PATCH; j++) {
+				const wx = camCx - half + i;
+				const wz = camCz - half + j;
+				if (!isCloud(wx, wz)) continue;
+				const x0 = wx * C;
+				const x1 = x0 + C;
+				const z0 = wz * C;
+				const z1 = z0 + C;
+				quad([x0, yT, z0], [x1, yT, z0], [x1, yT, z1], [x0, yT, z1], [0, 1, 0]);
+				quad([x0, yB, z1], [x1, yB, z1], [x1, yB, z0], [x0, yB, z0], [0, -1, 0]);
+				if (!isCloud(wx - 1, wz))
+					quad([x0, yB, z0], [x0, yB, z1], [x0, yT, z1], [x0, yT, z0], [-1, 0, 0]);
+				if (!isCloud(wx + 1, wz))
+					quad([x1, yB, z1], [x1, yB, z0], [x1, yT, z0], [x1, yT, z1], [1, 0, 0]);
+				if (!isCloud(wx, wz - 1))
+					quad([x1, yB, z0], [x0, yB, z0], [x0, yT, z0], [x1, yT, z0], [0, 0, -1]);
+				if (!isCloud(wx, wz + 1))
+					quad([x0, yB, z1], [x1, yB, z1], [x1, yT, z1], [x0, yT, z1], [0, 0, 1]);
+			}
+		}
+		if (indices.length === 0) return;
+		const vd = new VertexData();
+		vd.positions = positions;
+		vd.indices = indices;
+		vd.normals = normals;
+		mesh = new Mesh("clouds", scene);
+		vd.applyToMesh(mesh);
+		mesh.material = mat;
+		mesh.isPickable = false;
+	};
+
+	scene.onBeforeRenderObservable.add(() => {
+		if (!pattern) return;
+		const cx = Math.round(camera.position.x / CLOUD_CELL);
+		const cz = Math.round(camera.position.z / CLOUD_CELL);
+		const key = `${cx},${cz}`;
+		if (key !== lastKey) {
+			lastKey = key;
+			rebuild(cx, cz);
+		}
+	});
+
+	const img = new Image();
+	img.crossOrigin = "anonymous";
+	img.onload = () => {
+		texSize = img.width;
+		const cv = document.createElement("canvas");
+		cv.width = texSize;
+		cv.height = texSize;
+		const c = cv.getContext("2d");
+		if (!c) return;
+		c.drawImage(img, 0, 0);
+		const d = c.getImageData(0, 0, texSize, texSize).data;
+		pattern = new Uint8Array(texSize * texSize);
+		for (let k = 0; k < texSize * texSize; k++) {
+			pattern[k] = (d[k * 4 + 3] ?? 0) > 128 ? 1 : 0; // alpha → cloud cell
+		}
+		lastKey = ""; // force first rebuild
+	};
+	img.src = CLOUDS_URL;
+
+	return mat;
 };
 
 // ── Version & assets ──
@@ -213,17 +343,6 @@ export const setViewerCamera = (
 	);
 };
 
-/** Position the camera freely and point it at a target (debug / multi-angle). */
-export const setViewerFreeCam = (
-	viewer: Viewer,
-	cam: Vec3,
-	target: Vec3,
-): void => {
-	viewer.camera.rotationQuaternion = null;
-	viewer.camera.position.set(cam.x, cam.y, cam.z);
-	viewer.camera.setTarget(new Vector3(target.x, target.y, target.z));
-};
-
 export const resizeViewer = (
 	viewer: Viewer,
 	width: number,
@@ -239,14 +358,16 @@ const NIGHT_SKY = new Color3(0x0c / 255, 0x14 / 255, 0x45 / 255);
 
 export const setViewerTime = (viewer: Viewer, time: number): void => {
 	const angle = (time / 24000 - 0.25) * 2 * Math.PI;
-	const raw = Math.cos(angle);
-	const brightness = Math.max(0.15, raw * 0.5 + 0.5);
+	const raw = Math.cos(angle); // 1 at noon, -1 at midnight
+	// Full daylight across most of the day, quick twilight, dark at night (vanilla-ish).
+	const day = Math.min(1, Math.max(0, (raw + 0.2) / 0.5));
 
-	viewer.light.intensity = brightness;
+	// Bright day, dark night.
+	viewer.light.intensity = 0.3 + day * 1.15; // night ≈ 0.3, day ≈ 1.45
 
-	const r = NIGHT_SKY.r + (DAY_SKY.r - NIGHT_SKY.r) * brightness;
-	const g = NIGHT_SKY.g + (DAY_SKY.g - NIGHT_SKY.g) * brightness;
-	const b = NIGHT_SKY.b + (DAY_SKY.b - NIGHT_SKY.b) * brightness;
+	const r = NIGHT_SKY.r + (DAY_SKY.r - NIGHT_SKY.r) * day;
+	const g = NIGHT_SKY.g + (DAY_SKY.g - NIGHT_SKY.g) * day;
+	const b = NIGHT_SKY.b + (DAY_SKY.b - NIGHT_SKY.b) * day;
 	viewer.scene.clearColor = new Color4(r, g, b, 1);
 };
 
